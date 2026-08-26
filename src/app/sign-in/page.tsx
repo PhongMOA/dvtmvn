@@ -1,5 +1,6 @@
 import { signIn } from "@/auth";
 import { Button } from "@/components/ui/button";
+import { GoogleLogo } from "@/components/google-logo";
 
 export default async function SignInPage({
   searchParams,
@@ -25,7 +26,14 @@ export default async function SignInPage({
             await signIn("google", { redirectTo: callbackUrl });
           }}
         >
-          <Button type="submit" className="w-full" size="lg">
+          <Button
+            type="submit"
+            className="w-full gap-3"
+            size="lg"
+          >
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white">
+              <GoogleLogo className="size-3" />
+            </span>
             Đăng nhập với Google
           </Button>
         </form>
