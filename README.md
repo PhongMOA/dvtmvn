@@ -1,9 +1,3 @@
-# MarvelVN — Đặt combo sự kiện chiếu phim offline
-
-Web đặt combo (vé + merchandise) cho 1 sự kiện chiếu phim offline: đăng nhập Google, chọn combo, quét VietQR chuyển khoản, hệ thống tự xác nhận qua webhook SePay, nhận QR check-in tại "Vé của tôi". Admin quản lý event/combo và check-in thủ công.
-
-Đang chạy tại: https://dvtmvn.vercel.app
-
 ## Stack
 
 Next.js 16 (App Router) · Prisma 6 + Postgres (Supabase) · Auth.js v5 (Google OAuth) · Tailwind v4 + shadcn · SePay (VietQR + webhook HMAC-SHA256)
