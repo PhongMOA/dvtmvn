@@ -43,7 +43,7 @@ const marvelWordmark = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Avengers: Doomsday — Đặt vé chiếu phim offline",
+  title: "Đa vũ trụ Marvel VN - Đặt vé offline Avengers: Doomsday",
   description:
     "Đặt vé xem Avengers: Doomsday tại sự kiện chiếu phim offline. Thanh toán chuyển khoản VietQR, nhận vé QR check-in.",
 };
