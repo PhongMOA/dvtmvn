@@ -47,7 +47,7 @@ export default async function OrderPaymentPage({
         </h1>
         <p className="mt-4 text-muted-foreground">
           Đơn {order.comboType.name} × {order.quantity} đã quá hạn chuyển khoản
-          và bị huỷ, kho đã được hoàn lại. Vui lòng đặt lại combo.
+          và bị huỷ. Vui lòng đặt lại combo.
         </p>
         <Link href="/" className={`${buttonVariants()} mt-6`}>
           Về trang chủ

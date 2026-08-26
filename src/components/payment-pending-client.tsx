@@ -54,8 +54,8 @@ export function PaymentPendingClient({
   if (expired) {
     return (
       <p className="mt-6 text-sm text-destructive">
-        Đơn đã hết hạn thanh toán và được huỷ, kho đã được hoàn lại. Vui lòng quay
-        về trang chủ để đặt lại combo.
+        Đơn đã hết hạn thanh toán và được huỷ. Vui lòng quay về trang chủ để đặt
+        lại combo.
       </p>
     );
   }
