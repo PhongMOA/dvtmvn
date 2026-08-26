@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { PrismaClient } from "@/generated/prisma/client";
 
@@ -20,6 +21,36 @@ function resolveDatasourceUrl(): string | undefined {
   const relativePath = raw.slice("file:".length);
   const absolutePath = path.resolve(process.cwd(), "prisma", relativePath);
   return `file:${absolutePath}`;
+}
+
+// Cùng một căn bệnh bundling như trên, nhưng lần này với chính query engine
+// binary (.so.node/.dll.node) chứ không phải file SQLite: client bị Next.js
+// gộp vào 1 chunk trong `.next/server/chunks/...`, nên logic tự dò engine dựa
+// trên dirname của Prisma trỏ nhầm vào trong bundle -> lỗi "could not locate
+// the Query Engine for runtime rhel-openssl-3.0.x" trên Vercel dù file engine
+// vẫn nằm đúng chỗ trên đĩa (outputFileTracingIncludes đã đảm bảo điều đó).
+// Fix: trỏ thẳng Prisma vào đúng file bằng biến môi trường chính thức
+// `PRISMA_QUERY_ENGINE_LIBRARY`, tự tính đường dẫn qua `process.cwd()` (ổn
+// định, không phụ thuộc bundling) thay vì để Prisma tự dò.
+function resolveQueryEngineLibraryPath(): string | undefined {
+  if (process.env.PRISMA_QUERY_ENGINE_LIBRARY) {
+    return process.env.PRISMA_QUERY_ENGINE_LIBRARY;
+  }
+  const filename =
+    process.platform === "win32"
+      ? "query_engine-windows.dll.node"
+      : "libquery_engine-rhel-openssl-3.0.x.so.node";
+  const enginePath = path.resolve(
+    process.cwd(),
+    "src/generated/prisma",
+    filename,
+  );
+  return fs.existsSync(enginePath) ? enginePath : undefined;
+}
+
+const queryEngineLibraryPath = resolveQueryEngineLibraryPath();
+if (queryEngineLibraryPath) {
+  process.env.PRISMA_QUERY_ENGINE_LIBRARY = queryEngineLibraryPath;
 }
 
 export const prisma =
