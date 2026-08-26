@@ -27,15 +27,20 @@ async function main() {
     }),
     prisma.event.upsert({
       where: { id: eventId },
-      update: { status: "open", posterUrl: "/posters/doctor-doom.webp" },
+      update: {
+        status: "open",
+        posterUrl: "/posters/doctor-doom.webp",
+        venue: "CGV Vạn Hạnh Mall, 11 Sư Vạn Hạnh, Hòa Hưng, Hồ Chí Minh (Rạp 2D)",
+        startAt: new Date("2026-12-18T19:30:00+07:00"), // 19h30 (dự kiến) Thứ 6, 18/12/2026
+      },
       create: {
         id: eventId,
         title: "Avengers: Doomsday",
         description:
           "Suất chiếu đặc biệt offline — cùng hội tụ những siêu anh hùng mạnh nhất vũ trụ Marvel trong trận chiến định mệnh chống lại Doctor Doom. Đặt combo xong quét mã VietQR chuyển khoản để giữ chỗ, hệ thống tự xác nhận và trả về QR code check-in.",
         posterUrl: "/posters/doctor-doom.webp",
-        venue: "Rạp chiếu phim cộng đồng — địa điểm sẽ thông báo sau",
-        startAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // +14 ngày
+        venue: "CGV Vạn Hạnh Mall, 11 Sư Vạn Hạnh, Hòa Hưng, Hồ Chí Minh (Rạp 2D)",
+        startAt: new Date("2026-12-18T19:30:00+07:00"), // 19h30 (dự kiến) Thứ 6, 18/12/2026
         status: "open",
       },
     }),
