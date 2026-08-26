@@ -1,6 +1,10 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma"
+  // "native" cho máy dev (Windows); "rhel-openssl-3.0.x" cho runtime serverless
+  // của Vercel (Amazon Linux) — thiếu target này gây lỗi "could not locate the
+  // Query Engine for runtime rhel-openssl-3.0.x" lúc chạy trên Vercel.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 // Lưu ý (Supabase pooler): mọi lệnh `prisma migrate *`/`migrate status` bị
