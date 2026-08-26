@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  phone         String? // bắt buộc bổ sung sau khi đăng nhập lần đầu (xem ProfileModal) — cần để liên hệ khi giao/nhận combo
+  address       String? // bắt buộc bổ sung sau khi đăng nhập lần đầu (xem ProfileModal)
+  emailVerified DateTime? // required bởi @auth/prisma-adapter (schema chuẩn Auth.js), không dùng cho logic app
+  createdAt     DateTime  @default(now())
+  orders        Order[]
+  accounts      Account[]
+  sessions      Session[]
+}
+
+// --- Auth.js (NextAuth) Prisma adapter models ---
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  posterUrl   String?
+  venue       String
+  startAt     DateTime
+  status      String      @default("draft") // draft | open | closed
+  createdAt   DateTime    @default(now())
+  comboTypes  ComboType[]
+}
+
+// 1 combo = 1 gói bán ra của 1 event, có thể gồm vé + merchandise hoặc chỉ
+// merchandise (xem includesTicket). Giá và tồn kho nằm ở cấp combo, không còn
+// ở Event — mỗi combo bán độc lập với số lượng riêng, không dùng chung 1 pool
+// sức chứa venue (đã chốt với user: chỉ giới hạn theo từng combo).
+model ComboType {
+  id                String   @id @default(uuid())
+  eventId           String
+  name              String
+  price             Int // VND, giá sau giảm (nếu có) — hiển thị thông tin, không xử lý thanh toán online
+  originalPrice     Int? // giá gốc trước giảm, hiển thị gạch ngang — null nếu combo này không giảm giá
+  includesTicket    Boolean  @default(true)
+  items             String // JSON string[] mô tả các item kèm theo, vd ["1 Dây đeo","1 Bộ Sticker A6"]
+  totalQuantity     Int
+  remainingQuantity Int
+  createdAt         DateTime @default(now())
+  event             Event    @relation(fields: [eventId], references: [id])
+  orders            Order[]
+}
+
+// Thanh toán qua SePay (chuyển khoản ngân hàng, xác nhận tự động qua webhook —
+// xem src/app/api/webhooks/sepay/route.ts): đặt combo xong đơn ở paymentStatus
+// "pending", giữ chỗ bằng cách trừ remainingQuantity ngay (đã chốt với user), quá
+// hạn expiresAt mà chưa thanh toán thì tự chuyển "expired" + hoàn lại kho (xem
+// src/lib/order-expiry.ts). status (booked|checked_in) chỉ có ý nghĩa khi đã "paid".
+model Order {
+  id            String    @id @default(uuid())
+  comboTypeId   String
+  userId        String
+  quantity      Int
+  qrToken       String    @unique @default(uuid())
+  status        String    @default("booked") // booked | checked_in
+  orderCode     String    @unique // mã ngắn nhúng vào nội dung chuyển khoản để webhook khớp đơn
+  paymentStatus String    @default("pending") // pending | paid | expired
+  expiresAt     DateTime // hạn chuyển khoản, hết hạn mà còn pending -> expired + hoàn kho
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  comboType     ComboType @relation(fields: [comboTypeId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+// Log mọi giao dịch webhook SePay đã nhận — id chính là id giao dịch phía SePay,
+// dùng làm khoá chống trùng (SePay có thể gửi lại/retry theo Fibonacci tới 7 lần):
+// insert lần 2 với cùng id sẽ lỗi unique constraint -> coi như đã xử lý, bỏ qua.
+// orderId null nghĩa là giao dịch không khớp được đơn nào hoặc sai số tiền -> cần
+// admin đối soát thủ công.
+model SepayTransaction {
+  id              String   @id
+  gateway         String
+  transactionDate String
+  accountNumber   String
+  content         String
+  transferAmount  Int
+  referenceCode   String?
+  orderId         String?
+  createdAt       DateTime @default(now())
+}
