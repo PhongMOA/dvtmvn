@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { expireStaleOrdersForCombo } from "@/lib/order-expiry";
 import { BookingForm } from "@/components/booking-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,22 @@ export default async function Home() {
       </div>
     );
   }
+
+  // Dọn các đơn "pending" đã quá hạn của MỌI combo thuộc event này trước khi
+  // hiển thị tồn kho. Không có cron nên trước đây việc hoàn kho chỉ được kích
+  // hoạt lúc user đặt lại ĐÚNG combo đó (xem expireStaleOrdersForCombo) hoặc
+  // lúc trang thanh toán của ĐÚNG đơn đó đang mở tự poll — nếu user rời trang
+  // thanh toán giữa chừng mà không ai đặt lại combo, đơn "treo" vô thời hạn,
+  // trang chủ hiện thiếu hàng ảo. Trang chủ là nơi hiển thị tồn kho cho tất cả
+  // user nên tận dụng làm điểm dọn dẹp chung, không cần đợi 1 trong 2 điều
+  // kiện trên xảy ra.
+  await Promise.all(
+    event.comboTypes.map((combo) => expireStaleOrdersForCombo(combo.id)),
+  );
+  event.comboTypes = await prisma.comboType.findMany({
+    where: { eventId: event.id },
+    orderBy: { createdAt: "asc" },
+  });
 
   return (
     <div className="flex flex-1 flex-col">

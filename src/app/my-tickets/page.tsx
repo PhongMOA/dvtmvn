@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { TicketQr } from "@/components/ticket-qr";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -27,12 +28,19 @@ export default async function MyTicketsPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  // Chỉ để hiển thị đúng ngay lần load này — việc hoàn kho thật sự (DB) do
-  // expireOrderIfPastDue tự xử lý ở nơi khác (poll page / lượt đặt combo tiếp
-  // theo, xem lib/order-expiry.ts), tránh phải chờ round-trip DB thứ 2 ở đây.
+  // Hoàn kho thật ngay tại đây cho các đơn "pending" đã quá hạn hiển thị ở
+  // trang này — trước đây trang này chỉ ĐỔI NHÃN để hiển thị cho đẹp, không
+  // thật sự ghi DB/hoàn kho, nên nếu không có hành động nào khác (poll trang
+  // thanh toán / đặt lại đúng combo) kích hoạt expireOrderIfPastDue thì kho bị
+  // giữ "treo" vĩnh viễn dù UI đã báo "Đã hết hạn".
   const now = new Date();
+  const staleOrderIds = orders
+    .filter((order) => order.paymentStatus === "pending" && order.expiresAt < now)
+    .map((order) => order.id);
+  await Promise.all(staleOrderIds.map((id) => expireOrderIfPastDue(id)));
+
   const displayOrders = orders.map((order) =>
-    order.paymentStatus === "pending" && order.expiresAt < now
+    staleOrderIds.includes(order.id)
       ? { ...order, paymentStatus: "expired" as const }
       : order,
   );
@@ -108,7 +116,7 @@ export default async function MyTicketsPage() {
                   )}
                   {order.paymentStatus === "expired" && (
                     <span className="text-sm text-muted-foreground">
-                      Đã huỷ, kho đã hoàn lại
+                      Đã huỷ
                     </span>
                   )}
                 </div>
