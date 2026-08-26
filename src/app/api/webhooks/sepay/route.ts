@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractOrderCodeFromContent } from "@/lib/sepay";
@@ -15,20 +16,54 @@ type SepayWebhookPayload = {
   referenceCode?: string | null;
 };
 
-function isAuthorized(req: NextRequest): boolean {
-  const apiKey = process.env.SEPAY_WEBHOOK_API_KEY;
-  if (!apiKey) return false; // chưa cấu hình -> chặn hết, tránh nhận webhook giả
-  return req.headers.get("authorization") === `Apikey ${apiKey}`;
+// SePay ký mỗi request bằng HMAC-SHA256 trên chuỗi "{timestamp}.{raw body}"
+// (xem https://developer.sepay.vn/vi/sepay-webhooks/xac-thuc), gửi kèm 2 header:
+//   X-SePay-Signature: sha256=<hex digest>
+//   X-SePay-Timestamp: <unix giây lúc ký>
+// Phải verify trên RAW body (chuỗi gốc, chưa qua JSON.parse) — parse rồi
+// stringify lại có thể đổi whitespace/thứ tự key -> chữ ký không khớp nữa.
+// Chặn luôn timestamp lệch quá 5 phút để chống replay (phát lại request cũ đã
+// bị lộ, dù chữ ký gốc vẫn còn hợp lệ về mặt toán học).
+const SIGNATURE_TOLERANCE_SECONDS = 300;
+
+function isValidSignature(rawBody: string, req: NextRequest): boolean {
+  const secret = process.env.SEPAY_WEBHOOK_SECRET;
+  if (!secret) return false; // chưa cấu hình -> chặn hết, tránh nhận webhook giả
+
+  const signatureHeader = req.headers.get("x-sepay-signature");
+  const timestampHeader = req.headers.get("x-sepay-timestamp");
+  if (!signatureHeader || !timestampHeader) return false;
+
+  const timestamp = Number(timestampHeader);
+  if (!Number.isFinite(timestamp)) return false;
+  if (Math.abs(Date.now() / 1000 - timestamp) > SIGNATURE_TOLERANCE_SECONDS) {
+    return false;
+  }
+
+  const expected =
+    "sha256=" +
+    createHmac("sha256", secret)
+      .update(`${timestamp}.${rawBody}`)
+      .digest("hex");
+
+  const expectedBuf = Buffer.from(expected);
+  const actualBuf = Buffer.from(signatureHeader);
+  // timingSafeEqual ném lỗi nếu 2 buffer khác độ dài -> check độ dài trước,
+  // độ dài khác nhau nghĩa là chữ ký sai, trả false luôn thay vì để throw.
+  if (expectedBuf.length !== actualBuf.length) return false;
+  return timingSafeEqual(expectedBuf, actualBuf);
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  const rawBody = await req.text();
+
+  if (!isValidSignature(rawBody, req)) {
     return NextResponse.json({ success: false }, { status: 401 });
   }
 
   let payload: SepayWebhookPayload;
   try {
-    payload = await req.json();
+    payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ success: false }, { status: 400 });
   }
