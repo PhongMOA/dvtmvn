@@ -3,8 +3,17 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// Lưu ý (Supabase pooler): mọi lệnh `prisma migrate *`/`migrate status` bị
+// treo vô thời hạn qua Supavisor pooler (cả DATABASE_URL lẫn DIRECT_URL) —
+// nghi do advisory lock của schema engine không tương thích với connection
+// pooling. Vì vậy KHÔNG dùng `prisma migrate deploy` (đã bỏ khỏi vercel-build).
+// Khi cần đổi schema production: sinh SQL bằng
+// `prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script`
+// (hoặc --from-schema-datamodel bản cũ --to-... bản mới), rồi áp bằng
+// `prisma db execute --file <sql> --url <DIRECT_URL>` — lệnh này không qua
+// schema engine nên không bị treo.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

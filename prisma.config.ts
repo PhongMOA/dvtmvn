@@ -12,6 +12,11 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
+    // DATABASE_URL: transaction pooler (port 6543) — app runtime, phù hợp
+    // serverless (Vercel). DIRECT_URL: session pooler (port 5432) — dùng
+    // riêng cho `prisma migrate` (transaction pooler không hỗ trợ schema
+    // migration). Supabase: Project Settings -> Database -> Connect.
     url: env("DATABASE_URL"),
+    directUrl: env("DIRECT_URL"),
   },
 });
