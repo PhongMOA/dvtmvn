@@ -272,7 +272,10 @@ export default function AdminScanPage() {
               để làm nền cho thẻ thông tin/lỗi phía dưới. */}
           {result && <div className="flex-1 bg-black/60" />}
 
-          <div className="flex flex-col items-center gap-3 p-6">
+          {/* Khung dưới trước đây không có nền -> camera sáng phía sau lộ ra
+              quanh thẻ kết quả (khó nhìn). Thêm bg-black/60 cùng tông với ô
+              overlay phía trên để toàn màn hình tối liền mạch khi có kết quả. */}
+          <div className={cn("flex flex-col items-center gap-3 p-6", result && "bg-black/60")}>
             {result?.kind === "info" && (
               <div className="w-full max-w-sm rounded-lg bg-black/80 p-4 text-white">
                 <p className="text-xs uppercase tracking-wide text-white/60">
