@@ -122,6 +122,21 @@ export default async function OrderPaymentPage({
               <CopyButton value={account} label="số tài khoản" />
             </dd>
           </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Số tiền</dt>
+            <dd className="font-semibold text-accent">{formatVnd(amount)}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <dt className="shrink-0 text-muted-foreground">
+              Nội dung chuyển khoản
+            </dt>
+            <dd className="flex min-w-0 items-center gap-1">
+              <span className="truncate font-mono font-semibold tracking-wide text-foreground">
+                {order.orderCode}
+              </span>
+              <CopyButton value={order.orderCode} label="nội dung chuyển khoản" />
+            </dd>
+          </div>
         </div>
       </details>
 
