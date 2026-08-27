@@ -70,7 +70,14 @@ export default async function Home() {
   return (
     <div className="flex flex-1 flex-col">
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border/60 bg-background">
+      <section
+        className={cn(
+          "relative overflow-hidden bg-background",
+          // Chỉ kẻ viền dưới khi đã có nội dung bên dưới (hết countdown) —
+          // nếu không, viền lơ lửng dưới hero trông cụt.
+          salesOpen && "border-b border-border/60",
+        )}
+      >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-card via-background to-background" />
         {event.posterUrl && (
           <div className="absolute inset-y-0 right-0 hidden w-3/5 sm:block lg:w-1/2 xl:w-[42%]">
