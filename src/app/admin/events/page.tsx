@@ -35,9 +35,17 @@ export default async function AdminEventsPage() {
         <h1 className="font-heading text-3xl tracking-wide text-primary">
           SỰ KIỆN
         </h1>
-        <Link href="/admin/events/new" className={cn(buttonVariants({ size: "sm" }))}>
-          Tạo sự kiện mới
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/admin/users"
+            className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+          >
+            Người dùng
+          </Link>
+          <Link href="/admin/events/new" className={cn(buttonVariants({ size: "sm" }))}>
+            Tạo sự kiện mới
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-border">
