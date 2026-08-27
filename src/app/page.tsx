@@ -7,6 +7,8 @@ import { BookingForm } from "@/components/booking-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { parseComboItems } from "@/lib/combo";
+import { SALES_START_AT, isSalesOpen, formatSalesStartDate } from "@/lib/sales";
+import { SalesCountdown } from "@/components/sales-countdown";
 import { cn } from "@/lib/utils";
 
 function formatDateTime(date: Date) {
@@ -61,6 +63,9 @@ export default async function Home() {
     orderBy: { createdAt: "asc" },
   });
 
+  const now = new Date();
+  const salesOpen = isSalesOpen(now);
+
   return (
     <div className="flex flex-1 flex-col">
       {/* Hero */}
@@ -82,7 +87,7 @@ export default async function Home() {
         )}
         <div className="relative mx-auto flex max-w-5xl flex-col gap-6 px-4 py-16 sm:py-24">
           <Badge className="w-fit bg-primary/15 text-primary" variant="outline">
-            ĐANG MỞ BÁN
+            {salesOpen ? "ĐANG MỞ BÁN" : "SẮP MỞ BÁN"}
           </Badge>
           <h1 className="font-heading text-5xl leading-none tracking-wide text-foreground sm:text-7xl">
             {event.title.toUpperCase()}
@@ -91,6 +96,14 @@ export default async function Home() {
             <p className="max-w-2xl text-lg text-muted-foreground">
               {event.description}
             </p>
+          )}
+          {!salesOpen && (
+            <div className="mt-2">
+              <SalesCountdown
+                targetIso={SALES_START_AT.toISOString()}
+                serverNowMs={now.getTime()}
+              />
+            </div>
           )}
         </div>
       </section>
@@ -117,8 +130,9 @@ export default async function Home() {
           CHỌN COMBO
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Đặt combo xong quét mã VietQR chuyển khoản trong 15 phút để giữ chỗ —
-          hệ thống tự động xác nhận, không cần chờ duyệt thủ công.
+          {salesOpen
+            ? "Đặt combo xong quét mã VietQR chuyển khoản trong 15 phút để giữ chỗ — hệ thống tự động xác nhận, không cần chờ duyệt thủ công."
+            : `Combo sẽ mở bán vào ${formatSalesStartDate()}. Theo dõi đồng hồ đếm ngược ở đầu trang — khi hết giờ, các gói bên dưới sẽ tự động mở đặt.`}
         </p>
 
         {event.comboTypes.length === 0 ? (
@@ -170,12 +184,25 @@ export default async function Home() {
                   </ul>
 
                   <p className="text-xs text-muted-foreground">
-                    {soldOut
-                      ? "Đã hết hàng"
-                      : `Còn lại ${combo.remainingQuantity}/${combo.totalQuantity}`}
+                    {!salesOpen
+                      ? `Số lượng: ${combo.totalQuantity}`
+                      : soldOut
+                        ? "Đã hết hàng"
+                        : `Còn lại ${combo.remainingQuantity}/${combo.totalQuantity}`}
                   </p>
 
-                  {session?.user ? (
+                  {!salesOpen ? (
+                    <button
+                      type="button"
+                      disabled
+                      className={cn(
+                        buttonVariants(),
+                        "w-full cursor-not-allowed opacity-60",
+                      )}
+                    >
+                      Chưa mở bán
+                    </button>
+                  ) : session?.user ? (
                     <BookingForm
                       comboTypeId={combo.id}
                       remainingQuantity={combo.remainingQuantity}
