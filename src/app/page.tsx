@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { expireStaleOrdersForCombo } from "@/lib/order-expiry";
@@ -65,7 +66,17 @@ export default async function Home() {
   });
 
   const now = new Date();
-  const salesOpen = isSalesOpen(now);
+
+  // App Android gắn thêm chuỗi "MarvelVNApp" vào User-Agent của WebView (xem
+  // capacitor.config.ts) — dùng để user tự test được giao diện sau countdown
+  // (combo, đặt vé...) ngay trên app thật trước ngày mở bán chính thức, mà
+  // không ảnh hưởng khách xem qua web browser bình thường. Nhớ: build lại
+  // APK (npx cap sync android) thì UA mới có chuỗi này, web/app cũ vẫn bị
+  // khoá như thường.
+  const isAndroidApp = (await headers())
+    .get("user-agent")
+    ?.includes("MarvelVNApp") ?? false;
+  const salesOpen = isSalesOpen(now) || isAndroidApp;
 
   return (
     <div className="flex flex-1 flex-col">
