@@ -54,3 +54,8 @@ next-env.d.ts
 /778564605_967847896326034_6801130717605608236_n.jpg
 /unnamed.jpg
 /unnamed (1).jpg
+
+# Android wrapper (Capacitor) — build cục bộ, không commit vào git nữa (đã xoá
+# khỏi lịch sử qua git-filter-repo ngày 260827). Giữ nguyên trên máy, chỉ
+# không track vào repo GitHub.
+/android
