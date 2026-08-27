@@ -19,14 +19,6 @@ const config: CapacitorConfig = {
     androidScheme: "https",
     cleartext: false,
   },
-  // Gắn thêm chuỗi nhận diện vào User-Agent của WebView để server phân biệt
-  // được request tới từ app Android thật (native) so với browser thường —
-  // dùng ở src/app/page.tsx để mở khoá xem trước giao diện sau countdown chỉ
-  // cho app, không ảnh hưởng user web thường (xem comment ANDROID_APP_UA_TAG
-  // trong page.tsx). Đổi giá trị này thì phải sửa lại chuỗi so khớp bên đó.
-  android: {
-    appendUserAgent: "MarvelVNApp",
-  },
   // Chỉ dùng đăng nhập Google — tắt Facebook/Apple/Twitter để plugin
   // @capgo/capacitor-social-login không kéo thêm SDK không cần vào APK
   // (mặc định plugin bật cả 4 provider).
