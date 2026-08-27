@@ -208,3 +208,22 @@ body.barcode-scanner-active .barcode-scanner-ui {
   border-top: none;
   border-radius: 0 0 16px 0;
 }
+
+/* Nút "Dừng quét" trên trang admin/scan — theo yêu cầu user, làm to/rõ hơn
+   hẳn nút mặc định của shadcn Button, dạng viên thuốc bán trong suốt giống
+   ảnh mẫu tham khảo (không dùng component Button vì cần nền/kích cỡ khác
+   hẳn style chung của app). */
+.scan-stop-button {
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.875rem 2.5rem;
+  backdrop-filter: blur(4px);
+  transition: background-color 0.15s ease;
+}
+.scan-stop-button:active {
+  background: rgba(255, 255, 255, 0.28);
+}

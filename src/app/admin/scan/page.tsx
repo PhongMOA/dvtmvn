@@ -250,15 +250,21 @@ export default function AdminScanPage() {
           )}
 
           {/* Ô ngắm QR — chỉ hiện lúc chưa có kết quả, nhường chỗ cho thẻ
-              thông tin/lỗi bên dưới ngay khi bắt được mã. */}
+              thông tin/lỗi bên dưới ngay khi bắt được mã. Nút "Dừng quét" đặt
+              ngay dưới khung ngắm (to, rõ, dạng viên thuốc) theo đúng mẫu
+              tham khảo — thay vì chỉ có 1 nút nhỏ dồn chung với thẻ kết quả
+              ở cuối màn hình như bản trước, dễ bấm nhầm/khó thấy. */}
           {!result && (
-            <div className="flex flex-1 items-center justify-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-10">
               <div className={cn("qr-viewfinder", locked && "qr-viewfinder-locked")}>
                 <span className="qr-viewfinder-corner qr-viewfinder-corner--tl" />
                 <span className="qr-viewfinder-corner qr-viewfinder-corner--tr" />
                 <span className="qr-viewfinder-corner qr-viewfinder-corner--bl" />
                 <span className="qr-viewfinder-corner qr-viewfinder-corner--br" />
               </div>
+              <button type="button" onClick={stopScan} className="scan-stop-button">
+                Dừng quét
+              </button>
             </div>
           )}
 
@@ -320,9 +326,11 @@ export default function AdminScanPage() {
               </div>
             )}
 
-            <Button size="lg" variant="secondary" onClick={stopScan}>
-              Dừng quét
-            </Button>
+            {result && (
+              <button type="button" onClick={stopScan} className="scan-stop-button">
+                Dừng quét
+              </button>
+            )}
           </div>
         </div>
       )}
