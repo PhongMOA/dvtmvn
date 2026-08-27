@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { parseComboItems } from "@/lib/combo";
 import { SALES_START_AT, isSalesOpen } from "@/lib/sales";
 import { SalesCountdown } from "@/components/sales-countdown";
+import { FloatingParticles } from "@/components/floating-particles";
 import { cn } from "@/lib/utils";
 
 function formatDateTime(date: Date) {
@@ -85,6 +86,8 @@ export default async function Home() {
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
           </div>
         )}
+        {/* Đốm sáng nhỏ bay lơ lửng trong không khí */}
+        <FloatingParticles className="pointer-events-none opacity-80 mix-blend-screen" />
         <div className="relative mx-auto flex max-w-5xl flex-col gap-6 px-4 py-16 sm:py-24">
           <Badge className="w-fit bg-primary/15 text-primary" variant="outline">
             {salesOpen ? "ĐANG MỞ BÁN" : "SẮP MỞ BÁN"}
