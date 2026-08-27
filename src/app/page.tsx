@@ -84,18 +84,33 @@ export default async function Home() {
       >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-card via-background to-background" />
         {event.posterUrl && (
-          <div className="absolute inset-y-0 right-0 hidden w-3/5 sm:block lg:w-1/2 xl:w-[42%]">
-            <Image
-              src={event.posterUrl}
-              alt={event.title}
-              fill
-              priority
-              className="object-cover object-[50%_18%]"
-            />
-            {/* Phủ mờ bên trái + trên-dưới để trọng tâm ảnh (khuôn mặt) không chèn lên vùng chữ */}
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
-          </div>
+          <>
+            {/* Mobile (< sm): ảnh phủ toàn hero, làm nền cho chữ đè lên (không đủ
+                chỗ chia đôi trái/phải như desktop) — tối bằng gradient dọc để
+                chữ luôn đọc được bất kể vùng sáng/tối của ảnh gốc. */}
+            <div className="absolute inset-0 sm:hidden">
+              <Image
+                src={event.posterUrl}
+                alt={event.title}
+                fill
+                priority
+                className="object-cover object-[50%_18%]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/80 to-background" />
+            </div>
+            <div className="absolute inset-y-0 right-0 hidden w-3/5 sm:block lg:w-1/2 xl:w-[42%]">
+              <Image
+                src={event.posterUrl}
+                alt={event.title}
+                fill
+                priority
+                className="object-cover object-[50%_18%]"
+              />
+              {/* Phủ mờ bên trái + trên-dưới để trọng tâm ảnh (khuôn mặt) không chèn lên vùng chữ */}
+              <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+            </div>
+          </>
         )}
         {/* Đốm sáng nhỏ bay lơ lửng trong không khí */}
         <FloatingParticles className="pointer-events-none opacity-80 mix-blend-screen" />
