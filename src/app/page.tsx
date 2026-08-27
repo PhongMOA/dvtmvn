@@ -102,11 +102,6 @@ export default async function Home() {
           <h1 className="font-heading text-5xl leading-none tracking-wide text-foreground sm:text-7xl">
             {event.title.toUpperCase()}
           </h1>
-          {event.description && (
-            <p className="max-w-2xl text-lg text-muted-foreground">
-              {event.description}
-            </p>
-          )}
           {!salesOpen && (
             <div className="mt-2">
               <SalesCountdown

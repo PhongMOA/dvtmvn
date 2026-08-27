@@ -59,7 +59,7 @@ export function FloatingParticles({
       p.speed = rand(10, 26);
       p.phase = rand(0, Math.PI * 2);
       p.twinkle = rand(1.4, 3.2);
-      p.alpha = rand(0.06, 0.2);
+      p.alpha = rand(0.1, 0.4);
       p.life = spread ? rand(0, 2) : 0;
       p.maxLife = rand(2.6, 5.5);
       p.warm = Math.random() < 0.35;
