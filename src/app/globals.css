@@ -134,3 +134,16 @@
     @apply font-sans;
   }
 }
+
+/* @capacitor-mlkit/barcode-scanning: khi quét, plugin cho WebView trong suốt
+   để lộ camera preview native phía dưới — cần ẩn hết UI web đi (visibility
+   kế thừa xuống mọi phần tử con), chỉ chừa lại phần tử có class
+   `barcode-scanner-ui` (nút Hủy) bằng cách ép `visibility: visible` đè lại.
+   Xem src/app/admin/scan/page.tsx. */
+body.barcode-scanner-active {
+  visibility: hidden;
+  background: transparent !important;
+}
+body.barcode-scanner-active .barcode-scanner-ui {
+  visibility: visible !important;
+}

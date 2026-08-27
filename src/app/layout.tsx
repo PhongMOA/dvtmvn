@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { ProfileModal } from "@/components/profile-modal";
+import { PushRegistrar } from "@/components/push-registrar";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="flex flex-1 flex-col">{children}</main>
         <Toaster richColors theme="dark" />
         <ProfileModal />
+        <PushRegistrar />
       </body>
     </html>
   );

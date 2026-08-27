@@ -1,6 +1,5 @@
 import { signIn } from "@/auth";
-import { Button } from "@/components/ui/button";
-import { GoogleLogo } from "@/components/google-logo";
+import { SignInButton } from "@/components/sign-in-button";
 
 export default async function SignInPage({
   searchParams,
@@ -19,24 +18,15 @@ export default async function SignInPage({
         <p className="mt-2 text-sm text-muted-foreground">
           Đăng nhập để đặt vé và lưu lại vé của bạn.
         </p>
-        <form
-          className="mt-6"
-          action={async () => {
-            "use server";
-            await signIn("google", { redirectTo: callbackUrl });
-          }}
-        >
-          <Button
-            type="submit"
-            className="w-full gap-3"
-            size="lg"
-          >
-            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white">
-              <GoogleLogo className="size-3" />
-            </span>
-            Đăng nhập với Google
-          </Button>
-        </form>
+        <div className="mt-6">
+          <SignInButton
+            callbackUrl={callbackUrl}
+            webSignInAction={async () => {
+              "use server";
+              await signIn("google", { redirectTo: callbackUrl });
+            }}
+          />
+        </div>
       </div>
     </div>
   );

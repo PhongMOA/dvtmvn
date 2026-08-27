@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractOrderCodeFromContent } from "@/lib/sepay";
+import { sendPushToTokens } from "@/lib/push";
 
 // Payload SePay POST tới webhook khi có giao dịch ngân hàng mới — xem
 // https://docs.sepay.vn/tich-hop-webhooks.html. Chỉ khai các field mình dùng.
@@ -129,6 +130,26 @@ export async function POST(req: NextRequest) {
       where: { id: transactionId },
       data: { orderId: order.id },
     });
+
+    // Best-effort: không để lỗi push làm hỏng response webhook (SePay retry
+    // dựa trên response không phải 200 — không liên quan gì tới push).
+    try {
+      const tokens = await prisma.deviceToken.findMany({
+        where: { userId: order.userId },
+        select: { token: true },
+      });
+      if (tokens.length > 0) {
+        await sendPushToTokens(
+          tokens.map((t) => t.token),
+          {
+            title: "Thanh toán thành công",
+            body: `${order.comboType.name} x${order.quantity} đã sẵn sàng — xem vé trong "Vé của tôi".`,
+          },
+        );
+      }
+    } catch (err) {
+      console.error("Push thanh toán thất bại (không ảnh hưởng webhook):", err);
+    }
   }
 
   return NextResponse.json({ success: true });

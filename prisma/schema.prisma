@@ -33,6 +33,22 @@ model User {
   orders        Order[]
   accounts      Account[]
   sessions      Session[]
+  deviceTokens  DeviceToken[]
+}
+
+// Token push (FCM) của app Android — 1 user có thể cài trên nhiều thiết bị
+// nên unique trên token, không phải userId. Xem src/lib/push.ts,
+// src/app/actions/device-tokens.ts.
+model DeviceToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform   String   @default("android") // "android" | "web" (mở rộng web-push sau nếu cần)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // --- Auth.js (NextAuth) Prisma adapter models ---
