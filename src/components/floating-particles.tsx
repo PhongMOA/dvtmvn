@@ -51,17 +51,20 @@ export function FloatingParticles({
 
     const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
-    // Tái sinh 1 đốm ở nửa trên khung (để nó còn quãng đường trôi chéo xuống).
-    function spawn(p: Particle, spread: boolean) {
-      p.x = rand(-0.15 * width, width);
-      p.y = spread ? rand(-0.15 * height, height) : rand(-0.15 * height, 0.15 * height);
+    // Tái sinh 1 đốm ở vị trí ngẫu nhiên trên toàn khung hero. Vì độ mờ đi theo
+    // bao hình vòng đời (0 -> đỉnh -> 0) nên đốm luôn "hiện lên" từ trong suốt,
+    // không bị pop dù xuất hiện giữa khung. `initial=true` cho lần khởi tạo:
+    // rải sẵn tuổi ngẫu nhiên để không đồng loạt tắt/hiện.
+    function spawn(p: Particle, initial: boolean) {
+      p.maxLife = rand(4, 9);
+      p.x = rand(-0.1 * width, width);
+      p.y = rand(-0.1 * height, height);
       p.r = rand(0.5, 1.6);
       p.speed = rand(10, 26);
       p.phase = rand(0, Math.PI * 2);
       p.twinkle = rand(1.4, 3.2);
       p.alpha = rand(0.1, 0.4);
-      p.life = spread ? rand(0, 2) : 0;
-      p.maxLife = rand(2.6, 5.5);
+      p.life = initial ? rand(0, p.maxLife) : 0;
       p.warm = Math.random() < 0.35;
     }
 
