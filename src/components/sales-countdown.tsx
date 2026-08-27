@@ -40,8 +40,8 @@ export function SalesCountdown({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-        Mở bán combo sau
+      <p className="font-heading text-2xl leading-none tracking-wide text-foreground sm:text-3xl">
+        Doomsday is coming
       </p>
       <div className="flex gap-2 sm:gap-3">
         {cells.map((cell) => (
