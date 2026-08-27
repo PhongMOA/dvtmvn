@@ -7,7 +7,7 @@ import { BookingForm } from "@/components/booking-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { parseComboItems } from "@/lib/combo";
-import { SALES_START_AT, isSalesOpen, formatSalesStartDate } from "@/lib/sales";
+import { SALES_START_AT, isSalesOpen } from "@/lib/sales";
 import { SalesCountdown } from "@/components/sales-countdown";
 import { cn } from "@/lib/utils";
 
@@ -108,6 +108,10 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Phần bên dưới (địa điểm, suất chiếu, combo) chỉ hiện sau khi hết
+          countdown — trước đó trang chủ chỉ có hero + đồng hồ đếm ngược. */}
+      {salesOpen && (
+        <>
       {/* Details */}
       <section className="mx-auto w-full max-w-5xl px-4 py-12">
         <div className="grid grid-cols-2 gap-6 text-sm sm:grid-cols-3">
@@ -130,9 +134,8 @@ export default async function Home() {
           CHỌN COMBO
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {salesOpen
-            ? "Đặt combo xong quét mã VietQR chuyển khoản trong 15 phút để giữ chỗ — hệ thống tự động xác nhận, không cần chờ duyệt thủ công."
-            : `Combo sẽ mở bán vào ${formatSalesStartDate()}. Theo dõi đồng hồ đếm ngược ở đầu trang — khi hết giờ, các gói bên dưới sẽ tự động mở đặt.`}
+          Đặt combo xong quét mã VietQR chuyển khoản trong 15 phút để giữ chỗ —
+          hệ thống tự động xác nhận, không cần chờ duyệt thủ công.
         </p>
 
         {event.comboTypes.length === 0 ? (
@@ -184,25 +187,12 @@ export default async function Home() {
                   </ul>
 
                   <p className="text-xs text-muted-foreground">
-                    {!salesOpen
-                      ? `Số lượng: ${combo.totalQuantity}`
-                      : soldOut
-                        ? "Đã hết hàng"
-                        : `Còn lại ${combo.remainingQuantity}/${combo.totalQuantity}`}
+                    {soldOut
+                      ? "Đã hết hàng"
+                      : `Còn lại ${combo.remainingQuantity}/${combo.totalQuantity}`}
                   </p>
 
-                  {!salesOpen ? (
-                    <button
-                      type="button"
-                      disabled
-                      className={cn(
-                        buttonVariants(),
-                        "w-full cursor-not-allowed opacity-60",
-                      )}
-                    >
-                      Chưa mở bán
-                    </button>
-                  ) : session?.user ? (
+                  {session?.user ? (
                     <BookingForm
                       comboTypeId={combo.id}
                       remainingQuantity={combo.remainingQuantity}
@@ -221,6 +211,8 @@ export default async function Home() {
           </div>
         )}
       </section>
+        </>
+      )}
     </div>
   );
 }
