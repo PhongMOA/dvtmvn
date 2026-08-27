@@ -75,7 +75,11 @@ export default async function Home() {
           "relative overflow-hidden bg-background",
           // Chỉ kẻ viền dưới khi đã có nội dung bên dưới (hết countdown) —
           // nếu không, viền lơ lửng dưới hero trông cụt.
-          salesOpen && "border-b border-border/60",
+          salesOpen
+            ? "border-b border-border/60"
+            : // Chưa mở bán: chưa có combo bên dưới nên cho hero chiếm hết
+              // chiều cao còn lại và canh nội dung giữa màn hình cho đỡ hụt.
+              "flex flex-1 flex-col justify-center",
         )}
       >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-card via-background to-background" />
