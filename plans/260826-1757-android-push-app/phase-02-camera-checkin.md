@@ -112,6 +112,18 @@ sẵn ở `src/app/actions/admin-orders.ts`.
   thì scan sẽ lỗi — user cần chọn đúng loại emulator có Play Services nếu
   không test trên máy thật.
 
+## Cập nhật 260827 — tách quét thành 2 bước (xem trước rồi mới xác nhận)
+
+Thiết kế gốc phía trên cho auto-checkin ngay khi quét được QR. Theo yêu cầu
+user, đã đổi lại: quét xong chỉ TRA CỨU (không mutate), hiện thẻ "Thông tin
+người mua" + số vé + nút "Xác nhận" — admin bấm Xác nhận mới thật sự
+check-in, sau đó nút đổi thành "Quét tiếp" để mở khoá quét mã kế tiếp. Thêm
+action mới `getOrderByQrToken` (read-only) vào `src/app/actions/admin-orders.ts`
+đứng trước `checkInByQrToken` (giữ nguyên, dùng làm bước xác nhận thật —
+tự re-check trạng thái phòng khi đổi giữa lúc tra cứu và lúc xác nhận). UI
+`src/app/admin/scan/page.tsx` viết lại: dùng `resultRef` để khoá xử lý frame
+mới trong lúc đang hiện thẻ kết quả chờ admin xử lý.
+
 ## Todo Checklist
 
 - [x] `npm install @capacitor-mlkit/barcode-scanning` + `npx cap sync android`
@@ -124,6 +136,8 @@ sẵn ở `src/app/actions/admin-orders.ts`.
       plugin — chi tiết này không có trong thiết kế phase gốc)
 - [x] Link "Quét QR check-in" trong `src/app/admin/layout.tsx`, chỉ hiện khi
       native (`src/components/admin-scan-link.tsx`)
+- [x] (260827) Thêm `getOrderByQrToken` (tra cứu, không mutate) + đổi UI scan
+      sang flow 2 bước: quét -> xem thông tin -> Xác nhận -> Quét tiếp
 - [x] `npx tsc --noEmit`, `eslint`, `npm run build` đều pass
 - [ ] (User) Rebuild APK, test quét trên thiết bị thật
 

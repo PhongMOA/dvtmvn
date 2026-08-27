@@ -147,3 +147,64 @@ body.barcode-scanner-active {
 body.barcode-scanner-active .barcode-scanner-ui {
   visibility: visible !important;
 }
+
+/* Khung ngắm QR (viewfinder) cho trang admin/scan — chỉ 1 ô vuông ở giữa
+   "lộ rõ" camera, phần còn lại màn hình bị làm tối để tách biệt khỏi chữ
+   hướng dẫn + nút bấm đè lên trên (giống UI quét QR phổ biến). Kỹ thuật
+   box-shadow lan 9999px tạo lớp phủ tối phủ kín viewport trừ đúng ô vuông
+   này — thuần CSS, không cần plugin hỗ trợ khoanh vùng camera thật (ML Kit
+   vẫn quét toàn khung hình phía sau như cũ, ô vuông chỉ là UI dẫn hướng cho
+   admin canh QR vào giữa). */
+.qr-viewfinder {
+  position: relative;
+  width: min(68vw, 260px);
+  aspect-ratio: 1 / 1;
+  border-radius: 20px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.15s ease;
+}
+
+/* Đổi viền sang màu accent ngay khi ML Kit vừa nhận diện được 1 QR hợp lệ
+   (trước cả khi có kết quả tra cứu từ server) — tạo cảm giác "khung bắt được
+   mã" tức thì, phản hồi nhanh hơn thay vì phải chờ round-trip server mới
+   thấy UI đổi. */
+.qr-viewfinder-locked {
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.6),
+    0 0 0 3px var(--accent);
+}
+
+.qr-viewfinder-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--accent);
+}
+.qr-viewfinder-corner--tl {
+  top: -3px;
+  left: -3px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 16px 0 0 0;
+}
+.qr-viewfinder-corner--tr {
+  top: -3px;
+  right: -3px;
+  border-left: none;
+  border-bottom: none;
+  border-radius: 0 16px 0 0;
+}
+.qr-viewfinder-corner--bl {
+  bottom: -3px;
+  left: -3px;
+  border-right: none;
+  border-top: none;
+  border-radius: 0 0 0 16px;
+}
+.qr-viewfinder-corner--br {
+  bottom: -3px;
+  right: -3px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 16px 0;
+}
