@@ -45,7 +45,7 @@ export default async function AdminUsersPage({
       where,
       orderBy: { createdAt: "desc" },
       include: {
-        _count: { select: { orders: true, deviceTokens: true } },
+        _count: { select: { orders: true } },
         orders: {
           where: { paymentStatus: "paid" },
           select: { quantity: true },
@@ -95,7 +95,6 @@ export default async function AdminUsersPage({
               <TableHead>Liên hệ</TableHead>
               <TableHead>Địa chỉ</TableHead>
               <TableHead className="text-right">Đơn (đã TT)</TableHead>
-              <TableHead className="text-right">Thiết bị</TableHead>
               <TableHead>Đăng ký</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
@@ -138,9 +137,6 @@ export default async function AdminUsersPage({
                       {" "}
                       ({paidQuantity})
                     </span>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {user._count.deviceTokens}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(user.createdAt)}
