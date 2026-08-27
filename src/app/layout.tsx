@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Cal_Sans, Anton } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { ProfileModal } from "@/components/profile-modal";
 import { PushRegistrar } from "@/components/push-registrar";
+import { AppBottomNav } from "@/components/app-bottom-nav";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -49,7 +51,9 @@ export const metadata: Metadata = {
     "Đặt vé xem Avengers: Doomsday tại sự kiện chiếu phim offline. Thanh toán chuyển khoản VietQR, nhận vé QR check-in.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const session = await auth();
+
   return (
     <html
       lang="vi"
@@ -61,6 +65,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Toaster richColors theme="dark" />
         <ProfileModal />
         <PushRegistrar />
+        <AppBottomNav isLoggedIn={!!session?.user} />
       </body>
     </html>
   );
