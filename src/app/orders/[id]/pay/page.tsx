@@ -3,8 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
-import { buildVietQrUrl } from "@/lib/sepay";
+import { buildVietQrUrl, getBankTransferInfo } from "@/lib/sepay";
 import { PaymentPendingClient } from "@/components/payment-pending-client";
+import { CopyButton } from "@/components/copy-button";
 import { buttonVariants } from "@/components/ui/button";
 
 function formatVnd(amount: number) {
@@ -57,6 +58,7 @@ export default async function OrderPaymentPage({
   }
 
   const qrUrl = buildVietQrUrl({ amount, orderCode: order.orderCode });
+  const { account, bank } = getBankTransferInfo();
 
   return (
     <div className="mx-auto w-full max-w-md px-4 py-12 text-center">
@@ -80,13 +82,48 @@ export default async function OrderPaymentPage({
           <dt className="text-muted-foreground">Số tiền</dt>
           <dd className="font-semibold text-accent">{formatVnd(amount)}</dd>
         </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Nội dung chuyển khoản</dt>
-          <dd className="font-mono font-semibold tracking-wide text-foreground">
-            {order.orderCode}
+        <div className="flex items-center justify-between gap-2">
+          <dt className="shrink-0 text-muted-foreground">
+            Nội dung chuyển khoản
+          </dt>
+          <dd className="flex min-w-0 items-center gap-1">
+            <span className="truncate font-mono font-semibold tracking-wide text-foreground">
+              {order.orderCode}
+            </span>
+            <CopyButton value={order.orderCode} label="nội dung chuyển khoản" />
           </dd>
         </div>
       </dl>
+
+      {/* Không phải ai cũng mở trang này trên máy khác rồi lấy điện thoại quét
+          — nếu đang mở ngay trên điện thoại dùng để chuyển khoản (đặc biệt
+          trong app Android) thì không tự quét camera vào màn hình chính nó
+          được, cần thông tin để chuyển khoản thủ công trong app ngân hàng. */}
+      <details className="mt-4 rounded-lg border border-border bg-card text-left text-sm">
+        <summary className="cursor-pointer px-4 py-3 font-medium text-foreground">
+          Không quét được mã? Chuyển khoản thủ công
+        </summary>
+        <div className="flex flex-col gap-2 border-t border-border px-4 py-3">
+          <p className="text-xs text-muted-foreground">
+            Đang mở trang này ngay trên điện thoại dùng để chuyển khoản? Mở
+            app ngân hàng, chuyển khoản thủ công theo thông tin bên dưới (giữ
+            đúng nội dung chuyển khoản để hệ thống tự xác nhận).
+          </p>
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Ngân hàng</dt>
+            <dd className="font-semibold text-foreground">{bank}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <dt className="shrink-0 text-muted-foreground">Số tài khoản</dt>
+            <dd className="flex min-w-0 items-center gap-1">
+              <span className="truncate font-mono font-semibold tracking-wide text-foreground">
+                {account}
+              </span>
+              <CopyButton value={account} label="số tài khoản" />
+            </dd>
+          </div>
+        </div>
+      </details>
 
       <PaymentPendingClient
         orderId={order.id}

@@ -36,8 +36,7 @@ export function buildVietQrUrl({
   amount: number;
   orderCode: string;
 }): string {
-  const account = process.env.SEPAY_BANK_ACCOUNT_NUMBER ?? "";
-  const bank = process.env.SEPAY_BANK_NAME ?? "";
+  const { account, bank } = getBankTransferInfo();
   const params = new URLSearchParams({
     acc: account,
     bank,
@@ -46,4 +45,17 @@ export function buildVietQrUrl({
     template: "compact",
   });
   return `https://vietqr.app/img?${params.toString()}`;
+}
+
+/**
+ * Thông tin tài khoản ngân hàng để hiển thị dạng chữ (bên cạnh mã QR) — cần
+ * cho trường hợp user mở trang thanh toán ngay trên điện thoại dùng để
+ * chuyển khoản, không tự quét camera vào màn hình chính nó được, nên phải
+ * chuyển khoản thủ công bằng cách gõ số tài khoản trong app ngân hàng.
+ */
+export function getBankTransferInfo(): { account: string; bank: string } {
+  return {
+    account: process.env.SEPAY_BANK_ACCOUNT_NUMBER ?? "",
+    bank: process.env.SEPAY_BANK_NAME ?? "",
+  };
 }
