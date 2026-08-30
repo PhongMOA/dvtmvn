@@ -18,7 +18,10 @@ export function AdminScanLink() {
   return (
     <Link
       href="/admin/scan"
-      className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+      className={cn(
+        buttonVariants({ size: "sm", variant: "outline" }),
+        "shrink-0 whitespace-nowrap",
+      )}
     >
       Quét QR check-in
     </Link>

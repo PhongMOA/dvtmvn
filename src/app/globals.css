@@ -132,7 +132,37 @@
   }
   html {
     @apply font-sans;
+    /* App luôn chạy theme tối — báo cho trình duyệt/WebView để form controls
+       và scrollbar mặc định render theo tông tối, không còn máng trắng chói. */
+    color-scheme: dark;
+    /* Firefox */
+    scrollbar-color: oklch(0.5 0.02 150 / 0.4) transparent;
+    scrollbar-width: thin;
   }
+}
+
+/* Scrollbar hợp tông theme tối cho Chromium / Android WebView — mặc định là
+   máng sáng + tay kéo xám sáng, chói trên nền gần đen. Làm mảnh lại, bo tròn,
+   dùng màu theo palette lục. Trình duyệt không hỗ trợ sẽ bỏ qua khối này. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: oklch(0.5 0.02 150 / 0.4);
+  border-radius: 9999px;
+  /* viền trong suốt + background-clip: tạo khoảng đệm để tay kéo trông mảnh */
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.62 0.04 150 / 0.6);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* @capacitor-mlkit/barcode-scanning: khi quét, plugin cho WebView trong suốt

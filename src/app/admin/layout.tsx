@@ -14,20 +14,26 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-12">
-      <div className="mb-6 flex items-center justify-between">
-        <p className="font-heading text-sm tracking-widest text-accent">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="font-heading text-sm tracking-widest whitespace-nowrap text-accent">
           KHU VỰC QUẢN TRỊ
         </p>
-        <div className="flex items-center gap-2">
+        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
           <Link
             href="/admin/users"
-            className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+            className={cn(
+              buttonVariants({ size: "sm", variant: "outline" }),
+              "shrink-0 whitespace-nowrap",
+            )}
           >
             Người dùng
           </Link>
           <Link
             href="/admin/notifications"
-            className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+            className={cn(
+              buttonVariants({ size: "sm", variant: "outline" }),
+              "shrink-0 whitespace-nowrap",
+            )}
           >
             Gửi thông báo
           </Link>
