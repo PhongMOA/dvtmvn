@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { isAdmin } from "@/lib/auth-helpers";
 import { expireStaleOrdersForCombo } from "@/lib/order-expiry";
 import { BookingForm } from "@/components/booking-form";
 import { buttonVariants } from "@/components/ui/button";
@@ -65,7 +66,14 @@ export default async function Home() {
   });
 
   const now = new Date();
-  const salesOpen = isSalesOpen(now);
+  // Admin luôn thấy giao diện "sau countdown" (đủ combo + đặt hàng) để xem
+  // trước/kiểm thử, kể cả khi chưa tới SALES_START_AT công khai. Server action
+  // bookCombo không chặn theo isSalesOpen (chỉ theo event.status) nên admin đặt
+  // thử được luôn.
+  const admin = await isAdmin(session?.user);
+  const publicSalesOpen = isSalesOpen(now);
+  const salesOpen = publicSalesOpen || admin;
+  const adminPreview = admin && !publicSalesOpen;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -116,7 +124,11 @@ export default async function Home() {
         <FloatingParticles className="pointer-events-none opacity-80 mix-blend-screen" />
         <div className="relative mx-auto flex max-w-5xl flex-col gap-6 px-4 py-16 sm:py-24">
           <Badge className="w-fit bg-primary/15 text-primary" variant="outline">
-            {salesOpen ? "ĐANG MỞ BÁN" : "SẮP MỞ BÁN"}
+            {adminPreview
+              ? "XEM TRƯỚC (ADMIN) — CHƯA MỞ BÁN CÔNG KHAI"
+              : salesOpen
+                ? "ĐANG MỞ BÁN"
+                : "SẮP MỞ BÁN"}
           </Badge>
           <h1 className="font-heading text-5xl leading-none tracking-wide text-foreground sm:text-7xl">
             {event.title.toUpperCase()}
