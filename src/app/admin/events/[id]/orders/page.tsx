@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { checkInOrder } from "@/app/actions/admin-orders";
 import { parseComboItems } from "@/lib/combo";
+import { AdminSearchForm } from "@/components/admin-search-form";
+import { AdminPagination } from "@/components/admin-pagination";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,31 +16,75 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const PAGE_SIZE = 20;
+
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
 export default async function EventOrdersPage({
   params,
+  searchParams,
 }: PageProps<"/admin/events/[id]/orders">) {
   const { id } = await params;
+  const sp = await searchParams;
+  const qRaw = sp?.q;
+  const q = (typeof qRaw === "string" ? qRaw : "").trim();
+  const pageRaw = Number(Array.isArray(sp?.page) ? sp?.page[0] : sp?.page);
+
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) notFound();
 
+  const where: Prisma.OrderWhereInput = {
+    comboType: { eventId: id },
+    ...(q
+      ? {
+          OR: [
+            { orderCode: { contains: q, mode: "insensitive" } },
+            { user: { name: { contains: q, mode: "insensitive" } } },
+            { user: { email: { contains: q, mode: "insensitive" } } },
+            { user: { phone: { contains: q, mode: "insensitive" } } },
+            { comboType: { name: { contains: q, mode: "insensitive" } } },
+          ],
+        }
+      : {}),
+  };
+
+  const [matchCount, soldAgg] = await Promise.all([
+    prisma.order.count({ where }),
+    prisma.order.aggregate({
+      _sum: { quantity: true },
+      where: { comboType: { eventId: id } },
+    }),
+  ]);
+  const totalSold = soldAgg._sum.quantity ?? 0;
+
+  const totalPages = Math.max(1, Math.ceil(matchCount / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number.isFinite(pageRaw) ? pageRaw : 1), totalPages);
+
   const orders = await prisma.order.findMany({
-    where: { comboType: { eventId: id } },
+    where,
     include: { user: true, comboType: true },
     orderBy: { createdAt: "asc" },
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
   });
-
-  const totalSold = orders.reduce((sum, order) => sum + order.quantity, 0);
 
   return (
     <div>
       <h1 className="font-heading text-3xl tracking-wide text-primary">
         ĐƠN HÀNG — {event.title.toUpperCase()}
       </h1>
-      <p className="mt-1 text-sm text-muted-foreground">Đã bán {totalSold} combo</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Đã bán {totalSold} combo
+        {q ? ` — ${matchCount} đơn khớp tìm kiếm` : ""}
+      </p>
+
+      <AdminSearchForm
+        pathname={`/admin/events/${id}/orders`}
+        value={q}
+        placeholder="Tìm theo tên, email, SĐT, mã đơn hoặc tên combo"
+      />
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-border">
         <Table>
@@ -103,10 +150,20 @@ export default async function EventOrdersPage({
         </Table>
         {orders.length === 0 && (
           <p className="p-6 text-center text-sm text-muted-foreground">
-            Chưa có đơn hàng nào cho sự kiện này.
+            {q
+              ? "Không tìm thấy đơn hàng phù hợp."
+              : "Chưa có đơn hàng nào cho sự kiện này."}
           </p>
         )}
       </div>
+
+      <AdminPagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={matchCount}
+        query={{ q: q || undefined }}
+        pathname={`/admin/events/${id}/orders`}
+      />
     </div>
   );
 }

@@ -1,14 +1,10 @@
-import Link from "next/link";
 import type { Prisma } from "@/generated/prisma/client";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth-helpers";
 import { AdminDeleteUserButton } from "@/components/admin-delete-user-button";
-import { AdminSetAdminButton } from "@/components/admin-set-admin-button";
+import { AdminSearchForm } from "@/components/admin-search-form";
+import { AdminPagination } from "@/components/admin-pagination";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -17,6 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const PAGE_SIZE = 20;
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
@@ -29,10 +27,9 @@ export default async function AdminUsersPage({
   searchParams,
 }: PageProps<"/admin/users">) {
   const params = await searchParams;
-  const session = await auth();
-  const currentUserId = session?.user?.id;
   const qRaw = params?.q;
   const q = (typeof qRaw === "string" ? qRaw : "").trim();
+  const pageRaw = Number(Array.isArray(params?.page) ? params?.page[0] : params?.page);
 
   const where: Prisma.UserWhereInput = q
     ? {
@@ -44,20 +41,27 @@ export default async function AdminUsersPage({
       }
     : {};
 
-  const [users, total] = await Promise.all([
-    prisma.user.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: { select: { orders: true } },
-        orders: {
-          where: { paymentStatus: "paid" },
-          select: { quantity: true },
-        },
-      },
-    }),
+  const [grandTotal, matchCount] = await Promise.all([
     prisma.user.count(),
+    q ? prisma.user.count({ where }) : prisma.user.count(),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(matchCount / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number.isFinite(pageRaw) ? pageRaw : 1), totalPages);
+
+  const users = await prisma.user.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+    include: {
+      _count: { select: { orders: true } },
+      orders: {
+        where: { paymentStatus: "paid" },
+        select: { quantity: true },
+      },
+    },
+  });
 
   return (
     <div>
@@ -66,30 +70,16 @@ export default async function AdminUsersPage({
           NGƯỜI DÙNG
         </h1>
         <p className="text-sm text-muted-foreground">
-          {q ? `${users.length} kết quả / ` : ""}
-          {total} tài khoản đã đăng nhập
+          {q ? `${matchCount} kết quả / ` : ""}
+          {grandTotal} tài khoản đã đăng nhập
         </p>
       </div>
 
-      <form className="mt-6 flex gap-2" method="get">
-        <Input
-          name="q"
-          defaultValue={q}
-          placeholder="Tìm theo tên, email hoặc số điện thoại"
-          className="max-w-sm"
-        />
-        <Button type="submit" variant="outline" size="sm">
-          Tìm
-        </Button>
-        {q && (
-          <Link
-            href="/admin/users"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            Xoá lọc
-          </Link>
-        )}
-      </form>
+      <AdminSearchForm
+        pathname="/admin/users"
+        value={q}
+        placeholder="Tìm theo tên, email hoặc số điện thoại"
+      />
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-border">
         <Table>
@@ -109,12 +99,8 @@ export default async function AdminUsersPage({
                 (sum, order) => sum + order.quantity,
                 0,
               );
-              const envAdmin = isAdminEmail(user.email);
-              const admin = envAdmin || user.role === "admin";
-              const isSelf = user.id === currentUserId;
+              const admin = isAdminEmail(user.email);
               const displayName = user.name ?? user.email;
-              const canToggleAdmin = !envAdmin && !isSelf;
-              const canDelete = !admin && user._count.orders === 0;
 
               return (
                 <TableRow key={user.id}>
@@ -150,24 +136,13 @@ export default async function AdminUsersPage({
                     {formatDate(user.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {canToggleAdmin || canDelete ? (
-                      <div className="flex justify-end gap-2">
-                        {canToggleAdmin && (
-                          <AdminSetAdminButton
-                            userId={user.id}
-                            label={displayName}
-                            isAdmin={user.role === "admin"}
-                          />
-                        )}
-                        {canDelete && (
-                          <AdminDeleteUserButton
-                            userId={user.id}
-                            label={displayName}
-                          />
-                        )}
-                      </div>
-                    ) : (
+                    {admin || user._count.orders > 0 ? (
                       <span className="text-sm text-muted-foreground">—</span>
+                    ) : (
+                      <AdminDeleteUserButton
+                        userId={user.id}
+                        label={displayName}
+                      />
                     )}
                   </TableCell>
                 </TableRow>
@@ -181,6 +156,14 @@ export default async function AdminUsersPage({
           </p>
         )}
       </div>
+
+      <AdminPagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={matchCount}
+        query={{ q: q || undefined }}
+        pathname="/admin/users"
+      />
     </div>
   );
 }
