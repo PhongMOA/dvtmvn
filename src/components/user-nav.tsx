@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
-import { isAdminEmail } from "@/lib/auth-helpers";
+import { isAdmin } from "@/lib/auth-helpers";
 import { buttonVariants } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -27,7 +27,7 @@ export async function UserNav() {
     );
   }
 
-  const isAdmin = isAdminEmail(user.email);
+  const admin = await isAdmin(user);
   const displayName = user.name ?? user.email ?? "Người dùng";
   const initial = displayName.trim().charAt(0).toUpperCase();
 
@@ -68,7 +68,7 @@ export async function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuLinkItem href="/my-tickets">Vé của tôi</DropdownMenuLinkItem>
         <DropdownMenuLinkItem href="/profile">Thông tin tài khoản</DropdownMenuLinkItem>
-        {isAdmin && (
+        {admin && (
           <DropdownMenuLinkItem href="/admin/events">Quản trị</DropdownMenuLinkItem>
         )}
         <DropdownMenuSeparator />

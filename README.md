@@ -14,6 +14,8 @@ npm run dev
 
 Biến môi trường cần điền trong `.env`: `DATABASE_URL`/`DIRECT_URL` (Postgres), `ADMIN_EMAIL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET`, `SEPAY_BANK_ACCOUNT_NUMBER`/`SEPAY_BANK_NAME`/`SEPAY_WEBHOOK_SECRET`.
 
+`ADMIN_EMAIL` là admin "bootstrap" (luôn có quyền, không gỡ được). Sau khi đăng nhập, admin này có thể cấp/gỡ quyền admin cho user khác ở `/admin/users` (lưu vào cột `User.role`).
+
 ## Cấu trúc chính
 
 ```
@@ -29,4 +31,4 @@ src/app/admin/                 # CRUD event/combo, xem đơn, check-in
 
 ## Giới hạn MVP
 
-Chọn ghế, quét QR check-in bằng camera, nhiều admin/phân quyền, giới hạn combo/user.
+Chọn ghế, quét QR check-in bằng camera, phân quyền chi tiết (chỉ 1 mức "admin"), giới hạn combo/user.

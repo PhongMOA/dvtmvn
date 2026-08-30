@@ -28,6 +28,7 @@ model User {
   image         String?
   phone         String? // bắt buộc bổ sung sau khi đăng nhập lần đầu (xem ProfileModal) — cần để liên hệ khi giao/nhận combo
   address       String? // bắt buộc bổ sung sau khi đăng nhập lần đầu (xem ProfileModal)
+  role          String    @default("user") // "user" | "admin". Quyền admin = role == "admin" HOẶC email khớp ADMIN_EMAIL (admin bootstrap từ env, luôn admin, không set/gỡ được qua UI). Xem src/lib/auth-helpers.ts.
   emailVerified DateTime? // required bởi @auth/prisma-adapter (schema chuẩn Auth.js), không dùng cho logic app
   createdAt     DateTime  @default(now())
   orders        Order[]

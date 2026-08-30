@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Prisma } from "@/generated/prisma/client";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth-helpers";
 import { AdminDeleteUserButton } from "@/components/admin-delete-user-button";
+import { AdminSetAdminButton } from "@/components/admin-set-admin-button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -27,6 +29,8 @@ export default async function AdminUsersPage({
   searchParams,
 }: PageProps<"/admin/users">) {
   const params = await searchParams;
+  const session = await auth();
+  const currentUserId = session?.user?.id;
   const qRaw = params?.q;
   const q = (typeof qRaw === "string" ? qRaw : "").trim();
 
@@ -105,8 +109,12 @@ export default async function AdminUsersPage({
                 (sum, order) => sum + order.quantity,
                 0,
               );
-              const admin = isAdminEmail(user.email);
+              const envAdmin = isAdminEmail(user.email);
+              const admin = envAdmin || user.role === "admin";
+              const isSelf = user.id === currentUserId;
               const displayName = user.name ?? user.email;
+              const canToggleAdmin = !envAdmin && !isSelf;
+              const canDelete = !admin && user._count.orders === 0;
 
               return (
                 <TableRow key={user.id}>
@@ -142,13 +150,24 @@ export default async function AdminUsersPage({
                     {formatDate(user.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {admin || user._count.orders > 0 ? (
-                      <span className="text-sm text-muted-foreground">—</span>
+                    {canToggleAdmin || canDelete ? (
+                      <div className="flex justify-end gap-2">
+                        {canToggleAdmin && (
+                          <AdminSetAdminButton
+                            userId={user.id}
+                            label={displayName}
+                            isAdmin={user.role === "admin"}
+                          />
+                        )}
+                        {canDelete && (
+                          <AdminDeleteUserButton
+                            userId={user.id}
+                            label={displayName}
+                          />
+                        )}
+                      </div>
                     ) : (
-                      <AdminDeleteUserButton
-                        userId={user.id}
-                        label={displayName}
-                      />
+                      <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </TableCell>
                 </TableRow>

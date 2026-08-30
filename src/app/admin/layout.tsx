@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { isAdminEmail } from "@/lib/auth-helpers";
+import { isAdmin } from "@/lib/auth-helpers";
 import { AdminScanLink } from "@/components/admin-scan-link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const session = await auth();
-  if (!isAdminEmail(session?.user?.email)) {
+  if (!(await isAdmin(session?.user))) {
     redirect("/");
   }
 
