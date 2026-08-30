@@ -30,10 +30,58 @@ export function WebScanCheckin() {
     controlsRef.current = null;
   }, []);
 
-  // Rời trang giữa lúc đang quét -> tắt camera, tránh đèn camera sáng chạy ngầm.
-  useEffect(() => stopCamera, [stopCamera]);
+  // Khởi động camera trong effect (KHÔNG trong handler click) — phải đợi
+  // React render xong thẻ <video> thì `videoRef.current` mới có; gọi
+  // decodeFromConstraints ngay trong handler thì ref còn null -> @zxing tự tạo
+  // video ẩn, màn hình chỉ thấy nền đen.
+  useEffect(() => {
+    if (!scanning) return;
 
-  async function startScan() {
+    let cancelled = false;
+    const reader = new BrowserQRCodeReader(undefined, {
+      delayBetweenScanAttempts: 120,
+      delayBetweenScanSuccess: 800,
+    });
+
+    reader
+      .decodeFromConstraints(
+        { video: { facingMode: "environment" } },
+        videoRef.current ?? undefined,
+        (decoded) => {
+          if (!decoded) return; // frame chưa bắt được mã
+          const qrToken = decoded.getText();
+          if (!qrToken || shouldIgnore(qrToken)) return;
+          setLocked(true);
+          void resolveToken(qrToken);
+        },
+      )
+      .then((controls) => {
+        if (cancelled) {
+          controls.stop();
+          return;
+        }
+        controlsRef.current = controls;
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const name = err instanceof Error ? err.name : "";
+        setScanning(false);
+        setError(
+          name === "NotAllowedError" || name === "SecurityError"
+            ? "Bạn đã từ chối quyền camera. Vào cài đặt trình duyệt cấp lại quyền cho trang này rồi thử lại."
+            : name === "NotFoundError" || name === "OverconstrainedError"
+              ? "Không tìm thấy camera trên thiết bị này."
+              : "Không mở được camera, vui lòng thử lại.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+      stopCamera();
+    };
+  }, [scanning, shouldIgnore, resolveToken, stopCamera]);
+
+  function startScan() {
     setError(null);
 
     if (
@@ -49,41 +97,9 @@ export function WebScanCheckin() {
     reset();
     setLocked(false);
     setScanning(true);
-
-    // delayBetweenScanSuccess cao hơn mặc định: sau khi quét trúng 1 mã, admin
-    // cần vài giây để xử lý thẻ kết quả — không cần zxing giải mã dồn dập tiếp.
-    const reader = new BrowserQRCodeReader(undefined, {
-      delayBetweenScanAttempts: 120,
-      delayBetweenScanSuccess: 800,
-    });
-
-    try {
-      controlsRef.current = await reader.decodeFromConstraints(
-        { video: { facingMode: "environment" } },
-        videoRef.current ?? undefined,
-        (decoded) => {
-          if (!decoded) return; // frame chưa bắt được mã -> bỏ qua
-          const qrToken = decoded.getText();
-          if (!qrToken || shouldIgnore(qrToken)) return;
-          setLocked(true);
-          void resolveToken(qrToken);
-        },
-      );
-    } catch (err) {
-      setScanning(false);
-      const name = err instanceof Error ? err.name : "";
-      setError(
-        name === "NotAllowedError" || name === "SecurityError"
-          ? "Bạn đã từ chối quyền camera. Vào cài đặt trình duyệt cấp lại quyền cho trang này rồi thử lại."
-          : name === "NotFoundError" || name === "OverconstrainedError"
-            ? "Không tìm thấy camera trên thiết bị này."
-            : "Không mở được camera, vui lòng thử lại.",
-      );
-    }
   }
 
   function stopScan() {
-    stopCamera();
     setScanning(false);
     setLocked(false);
   }
@@ -118,6 +134,7 @@ export function WebScanCheckin() {
           <video
             ref={videoRef}
             className="absolute inset-0 h-full w-full object-cover"
+            autoPlay
             playsInline
             muted
           />
