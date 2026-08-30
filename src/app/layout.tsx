@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Cal_Sans, Anton } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { auth } from "@/auth";
+import { isAdmin } from "@/lib/auth-helpers";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { ProfileModal } from "@/components/profile-modal";
@@ -53,6 +54,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
+  const admin = await isAdmin(session?.user);
 
   return (
     <html
@@ -65,7 +67,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Toaster richColors theme="dark" />
         <ProfileModal />
         <PushRegistrar />
-        <AppBottomNav isLoggedIn={!!session?.user} />
+        <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} />
       </body>
     </html>
   );

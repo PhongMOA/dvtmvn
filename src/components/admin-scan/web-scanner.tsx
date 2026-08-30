@@ -130,7 +130,7 @@ export function WebScanCheckin() {
       )}
 
       {scanning && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black">
+        <div className="fixed inset-0 z-[60] flex flex-col bg-black">
           <video
             ref={videoRef}
             className="absolute inset-0 h-full w-full object-cover"
