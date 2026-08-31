@@ -3,8 +3,10 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { refreshShipmentStatus } from "@/app/actions/order-status";
+import { ghtkStatusColorClass } from "@/lib/ghtk";
 import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function formatDateTime(iso: string) {
   return new Intl.DateTimeFormat("vi-VN", {
@@ -15,7 +17,8 @@ function formatDateTime(iso: string) {
 
 /**
  * Khối "vận chuyển GHTK" dưới mỗi vé đã thanh toán ở /my-tickets. Hiện mã vận
- * đơn + trạng thái, nút "Cập nhật" gọi refreshShipmentStatus.
+ * đơn + trạng thái (có mã màu theo tiến độ: đỏ = huỷ/thất bại, xanh = đã giao,
+ * vàng sáng dần theo tiến độ xử lý), nút "Cập nhật" gọi refreshShipmentStatus.
  *
  * Nếu đơn GHTK chưa tạo được (error && !label): chỉ báo chung chung, không lộ
  * chi tiết lỗi kỹ thuật cho khách — admin sẽ tạo lại ở trang quản lý.
@@ -23,17 +26,22 @@ function formatDateTime(iso: string) {
 export function ShipmentStatus({
   orderId,
   label,
+  status,
   statusText,
   syncedAt,
   error,
 }: {
   orderId: string;
   label: string | null;
+  status: string | null;
   statusText: string | null;
   syncedAt: string | null;
   error: string | null;
 }) {
-  const [status, setStatus] = useState(statusText);
+  const [current, setCurrent] = useState<{
+    status: string | null;
+    text: string | null;
+  }>({ status, text: statusText });
   const [synced, setSynced] = useState(syncedAt);
   const [isPending, startTransition] = useTransition();
 
@@ -54,7 +62,7 @@ export function ShipmentStatus({
         toast.error(result.error);
         return;
       }
-      setStatus(result.statusText);
+      setCurrent({ status: result.status, text: result.statusText });
       setSynced(new Date().toISOString());
       toast.success("Đã cập nhật trạng thái vận chuyển.");
     });
@@ -73,8 +81,10 @@ export function ShipmentStatus({
       </div>
       <div className="flex items-center justify-between gap-2">
         <span className="text-muted-foreground">Trạng thái</span>
-        <span className="font-medium text-foreground">
-          {status ?? "Đang cập nhật"}
+        <span
+          className={cn("font-semibold", ghtkStatusColorClass(current.status))}
+        >
+          {current.text ?? "Đang cập nhật"}
         </span>
       </div>
       <div className="flex items-center justify-between gap-2">

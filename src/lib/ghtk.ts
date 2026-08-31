@@ -344,6 +344,46 @@ export const GHTK_STATUS_TEXT: Record<string, string> = {
   "128": "Shipper báo đã lấy hàng",
 };
 
+/**
+ * Class màu (Tailwind) cho nhãn trạng thái vận chuyển:
+ *   - huỷ / thất bại / trả hàng → đỏ
+ *   - đã giao / đã đối soát      → xanh
+ *   - đang xử lý (pending)       → vàng, sáng dần theo tiến độ
+ *     (chưa tiếp nhận → đã tiếp nhận → đang lấy → đã lấy/nhập kho → đang giao)
+ */
+export function ghtkStatusColorClass(statusId: string | null | undefined): string {
+  switch (statusId) {
+    case "-1": // huỷ
+    case "7": // không lấy được hàng
+    case "9": // không giao được hàng
+    case "13": // bồi hoàn
+    case "20": // đang trả hàng
+    case "21": // đã trả hàng
+      return "text-[#ef4444]";
+    case "5": // đã giao
+    case "6": // đã đối soát
+    case "11": // đã đối soát công nợ trả hàng
+      return "text-[#22c55e]";
+    case "1": // chưa tiếp nhận
+      return "text-[#b45309]";
+    case "2": // đã tiếp nhận
+    case "8": // hoãn lấy hàng
+    case "123": // shipper báo delay lấy hàng
+      return "text-[#d97706]";
+    case "12": // đang lấy hàng
+    case "128": // shipper báo đã lấy hàng
+      return "text-[#f59e0b]";
+    case "3": // đã lấy hàng / nhập kho
+      return "text-[#fbbf24]";
+    case "4": // đang giao hàng
+    case "10": // delay giao hàng
+    case "127": // shipper báo delay giao hàng
+      return "text-[#fde047]";
+    default:
+      return "text-foreground";
+  }
+}
+
 export type ShipmentStatusResult =
   | { ok: true; status: string; statusText: string }
   | { ok: false; error: string };

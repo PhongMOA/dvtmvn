@@ -3,6 +3,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { checkInOrder, retryGhtkOrder } from "@/app/actions/admin-orders";
 import { AdminCancelShipment } from "@/components/admin-cancel-shipment";
+import { ghtkStatusColorClass } from "@/lib/ghtk";
+import { cn } from "@/lib/utils";
 import { parseComboItems } from "@/lib/combo";
 import { AdminSearchForm } from "@/components/admin-search-form";
 import { AdminPagination } from "@/components/admin-pagination";
@@ -138,7 +140,12 @@ export default async function EventOrdersPage({
                       <span className="font-mono font-medium text-foreground">
                         {order.ghtkLabel}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span
+                        className={cn(
+                          "text-xs font-medium",
+                          ghtkStatusColorClass(order.ghtkStatus),
+                        )}
+                      >
                         {order.ghtkStatusText ?? "Đã tạo đơn"}
                       </span>
                       {order.ghtkStatus !== "-1" && (

@@ -81,7 +81,7 @@ export async function skipPayment(orderId: string): Promise<OrderStatusResult> {
 }
 
 export type RefreshShipmentResult =
-  | { ok: true; statusText: string }
+  | { ok: true; status: string; statusText: string }
   | { ok: false; error: string };
 
 /**
@@ -121,5 +121,5 @@ export async function refreshShipmentStatus(
   });
 
   revalidatePath("/my-tickets");
-  return { ok: true, statusText: result.statusText };
+  return { ok: true, status: result.status, statusText: result.statusText };
 }

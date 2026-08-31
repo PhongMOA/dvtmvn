@@ -128,6 +128,7 @@ export default async function MyTicketsPage() {
                   <ShipmentStatus
                     orderId={order.id}
                     label={order.ghtkLabel}
+                    status={order.ghtkStatus}
                     statusText={order.ghtkStatusText}
                     syncedAt={order.ghtkSyncedAt?.toISOString() ?? null}
                     error={order.ghtkError}
