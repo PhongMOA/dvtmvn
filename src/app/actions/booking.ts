@@ -199,14 +199,29 @@ export async function prepareCheckout(
     };
   }
 
-  // Lưu địa chỉ vào hồ sơ user để lần sau điền sẵn (không chặn nếu lỗi).
-  try {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { phone, province, district, ward, address },
-    });
-  } catch {
-    /* không critical */
+  // Chỉ ghi địa chỉ vào hồ sơ user khi hồ sơ CHƯA đầy đủ (lần đầu điền) — để
+  // ProfileModal thôi nhắc. Nếu hồ sơ đã đủ mà khách chọn "Giao địa chỉ khác"
+  // thì đây là địa chỉ dùng 1 lần, không được ghi đè hồ sơ. Địa chỉ của đơn
+  // luôn được snapshot vào Order bên dưới.
+  const profileRow = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { province: true, district: true, ward: true, address: true },
+  });
+  const profileWasComplete = Boolean(
+    profileRow?.province &&
+      profileRow?.district &&
+      profileRow?.ward &&
+      profileRow?.address,
+  );
+  if (!profileWasComplete) {
+    try {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { phone, province, district, ward, address },
+      });
+    } catch {
+      /* không critical */
+    }
   }
 
   const estimate = await estimateShippingFee({

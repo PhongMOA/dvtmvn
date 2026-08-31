@@ -11,6 +11,7 @@ import { AddressFields } from "@/components/address-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 function formatVnd(amount: number) {
   return new Intl.NumberFormat("vi-VN", {
@@ -21,10 +22,17 @@ function formatVnd(amount: number) {
 
 type Summary = Extract<PrepareCheckoutResult, { ok: true }>;
 
+function isProfileComplete(p: CheckoutProfile): boolean {
+  return Boolean(
+    p.phone && p.province && p.district && p.ward && p.address,
+  );
+}
+
 /**
  * UI 2 bước dùng chung cho việc chốt đơn combo trước khi thanh toán:
- *   1. Xác nhận thông tin nhận hàng (sửa được địa chỉ) → gọi prepareCheckout
- *      (validate + tính phí ship GHTK + snapshot vào Order).
+ *   1. Chọn địa chỉ nhận hàng — mặc định dùng địa chỉ trong hồ sơ, hoặc chọn
+ *      "Giao địa chỉ khác" để nhập tay → gọi prepareCheckout (validate + tính
+ *      phí ship GHTK + snapshot vào Order).
  *   2. Tóm tắt: tiền combo + phí ship + tổng cộng → bấm "Thanh toán ngay".
  *
  * Dùng ở 2 nơi:
@@ -44,12 +52,24 @@ export function ShippingCheckout({
   defaultProfile: CheckoutProfile;
   onProceed: () => void;
 }) {
+  const profileComplete = isProfileComplete(defaultProfile);
+  const [mode, setMode] = useState<"profile" | "other">(
+    profileComplete ? "profile" : "other",
+  );
   const [summary, setSummary] = useState<Summary | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleConfirm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    if (mode === "profile") {
+      formData.set("name", defaultProfile.name);
+      formData.set("phone", defaultProfile.phone);
+      formData.set("province", defaultProfile.province);
+      formData.set("district", defaultProfile.district);
+      formData.set("ward", defaultProfile.ward);
+      formData.set("address", defaultProfile.address);
+    }
     startTransition(async () => {
       const result = await prepareCheckout(orderId, formData);
       if (!result.ok) {
@@ -60,11 +80,9 @@ export function ShippingCheckout({
     });
   }
 
-  const gap = variant === "page" ? "gap-4" : "gap-4";
-
   if (summary) {
     return (
-      <div className={`flex flex-col ${gap}`}>
+      <div className="flex flex-col gap-4">
         <dl className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4 text-left text-sm">
           <div className="flex items-center justify-between">
             <dt className="text-muted-foreground">Tiền combo</dt>
@@ -108,51 +126,113 @@ export function ShippingCheckout({
     );
   }
 
+  const profileLine = [
+    defaultProfile.address,
+    defaultProfile.ward,
+    defaultProfile.district,
+    defaultProfile.province,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <form
-      key={[
-        defaultProfile.name,
-        defaultProfile.phone,
-        defaultProfile.province,
-        defaultProfile.district,
-        defaultProfile.ward,
-        defaultProfile.address,
-      ].join("|")}
       onSubmit={handleConfirm}
-      className={`flex flex-col ${gap} text-left`}
+      className={cn(
+        "flex flex-col text-left",
+        variant === "page" ? "gap-4" : "gap-3",
+      )}
     >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`checkout-name-${orderId}`}>Người nhận</Label>
-        <Input
-          id={`checkout-name-${orderId}`}
-          name="name"
-          defaultValue={defaultProfile.name}
-          placeholder="Họ tên người nhận hàng"
+      <label
+        className={cn(
+          "flex cursor-pointer gap-3 rounded-lg border p-3 text-sm",
+          mode === "profile"
+            ? "border-accent bg-accent/5"
+            : "border-border",
+          !profileComplete && "cursor-not-allowed opacity-60",
+        )}
+      >
+        <input
+          type="radio"
+          name="ship-mode"
+          value="profile"
+          checked={mode === "profile"}
+          disabled={!profileComplete}
+          onChange={() => setMode("profile")}
+          className="mt-0.5 accent-accent"
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`checkout-phone-${orderId}`}>Số điện thoại</Label>
-        <Input
-          id={`checkout-phone-${orderId}`}
-          name="phone"
-          type="tel"
-          defaultValue={defaultProfile.phone}
-          placeholder="09xxxxxxxx"
-          required
+        <span className="flex flex-col gap-0.5">
+          <span className="font-medium text-foreground">
+            Giao tới địa chỉ trong hồ sơ
+          </span>
+          {profileComplete ? (
+            <span className="text-muted-foreground">
+              {defaultProfile.name || "—"} · {defaultProfile.phone}
+              <br />
+              {profileLine}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              Hồ sơ chưa có đủ địa chỉ — chọn &quot;Giao địa chỉ khác&quot; để nhập.
+            </span>
+          )}
+        </span>
+      </label>
+
+      <label
+        className={cn(
+          "flex cursor-pointer gap-3 rounded-lg border p-3 text-sm",
+          mode === "other" ? "border-accent bg-accent/5" : "border-border",
+        )}
+      >
+        <input
+          type="radio"
+          name="ship-mode"
+          value="other"
+          checked={mode === "other"}
+          onChange={() => setMode("other")}
+          className="mt-0.5 accent-accent"
         />
-      </div>
-      <AddressFields
-        idPrefix={`checkout-${orderId}`}
-        defaultProvince={defaultProfile.province}
-        defaultDistrict={defaultProfile.district}
-        defaultWard={defaultProfile.ward}
-        defaultAddress={defaultProfile.address}
-      />
-      <p className="text-xs text-muted-foreground">
-        Tên Tỉnh/Thành cần khớp cách gọi của GHTK (vd &quot;Hà Nội&quot;, &quot;TP.
-        Hồ Chí Minh&quot;). Hệ thống sẽ tính phí ship theo địa chỉ này.
-      </p>
-      <Button type="submit" disabled={isPending} className="w-full">
+        <span className="font-medium text-foreground">Giao địa chỉ khác</span>
+      </label>
+
+      {mode === "other" && (
+        <div className="flex flex-col gap-4 rounded-lg border border-border p-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`checkout-name-${orderId}`}>Người nhận</Label>
+            <Input
+              id={`checkout-name-${orderId}`}
+              name="name"
+              defaultValue={defaultProfile.name}
+              placeholder="Họ tên người nhận hàng"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`checkout-phone-${orderId}`}>Số điện thoại</Label>
+            <Input
+              id={`checkout-phone-${orderId}`}
+              name="phone"
+              type="tel"
+              defaultValue={defaultProfile.phone}
+              placeholder="09xxxxxxxx"
+              required
+            />
+          </div>
+          <AddressFields
+            idPrefix={`checkout-${orderId}`}
+            defaultProvince={defaultProfile.province}
+            defaultDistrict={defaultProfile.district}
+            defaultWard={defaultProfile.ward}
+            defaultAddress={defaultProfile.address}
+          />
+        </div>
+      )}
+
+      <Button
+        type="submit"
+        disabled={isPending || (mode === "profile" && !profileComplete)}
+        className="w-full"
+      >
         {isPending ? "Đang tính phí ship..." : "Tiếp tục"}
       </Button>
     </form>
