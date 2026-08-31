@@ -8,9 +8,10 @@
  * Auth: header `Token: <token>` + `X-Client-Source: <mã shop>`.
  *
  * Hiện chỉ dùng endpoint tính phí `GET /services/shipment/fee` để KIỂM TRA địa chỉ
- * lấy hàng có hợp lệ với mạng lưới GHTK không (endpoint parse-address đang lỗi trên
- * token production). Fee yêu cầu tên tỉnh/quận đúng chuẩn GHTK ("Hà Nội",
- * "TP. Hồ Chí Minh", "Quận Ba Đình"...) — sai tên -> success:false.
+ * có hợp lệ với mạng lưới GHTK không (endpoint parse-address đang lỗi trên token
+ * production). LƯU Ý (MVP): fee chỉ thực sự kiểm tra được cấp TỈNH/THÀNH — cho
+ * `province` hợp lệ là GHTK trả phí bất kể quận/huyện có thật hay không. Tên tỉnh
+ * phải gần đúng chuẩn GHTK ("Hà Nội", "Hồ Chí Minh"/"TP. Hồ Chí Minh"...).
  */
 
 const BASE_URL = (
@@ -23,14 +24,17 @@ export function isGhtkConfigured(): boolean {
   return Boolean(TOKEN && CLIENT_SOURCE);
 }
 
-export type PickLocationCheck =
-  /** GHTK tính được phí -> tỉnh/quận hợp lệ, giao được. */
+export type LocationCheck =
+  /** GHTK tính được phí -> tỉnh (ít nhất) hợp lệ, giao được. */
   | { status: "ok"; fee: number }
-  /** GHTK phản hồi bình thường nhưng từ chối -> địa chỉ/tỉnh/quận không hợp lệ. */
+  /** GHTK phản hồi bình thường nhưng từ chối -> tỉnh/thành không hợp lệ. */
   | { status: "rejected" }
   /** Không kiểm tra được (chưa cấu hình, lỗi mạng, GHTK 5xx...) — caller nên cho
    *  lưu kèm cảnh báo thay vì chặn. */
   | { status: "unavailable"; detail: string };
+
+/** @deprecated dùng {@link LocationCheck} */
+export type PickLocationCheck = LocationCheck;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -38,12 +42,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Kiểm tra một địa điểm có nằm trong vùng phục vụ của GHTK không, bằng cách hỏi
  * phí ship với điểm lấy = điểm giao = địa điểm đó. Thử lại 1 lần khi GHTK trả
  * success:false rỗng (endpoint fee thỉnh thoảng hiccup) hoặc lỗi mạng.
+ *
+ * MVP: thực chất chỉ xác thực được cấp tỉnh/thành (xem chú thích đầu file).
+ * `district` truyền để fee chạy đúng dạng request, không được kiểm tra chặt.
  */
-export async function checkPickLocation(input: {
+export async function checkLocationServiceable(input: {
   province: string;
   district: string;
   address: string;
-}): Promise<PickLocationCheck> {
+}): Promise<LocationCheck> {
   if (!isGhtkConfigured()) {
     return { status: "unavailable", detail: "NOT_CONFIGURED" };
   }
@@ -98,3 +105,6 @@ export async function checkPickLocation(input: {
 
   return { status: "unavailable", detail: lastDetail };
 }
+
+/** @deprecated đổi tên thành {@link checkLocationServiceable}. */
+export const checkPickLocation = checkLocationServiceable;

@@ -12,9 +12,14 @@ export type BookComboResult =
       ok: false;
       error: string;
       // Chỉ có khi error === "MISSING_PROFILE" — giá trị hiện có (có thể đã
-      // điền 1 trong 2 trường) để client hiện sẵn trong modal bắt buộc bổ
-      // sung, không bắt user gõ lại từ đầu.
-      profile?: { phone: string; address: string };
+      // điền một phần) để client hiện sẵn trong modal bắt buộc bổ sung, không
+      // bắt user gõ lại từ đầu.
+      profile?: {
+        phone: string;
+        province: string;
+        district: string;
+        address: string;
+      };
     };
 
 export async function bookCombo(
@@ -32,19 +37,29 @@ export async function bookCombo(
     return { ok: false, error: "Số lượng không hợp lệ." };
   }
 
-  // Bắt buộc có SĐT + địa chỉ trước khi giữ chỗ — cần để giao vé/combo sau
-  // này. ProfileModal ở layout chỉ nhắc nhẹ (dismiss được), nên phải chặn
-  // thật ở đây (nguồn dữ liệu DB, không tin trạng thái client) chứ không chỉ
-  // dựa vào việc modal đó có đang hiện hay không.
+  // Bắt buộc có SĐT + địa chỉ giao hàng (tỉnh/quận/chi tiết) trước khi giữ
+  // chỗ — cần để giao vé/combo sau này. ProfileModal ở layout chỉ nhắc nhẹ
+  // (dismiss được), nên phải chặn thật ở đây (nguồn dữ liệu DB, không tin
+  // trạng thái client) chứ không chỉ dựa vào việc modal đó có đang hiện hay không.
   const profile = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { phone: true, address: true },
+    select: { phone: true, province: true, district: true, address: true },
   });
-  if (!profile?.phone || !profile?.address) {
+  if (
+    !profile?.phone ||
+    !profile?.province ||
+    !profile?.district ||
+    !profile?.address
+  ) {
     return {
       ok: false,
       error: "MISSING_PROFILE",
-      profile: { phone: profile?.phone ?? "", address: profile?.address ?? "" },
+      profile: {
+        phone: profile?.phone ?? "",
+        province: profile?.province ?? "",
+        district: profile?.district ?? "",
+        address: profile?.address ?? "",
+      },
     };
   }
 

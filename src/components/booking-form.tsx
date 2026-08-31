@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { bookCombo } from "@/app/actions/booking";
 import { updateProfile } from "@/app/actions/profile";
+import { AddressFields } from "@/components/address-fields";
 import {
   Dialog,
   DialogPopup,
@@ -32,6 +33,8 @@ export function BookingForm({
   // nguyên giá trị đã điền (nếu có) để user không phải gõ lại từ đầu.
   const [missingProfile, setMissingProfile] = useState<{
     phone: string;
+    province: string;
+    district: string;
     address: string;
   } | null>(null);
   const [isSavingProfile, startSavingProfile] = useTransition();
@@ -47,7 +50,14 @@ export function BookingForm({
           return;
         }
         if (result.error === "MISSING_PROFILE") {
-          setMissingProfile(result.profile ?? { phone: "", address: "" });
+          setMissingProfile(
+            result.profile ?? {
+              phone: "",
+              province: "",
+              district: "",
+              address: "",
+            },
+          );
           return;
         }
         toast.error(result.error);
@@ -75,7 +85,8 @@ export function BookingForm({
         toast.error(result.error);
         return;
       }
-      toast.success("Đã lưu thông tin liên hệ.");
+      if (result.warning) toast.warning(result.warning);
+      else toast.success("Đã lưu thông tin liên hệ.");
       setMissingProfile(null);
       submitBooking();
     });
@@ -124,10 +135,15 @@ export function BookingForm({
             </DialogDescription>
           </DialogHeader>
           {missingProfile && (
-            // key theo phone/address: tránh Base UI báo lỗi đổi defaultValue
-            // sau khi Input đã init (cùng lý do với ProfileModalClient).
+            // key theo các trường: tránh Base UI báo lỗi đổi defaultValue sau
+            // khi Input đã init (cùng lý do với ProfileModalClient).
             <form
-              key={`${missingProfile.phone}-${missingProfile.address}`}
+              key={[
+                missingProfile.phone,
+                missingProfile.province,
+                missingProfile.district,
+                missingProfile.address,
+              ].join("|")}
               onSubmit={handleProfileSubmit}
               className="mt-4 flex flex-col gap-4"
             >
@@ -144,16 +160,12 @@ export function BookingForm({
                   required
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor={`booking-address-${comboTypeId}`}>Địa chỉ</Label>
-                <Input
-                  id={`booking-address-${comboTypeId}`}
-                  name="address"
-                  defaultValue={missingProfile.address}
-                  placeholder="Số nhà, đường, quận/huyện, tỉnh/thành"
-                  required
-                />
-              </div>
+              <AddressFields
+                idPrefix={`booking-${comboTypeId}`}
+                defaultProvince={missingProfile.province}
+                defaultDistrict={missingProfile.district}
+                defaultAddress={missingProfile.address}
+              />
               <Button type="submit" disabled={isSavingProfile} className="w-fit">
                 {isSavingProfile ? "Đang lưu..." : "Lưu & tiếp tục đặt combo"}
               </Button>

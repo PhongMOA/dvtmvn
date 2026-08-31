@@ -29,6 +29,8 @@ export default async function ProfilePage() {
         name={user.name ?? ""}
         email={user.email}
         defaultPhone={user.phone ?? ""}
+        defaultProvince={user.province ?? ""}
+        defaultDistrict={user.district ?? ""}
         defaultAddress={user.address ?? ""}
       />
     </div>
