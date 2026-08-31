@@ -10,10 +10,14 @@ import { Label } from "@/components/ui/label";
 export function PickInfoForm({
   defaultName,
   defaultTel,
+  defaultProvince,
+  defaultDistrict,
   defaultAddress,
 }: {
   defaultName: string;
   defaultTel: string;
+  defaultProvince: string;
+  defaultDistrict: string;
   defaultAddress: string;
 }) {
   const [state, formAction, isPending] = useActionState(updatePickInfo, {
@@ -22,7 +26,8 @@ export function PickInfoForm({
 
   useEffect(() => {
     if (state.error) toast.error(state.error);
-    else if (state.success) toast.success("Đã lưu thông tin kho lấy hàng.");
+    else if (state.warning) toast.warning(state.warning);
+    else if (state.success) toast.success("Đã lưu — GHTK xác nhận địa chỉ hợp lệ.");
   }, [state]);
 
   return (
@@ -30,7 +35,7 @@ export function PickInfoForm({
     // truyền defaultValue mới xuống trong khi form còn mounted -> Input uncontrolled
     // sẽ báo lỗi "changing the default value". Đổi key buộc React remount.
     <form
-      key={`${defaultName}-${defaultTel}-${defaultAddress}`}
+      key={[defaultName, defaultTel, defaultProvince, defaultDistrict, defaultAddress].join("|")}
       action={formAction}
       className="mt-4 flex flex-col gap-4"
     >
@@ -55,18 +60,45 @@ export function PickInfoForm({
           required
         />
       </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="pickProvince">Tỉnh/Thành</Label>
+          <Input
+            id="pickProvince"
+            name="pickProvince"
+            defaultValue={defaultProvince}
+            placeholder="VD: TP. Hồ Chí Minh"
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="pickDistrict">Quận/Huyện</Label>
+          <Input
+            id="pickDistrict"
+            name="pickDistrict"
+            defaultValue={defaultDistrict}
+            placeholder="VD: Quận Ba Đình"
+            required
+          />
+        </div>
+      </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="pickAddress">Địa chỉ lấy hàng</Label>
+        <Label htmlFor="pickAddress">Địa chỉ chi tiết</Label>
         <Input
           id="pickAddress"
           name="pickAddress"
           defaultValue={defaultAddress}
-          placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+          placeholder="Số nhà, tên đường, phường/xã"
           required
         />
       </div>
+      <p className="text-xs text-muted-foreground">
+        Tên Tỉnh/Thành và Quận/Huyện phải khớp cách gọi của GHTK (vd &quot;Hà Nội&quot;,
+        &quot;TP. Hồ Chí Minh&quot;, &quot;Quận Ba Đình&quot;). Khi bấm lưu, hệ thống
+        gọi GHTK kiểm tra địa chỉ có giao được không.
+      </p>
       <Button type="submit" size="lg" disabled={isPending} className="w-fit">
-        {isPending ? "Đang lưu..." : "Lưu thay đổi"}
+        {isPending ? "Đang kiểm tra & lưu..." : "Lưu thay đổi"}
       </Button>
     </form>
   );

@@ -163,9 +163,11 @@ model SepayTransaction {
 // thông tin kho lấy hàng để tạo đơn ship GHTK (pick_name/pick_tel/pick_address).
 // Sửa tại /admin/settings.
 model ShopSetting {
-  id          String   @id @default("default")
-  pickName    String   @default("")
-  pickTel     String   @default("")
-  pickAddress String   @default("")
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default("default")
+  pickName     String   @default("")
+  pickTel      String   @default("")
+  pickProvince String   @default("") // tên tỉnh/thành đúng theo GHTK, vd "Hà Nội", "TP. Hồ Chí Minh"
+  pickDistrict String   @default("") // tên quận/huyện đúng theo GHTK, vd "Quận Ba Đình"
+  pickAddress  String   @default("") // số nhà + đường (địa chỉ chi tiết)
+  updatedAt    DateTime @updatedAt
 }
