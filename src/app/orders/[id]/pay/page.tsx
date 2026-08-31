@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/auth-helpers";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { buildVietQrUrl, getBankTransferInfo } from "@/lib/sepay";
 import { PaymentPendingClient } from "@/components/payment-pending-client";
@@ -186,7 +185,6 @@ export default async function OrderPaymentPage({
       <PaymentPendingClient
         orderId={order.id}
         expiresAt={order.expiresAt.toISOString()}
-        isAdmin={await isAdmin(session.user)}
       />
     </div>
   );
