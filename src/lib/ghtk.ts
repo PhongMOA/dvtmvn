@@ -287,6 +287,38 @@ export async function createGhtkOrder(
   return { ok: false, error: json.message || json.error?.code || "UNKNOWN" };
 }
 
+// --- Huỷ đơn -----------------------------------------------------------------
+
+export type CancelGhtkOrderResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * `POST /services/shipment/cancel/{label}`. GHTK chỉ cho huỷ khi đơn còn ở
+ * trạng thái chưa tiếp nhận (1) / đã tiếp nhận (2) / đang lấy hàng (12) — lấy
+ * hàng xong là không huỷ được, GHTK trả `success:false` kèm message.
+ */
+export async function cancelGhtkOrder(
+  label: string,
+): Promise<CancelGhtkOrderResult> {
+  if (!isGhtkConfigured()) return { ok: false, error: "NOT_CONFIGURED" };
+
+  try {
+    const res = await fetch(
+      `${BASE_URL}/services/shipment/cancel/${encodeURIComponent(label)}`,
+      {
+        method: "POST",
+        headers: { ...ghtkHeaders(), "Content-Type": "application/json" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    const json = (await res.json()) as { success?: boolean; message?: string };
+    if (json.success) return { ok: true };
+    return { ok: false, error: json.message || `HTTP ${res.status}` };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 // --- Trạng thái đơn -----------------------------------------------------------
 
 /** status_id GHTK -> nhãn tiếng Việt (fallback về status_text GHTK trả về). */

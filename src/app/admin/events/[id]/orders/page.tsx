@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { checkInOrder, retryGhtkOrder } from "@/app/actions/admin-orders";
+import { AdminCancelShipment } from "@/components/admin-cancel-shipment";
 import { parseComboItems } from "@/lib/combo";
 import { AdminSearchForm } from "@/components/admin-search-form";
 import { AdminPagination } from "@/components/admin-pagination";
@@ -133,13 +134,16 @@ export default async function EventOrdersPage({
                   {order.paymentStatus !== "paid" ? (
                     <span className="text-sm text-muted-foreground">—</span>
                   ) : order.ghtkLabel ? (
-                    <div className="text-sm">
+                    <div className="flex flex-col items-start gap-1.5 text-sm">
                       <span className="font-mono font-medium text-foreground">
                         {order.ghtkLabel}
                       </span>
-                      <div className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {order.ghtkStatusText ?? "Đã tạo đơn"}
-                      </div>
+                      </span>
+                      {order.ghtkStatus !== "-1" && (
+                        <AdminCancelShipment orderId={order.id} />
+                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col items-start gap-1.5">

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { fulfillPaidOrder } from "@/lib/order-fulfillment";
+import { cancelGhtkOrder } from "@/lib/ghtk";
 
 export async function checkInOrder(orderId: string) {
   await requireAdmin();
@@ -36,6 +37,56 @@ export async function retryGhtkOrder(orderId: string) {
 
   await fulfillPaidOrder(orderId);
   revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+}
+
+export type CancelShipmentResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Huỷ đơn vận chuyển GHTK (chỉ admin). GHTK chỉ cho huỷ khi shipper chưa lấy
+ * hàng — nếu không sẽ trả lỗi kèm lý do. Huỷ xong đánh dấu ghtkStatus = -1
+ * (giữ nguyên label để tra cứu lịch sử).
+ */
+export async function cancelGhtkShipment(
+  orderId: string,
+): Promise<CancelShipmentResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { ok: false, error: "Không có quyền." };
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { comboType: true },
+  });
+  if (!order) return { ok: false, error: "Không tìm thấy đơn." };
+  if (!order.ghtkLabel) return { ok: false, error: "Đơn chưa có mã vận chuyển." };
+
+  const result = await cancelGhtkOrder(order.ghtkLabel);
+  if (!result.ok) {
+    return {
+      ok: false,
+      error:
+        result.error === "NOT_CONFIGURED"
+          ? "Chưa cấu hình GHTK."
+          : result.error,
+    };
+  }
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      ghtkStatus: "-1",
+      ghtkStatusText: "Đã huỷ",
+      ghtkSyncedAt: new Date(),
+    },
+  });
+
+  revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+  revalidatePath("/my-tickets");
+  return { ok: true };
 }
 
 // Tra cứu đơn theo qrToken quét được từ camera — CHỈ đọc, không check-in.
