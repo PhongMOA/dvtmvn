@@ -131,7 +131,7 @@ export default async function AdminUsersPage({
                     {user.phone ?? "—"}
                   </TableCell>
                   <TableCell className="max-w-[220px] text-sm text-muted-foreground">
-                    {[user.address, user.district, user.province]
+                    {[user.address, user.ward, user.district, user.province]
                       .filter(Boolean)
                       .join(", ") || "—"}
                   </TableCell>

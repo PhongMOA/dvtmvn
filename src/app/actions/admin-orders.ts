@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { fulfillPaidOrder } from "@/lib/order-fulfillment";
 
 export async function checkInOrder(orderId: string) {
   await requireAdmin();
@@ -17,6 +18,23 @@ export async function checkInOrder(orderId: string) {
   if (order.paymentStatus === "paid") {
     await prisma.order.update({ where: { id: orderId }, data: { status: "checked_in" } });
   }
+  revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+}
+
+/**
+ * Tạo lại đơn vận chuyển GHTK cho đơn đã thanh toán nhưng tạo đơn ship thất bại
+ * (ghtkError, chưa có ghtkLabel). fulfillPaidOrder idempotent — nếu đã có label
+ * thì không tạo trùng.
+ */
+export async function retryGhtkOrder(orderId: string) {
+  await requireAdmin();
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { comboType: true },
+  });
+  if (!order || order.paymentStatus !== "paid") return;
+
+  await fulfillPaidOrder(orderId);
   revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
 }
 

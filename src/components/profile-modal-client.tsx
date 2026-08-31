@@ -20,12 +20,14 @@ export function ProfileModalClient({
   defaultPhone,
   defaultProvince,
   defaultDistrict,
+  defaultWard,
   defaultAddress,
 }: {
   needsProfile: boolean;
   defaultPhone: string;
   defaultProvince: string;
   defaultDistrict: string;
+  defaultWard: string;
   defaultAddress: string;
 }) {
   // Chỉ tự tắt tạm thời cho phiên hiện tại — không có gì được lưu khi tắt, nên
@@ -61,7 +63,7 @@ export function ProfileModalClient({
             "changing the default value state ... after being initialized" khi server
             component cha truyền defaultValue mới xuống trong lúc modal vẫn mounted. */}
         <form
-          key={[defaultPhone, defaultProvince, defaultDistrict, defaultAddress].join("|")}
+          key={[defaultPhone, defaultProvince, defaultDistrict, defaultWard, defaultAddress].join("|")}
           action={formAction}
           className="mt-4 flex flex-col gap-4"
         >
@@ -80,6 +82,7 @@ export function ProfileModalClient({
             idPrefix="modal"
             defaultProvince={defaultProvince}
             defaultDistrict={defaultDistrict}
+            defaultWard={defaultWard}
             defaultAddress={defaultAddress}
           />
           <Button type="submit" disabled={isPending} className="w-fit">

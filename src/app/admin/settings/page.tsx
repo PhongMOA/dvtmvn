@@ -24,6 +24,7 @@ export default async function AdminSettingsPage() {
           defaultTel={setting.pickTel}
           defaultProvince={setting.pickProvince}
           defaultDistrict={setting.pickDistrict}
+          defaultWard={setting.pickWard}
           defaultAddress={setting.pickAddress}
         />
       </section>

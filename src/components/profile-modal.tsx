@@ -13,12 +13,22 @@ export async function ProfileModal() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { phone: true, province: true, district: true, address: true },
+    select: {
+      phone: true,
+      province: true,
+      district: true,
+      ward: true,
+      address: true,
+    },
   });
   if (!user) return null;
 
   const needsProfile =
-    !user.phone || !user.province || !user.district || !user.address;
+    !user.phone ||
+    !user.province ||
+    !user.district ||
+    !user.ward ||
+    !user.address;
 
   return (
     <ProfileModalClient
@@ -26,6 +36,7 @@ export async function ProfileModal() {
       defaultPhone={user.phone ?? ""}
       defaultProvince={user.province ?? ""}
       defaultDistrict={user.district ?? ""}
+      defaultWard={user.ward ?? ""}
       defaultAddress={user.address ?? ""}
     />
   );

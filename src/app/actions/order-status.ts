@@ -1,9 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireUser } from "@/lib/auth-helpers";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
-import { sendPushToTokens } from "@/lib/push";
+import { fulfillPaidOrder } from "@/lib/order-fulfillment";
+import { getGhtkShipmentStatus } from "@/lib/ghtk";
 
 export type OrderPaymentStatus = "pending" | "paid" | "expired";
 
@@ -46,7 +48,6 @@ export async function skipPayment(orderId: string): Promise<OrderStatusResult> {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { comboType: true },
   });
   if (!order) {
     return { ok: false, error: "NOT_FOUND" };
@@ -68,25 +69,57 @@ export async function skipPayment(orderId: string): Promise<OrderStatusResult> {
     return { ok: true, status: (latest?.paymentStatus ?? "expired") as OrderPaymentStatus };
   }
 
-  // Best-effort: gửi push "thanh toán thành công" y như webhook thật, để tiến
-  // trình phía sau được test đầy đủ. Lỗi push không được làm hỏng kết quả.
+  // Best-effort: push + tạo đơn GHTK y như webhook thật, để tiến trình phía sau
+  // được test đầy đủ. fulfillPaidOrder không throw; vẫn bọc try/catch.
   try {
-    const tokens = await prisma.deviceToken.findMany({
-      where: { userId: order.userId },
-      select: { token: true },
-    });
-    if (tokens.length > 0) {
-      await sendPushToTokens(
-        tokens.map((t) => t.token),
-        {
-          title: "Thanh toán thành công",
-          body: `${order.comboType.name} x${order.quantity} đã sẵn sàng — xem vé trong "Vé của tôi".`,
-        },
-      );
-    }
+    await fulfillPaidOrder(orderId);
   } catch (err) {
-    console.error("Push bỏ qua thanh toán thất bại (không ảnh hưởng đơn):", err);
+    console.error("fulfillPaidOrder (skipPayment) lỗi:", err);
   }
 
   return { ok: true, status: "paid" };
+}
+
+export type RefreshShipmentResult =
+  | { ok: true; statusText: string }
+  | { ok: false; error: string };
+
+/**
+ * Khách bấm "Cập nhật" ở /my-tickets để tra trạng thái vận chuyển GHTK mới nhất
+ * cho đơn của mình. Cần đơn có ghtkLabel (đã tạo đơn ship thành công).
+ */
+export async function refreshShipmentStatus(
+  orderId: string,
+): Promise<RefreshShipmentResult> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { ok: false, error: "Vui lòng đăng nhập lại." };
+  }
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order || order.userId !== user.id) {
+    return { ok: false, error: "Không tìm thấy đơn hàng." };
+  }
+  if (!order.ghtkLabel) {
+    return { ok: false, error: "Đơn chưa có mã vận chuyển." };
+  }
+
+  const result = await getGhtkShipmentStatus(order.ghtkLabel);
+  if (!result.ok) {
+    return { ok: false, error: "Chưa lấy được trạng thái, thử lại sau ít phút." };
+  }
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      ghtkStatus: result.status,
+      ghtkStatusText: result.statusText,
+      ghtkSyncedAt: new Date(),
+    },
+  });
+
+  revalidatePath("/my-tickets");
+  return { ok: true, statusText: result.statusText };
 }

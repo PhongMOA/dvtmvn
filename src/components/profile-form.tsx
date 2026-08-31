@@ -14,6 +14,7 @@ export function ProfileForm({
   defaultPhone,
   defaultProvince,
   defaultDistrict,
+  defaultWard,
   defaultAddress,
 }: {
   name: string;
@@ -21,6 +22,7 @@ export function ProfileForm({
   defaultPhone: string;
   defaultProvince: string;
   defaultDistrict: string;
+  defaultWard: string;
   defaultAddress: string;
 }) {
   const [state, formAction, isPending] = useActionState(updateProfile, { error: null });
@@ -40,7 +42,7 @@ export function ProfileForm({
     // form vẫn đang mounted — Input (uncontrolled) sẽ báo lỗi "changing the default
     // value ... after being initialized". Đổi key buộc React remount lại như init mới.
     <form
-      key={[defaultPhone, defaultProvince, defaultDistrict, defaultAddress].join("|")}
+      key={[defaultPhone, defaultProvince, defaultDistrict, defaultWard, defaultAddress].join("|")}
       action={formAction}
       className="mt-8 flex flex-col gap-4"
     >
@@ -67,6 +69,7 @@ export function ProfileForm({
         idPrefix="profile"
         defaultProvince={defaultProvince}
         defaultDistrict={defaultDistrict}
+        defaultWard={defaultWard}
         defaultAddress={defaultAddress}
       />
       <Button type="submit" size="lg" disabled={isPending} className="w-fit">

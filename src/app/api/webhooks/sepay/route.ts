@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractOrderCodeFromContent } from "@/lib/sepay";
-import { sendPushToTokens } from "@/lib/push";
+import { fulfillPaidOrder } from "@/lib/order-fulfillment";
 
 // Payload SePay POST tới webhook khi có giao dịch ngân hàng mới — xem
 // https://docs.sepay.vn/tich-hop-webhooks.html. Chỉ khai các field mình dùng.
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
-  const expectedAmount = order.comboType.price * order.quantity;
+  const expectedAmount = order.comboType.price * order.quantity + order.shipFee;
   if (payload.transferAmount !== expectedAmount) {
     // Sai số tiền — không tự xác nhận, để admin đối soát qua log SepayTransaction.
     return NextResponse.json({ success: true });
@@ -131,24 +131,13 @@ export async function POST(req: NextRequest) {
       data: { orderId: order.id },
     });
 
-    // Best-effort: không để lỗi push làm hỏng response webhook (SePay retry
-    // dựa trên response không phải 200 — không liên quan gì tới push).
+    // Best-effort: gửi push + tạo đơn vận chuyển GHTK. fulfillPaidOrder không bao
+    // giờ throw, nhưng vẫn bọc try/catch để chắc chắn response webhook luôn 200
+    // (SePay retry dựa trên response không phải 200).
     try {
-      const tokens = await prisma.deviceToken.findMany({
-        where: { userId: order.userId },
-        select: { token: true },
-      });
-      if (tokens.length > 0) {
-        await sendPushToTokens(
-          tokens.map((t) => t.token),
-          {
-            title: "Thanh toán thành công",
-            body: `${order.comboType.name} x${order.quantity} đã sẵn sàng — xem vé trong "Vé của tôi".`,
-          },
-        );
-      }
+      await fulfillPaidOrder(order.id);
     } catch (err) {
-      console.error("Push thanh toán thất bại (không ảnh hưởng webhook):", err);
+      console.error("fulfillPaidOrder lỗi (không ảnh hưởng webhook):", err);
     }
   }
 

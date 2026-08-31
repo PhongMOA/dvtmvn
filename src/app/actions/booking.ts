@@ -3,24 +3,32 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
-import { expireStaleOrdersForCombo } from "@/lib/order-expiry";
+import {
+  expireOrderIfPastDue,
+  expireStaleOrdersForCombo,
+} from "@/lib/order-expiry";
 import { generateOrderCode, PAYMENT_WINDOW_MINUTES } from "@/lib/sepay";
+import { getShopSetting } from "@/lib/shop-setting";
+import { COMBO_WEIGHT_GRAM, estimateShippingFee } from "@/lib/ghtk";
+
+export type CheckoutProfile = {
+  name: string;
+  phone: string;
+  province: string;
+  district: string;
+  ward: string;
+  address: string;
+};
 
 export type BookComboResult =
-  | { ok: true; orderId: string }
   | {
-      ok: false;
-      error: string;
-      // Chỉ có khi error === "MISSING_PROFILE" — giá trị hiện có (có thể đã
-      // điền một phần) để client hiện sẵn trong modal bắt buộc bổ sung, không
-      // bắt user gõ lại từ đầu.
-      profile?: {
-        phone: string;
-        province: string;
-        district: string;
-        address: string;
-      };
-    };
+      ok: true;
+      orderId: string;
+      // Giá trị hồ sơ hiện có (có thể rỗng/điền một phần) để hiện sẵn trong
+      // bước xác nhận thông tin nhận hàng — không bắt user gõ lại từ đầu.
+      profile: CheckoutProfile;
+    }
+  | { ok: false; error: string };
 
 export async function bookCombo(
   comboTypeId: string,
@@ -37,31 +45,28 @@ export async function bookCombo(
     return { ok: false, error: "Số lượng không hợp lệ." };
   }
 
-  // Bắt buộc có SĐT + địa chỉ giao hàng (tỉnh/quận/chi tiết) trước khi giữ
-  // chỗ — cần để giao vé/combo sau này. ProfileModal ở layout chỉ nhắc nhẹ
-  // (dismiss được), nên phải chặn thật ở đây (nguồn dữ liệu DB, không tin
-  // trạng thái client) chứ không chỉ dựa vào việc modal đó có đang hiện hay không.
-  const profile = await prisma.user.findUnique({
+  // Hồ sơ giao hàng KHÔNG còn chặn cứng ở đây — bước "xác nhận thông tin nhận
+  // hàng" (ShippingCheckout → prepareCheckout) sau khi giữ chỗ sẽ bắt user điền
+  // đủ trước khi tính phí ship + sang thanh toán. Ở đây chỉ đọc để hiện sẵn.
+  const profileRow = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { phone: true, province: true, district: true, address: true },
+    select: {
+      name: true,
+      phone: true,
+      province: true,
+      district: true,
+      ward: true,
+      address: true,
+    },
   });
-  if (
-    !profile?.phone ||
-    !profile?.province ||
-    !profile?.district ||
-    !profile?.address
-  ) {
-    return {
-      ok: false,
-      error: "MISSING_PROFILE",
-      profile: {
-        phone: profile?.phone ?? "",
-        province: profile?.province ?? "",
-        district: profile?.district ?? "",
-        address: profile?.address ?? "",
-      },
-    };
-  }
+  const profile: CheckoutProfile = {
+    name: profileRow?.name ?? "",
+    phone: profileRow?.phone ?? "",
+    province: profileRow?.province ?? "",
+    district: profileRow?.district ?? "",
+    ward: profileRow?.ward ?? "",
+    address: profileRow?.address ?? "",
+  };
 
   // Dọn trước các đơn "pending" đã quá hạn của combo này để hoàn lại kho — không
   // có cron nên tận dụng ngay lúc có người đặt mới (xem lib/order-expiry.ts).
@@ -122,5 +127,130 @@ export async function bookCombo(
 
   revalidatePath("/");
   revalidatePath("/my-tickets");
-  return { ok: true, orderId };
+  return { ok: true, orderId, profile };
+}
+
+export type PrepareCheckoutResult =
+  | { ok: true; comboTotal: number; shipFee: number; total: number }
+  | { ok: false; error: string };
+
+const PHONE_RE = /^[0-9+ ]{8,15}$/;
+
+/**
+ * Bước "tóm tắt đơn hàng" trước khi thanh toán: chốt địa chỉ nhận hàng, tính phí
+ * ship GHTK thật (kho lấy hàng → địa chỉ khách) và snapshot toàn bộ vào Order.
+ * Số tiền chuyển khoản sau đó = giá combo + shipFee (xem pay page + webhook).
+ *
+ * Chặn thanh toán nếu GHTK không tính được phí (chưa cấu hình / tỉnh bị từ chối /
+ * lỗi mạng) — quyết định đã chốt với user.
+ */
+export async function prepareCheckout(
+  orderId: string,
+  formData: FormData,
+): Promise<PrepareCheckoutResult> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { ok: false, error: "Vui lòng đăng nhập lại." };
+  }
+
+  await expireOrderIfPastDue(orderId);
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { comboType: true },
+  });
+  if (!order || order.userId !== user.id) {
+    return { ok: false, error: "Không tìm thấy đơn hàng." };
+  }
+  if (order.paymentStatus === "paid") {
+    return { ok: false, error: "Đơn đã được thanh toán." };
+  }
+  if (order.paymentStatus !== "pending") {
+    return { ok: false, error: "Đơn đã hết hạn, vui lòng đặt lại." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const province = String(formData.get("province") ?? "").trim();
+  const district = String(formData.get("district") ?? "").trim();
+  const ward = String(formData.get("ward") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+
+  if (!phone) return { ok: false, error: "Thiếu số điện thoại." };
+  if (!PHONE_RE.test(phone)) return { ok: false, error: "Số điện thoại không hợp lệ." };
+  if (!province) return { ok: false, error: "Thiếu tỉnh/thành." };
+  if (!district) return { ok: false, error: "Thiếu quận/huyện." };
+  if (!ward) return { ok: false, error: "Thiếu phường/xã." };
+  if (!address) return { ok: false, error: "Thiếu địa chỉ chi tiết." };
+
+  const shop = await getShopSetting();
+  if (
+    !shop.pickName ||
+    !shop.pickTel ||
+    !shop.pickProvince ||
+    !shop.pickWard ||
+    !shop.pickAddress
+  ) {
+    return {
+      ok: false,
+      error: "Shop chưa cấu hình kho lấy hàng, vui lòng liên hệ ban tổ chức.",
+    };
+  }
+
+  // Lưu địa chỉ vào hồ sơ user để lần sau điền sẵn (không chặn nếu lỗi).
+  try {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { phone, province, district, ward, address },
+    });
+  } catch {
+    /* không critical */
+  }
+
+  const estimate = await estimateShippingFee({
+    pickProvince: shop.pickProvince,
+    pickDistrict: shop.pickDistrict,
+    toProvince: province,
+    toDistrict: district,
+    toAddress: address,
+    weightGram: COMBO_WEIGHT_GRAM * order.quantity,
+  });
+
+  if (estimate.status === "rejected") {
+    return {
+      ok: false,
+      error:
+        'GHTK không giao tới địa chỉ này. Kiểm tra lại tên Tỉnh/Thành đúng theo ' +
+        'GHTK (vd "Hà Nội", "TP. Hồ Chí Minh").',
+    };
+  }
+  if (estimate.status !== "ok") {
+    return {
+      ok: false,
+      error: "Chưa tính được phí ship, vui lòng thử lại sau ít phút.",
+    };
+  }
+
+  const comboTotal = order.comboType.price * order.quantity;
+  const shipFee = estimate.fee;
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      shipName: name || user.name || user.email || null,
+      shipPhone: phone,
+      shipProvince: province,
+      shipDistrict: district,
+      shipWard: ward,
+      shipAddress: address,
+      shipFee,
+    },
+  });
+
+  revalidatePath(`/orders/${order.id}/pay`);
+  revalidatePath("/my-tickets");
+
+  return { ok: true, comboTotal, shipFee, total: comboTotal + shipFee };
 }

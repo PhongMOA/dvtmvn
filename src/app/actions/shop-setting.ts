@@ -31,6 +31,7 @@ export async function updatePickInfo(
   const pickTel = String(formData.get("pickTel") ?? "").trim();
   const pickProvince = String(formData.get("pickProvince") ?? "").trim();
   const pickDistrict = String(formData.get("pickDistrict") ?? "").trim();
+  const pickWard = String(formData.get("pickWard") ?? "").trim();
   const pickAddress = String(formData.get("pickAddress") ?? "").trim();
 
   if (!pickName) return { error: "Thiếu tên người gửi." };
@@ -38,6 +39,7 @@ export async function updatePickInfo(
   if (!/^[0-9+ ]{8,15}$/.test(pickTel)) return { error: "Số điện thoại không hợp lệ." };
   if (!pickProvince) return { error: "Thiếu tỉnh/thành." };
   if (!pickDistrict) return { error: "Thiếu quận/huyện." };
+  if (!pickWard) return { error: "Thiếu phường/xã." };
   if (!pickAddress) return { error: "Thiếu địa chỉ chi tiết." };
 
   const check = await checkPickLocation({
@@ -63,9 +65,17 @@ export async function updatePickInfo(
         pickTel,
         pickProvince,
         pickDistrict,
+        pickWard,
         pickAddress,
       },
-      update: { pickName, pickTel, pickProvince, pickDistrict, pickAddress },
+      update: {
+        pickName,
+        pickTel,
+        pickProvince,
+        pickDistrict,
+        pickWard,
+        pickAddress,
+      },
     });
   } catch {
     return { error: "Lưu cấu hình thất bại, vui lòng thử lại." };

@@ -32,6 +32,7 @@ model User {
   // sung trước khi đặt combo (xem ProfileModal, actions/booking.ts).
   province      String? // tỉnh/thành, validate qua GHTK fee khi lưu
   district      String? // quận/huyện (MVP chưa validate chặt cấp này)
+  ward          String? // phường/xã — text tự do, không validate; bắt buộc khi tạo đơn GHTK
   address       String? // số nhà + tên đường
   role          String    @default("user") // "user" | "admin". Quyền admin = role == "admin" HOẶC email khớp ADMIN_EMAIL (admin bootstrap từ env, luôn admin, không set/gỡ được qua UI). Xem src/lib/auth-helpers.ts.
   emailVerified DateTime? // required bởi @auth/prisma-adapter (schema chuẩn Auth.js), không dùng cho logic app
@@ -144,6 +145,27 @@ model Order {
   createdAt     DateTime  @default(now())
   comboType     ComboType @relation(fields: [comboTypeId], references: [id])
   user          User      @relation(fields: [userId], references: [id])
+
+  // Snapshot thông tin nhận hàng + phí ship GHTK đã chốt ở bước tóm tắt trước
+  // thanh toán (user có thể sửa profile sau — đơn phải giữ nguyên giá trị lúc
+  // đặt). shipFee cộng vào số tiền chuyển khoản.
+  shipName       String?
+  shipPhone      String?
+  shipProvince   String?
+  shipDistrict   String?
+  shipWard       String?
+  shipAddress    String?
+  shipFee        Int       @default(0) // VND
+
+  // Đơn vận chuyển GHTK — tạo tự động sau khi thanh toán thành công (xem
+  // src/lib/order-fulfillment.ts). ghtkError giữ lý do tạo thất bại để admin
+  // bấm tạo lại tại /admin/events/[id]/orders.
+  ghtkLabel      String?
+  ghtkTrackingId String?
+  ghtkStatus     String? // status_id GHTK gần nhất (lưu dạng text)
+  ghtkStatusText String?
+  ghtkError      String?
+  ghtkSyncedAt   DateTime?
 }
 
 // Log mọi giao dịch webhook SePay đã nhận — id chính là id giao dịch phía SePay,
@@ -173,6 +195,7 @@ model ShopSetting {
   pickTel      String   @default("")
   pickProvince String   @default("") // tên tỉnh/thành đúng theo GHTK, vd "Hà Nội", "TP. Hồ Chí Minh"
   pickDistrict String   @default("") // tên quận/huyện đúng theo GHTK, vd "Quận Ba Đình"
+  pickWard     String   @default("") // tên phường/xã — bắt buộc khi tạo đơn GHTK
   pickAddress  String   @default("") // số nhà + đường (địa chỉ chi tiết)
   updatedAt    DateTime @updatedAt
 }

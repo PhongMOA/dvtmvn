@@ -6,6 +6,7 @@ import { isAdmin } from "@/lib/auth-helpers";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { buildVietQrUrl, getBankTransferInfo } from "@/lib/sepay";
 import { PaymentPendingClient } from "@/components/payment-pending-client";
+import { PayCheckoutGate } from "@/components/pay-checkout-gate";
 import { CopyButton } from "@/components/copy-button";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -31,7 +32,7 @@ export default async function OrderPaymentPage({
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { comboType: true },
+    include: { comboType: true, user: true },
   });
   if (!order || order.userId !== session.user.id) notFound();
 
@@ -39,7 +40,8 @@ export default async function OrderPaymentPage({
     redirect("/my-tickets");
   }
 
-  const amount = order.comboType.price * order.quantity;
+  const comboTotal = order.comboType.price * order.quantity;
+  const amount = comboTotal + order.shipFee;
 
   if (order.paymentStatus === "expired") {
     return (
@@ -54,6 +56,36 @@ export default async function OrderPaymentPage({
         <Link href="/" className={`${buttonVariants()} mt-6`}>
           Về trang chủ
         </Link>
+      </div>
+    );
+  }
+
+  // Đơn pending chưa qua bước xác nhận thông tin nhận hàng (mở URL trực tiếp,
+  // hoặc "Tiếp tục thanh toán" từ /my-tickets với đơn cũ) — bắt xác nhận địa chỉ
+  // + tính phí ship tại chỗ trước khi hiện QR.
+  if (!order.shipProvince) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 py-12">
+        <h1 className="text-center font-heading text-3xl tracking-wide text-primary">
+          XÁC NHẬN THÔNG TIN NHẬN HÀNG
+        </h1>
+        <p className="mt-2 text-center text-sm text-muted-foreground">
+          {order.comboType.name} × {order.quantity} — kiểm tra địa chỉ để tính phí
+          ship trước khi thanh toán.
+        </p>
+        <div className="mt-6">
+          <PayCheckoutGate
+            orderId={order.id}
+            defaultProfile={{
+              name: order.user.name ?? "",
+              phone: order.user.phone ?? "",
+              province: order.user.province ?? "",
+              district: order.user.district ?? "",
+              ward: order.user.ward ?? "",
+              address: order.user.address ?? "",
+            }}
+          />
+        </div>
       </div>
     );
   }
@@ -80,7 +112,17 @@ export default async function OrderPaymentPage({
 
       <dl className="mt-6 flex flex-col gap-2 rounded-lg border border-border bg-card p-4 text-left text-sm">
         <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Số tiền</dt>
+          <dt className="text-muted-foreground">Tiền combo</dt>
+          <dd className="font-medium text-foreground">{formatVnd(comboTotal)}</dd>
+        </div>
+        <div className="flex items-center justify-between">
+          <dt className="text-muted-foreground">Phí ship (GHTK)</dt>
+          <dd className="font-medium text-foreground">
+            {formatVnd(order.shipFee)}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between border-t border-border pt-2">
+          <dt className="font-semibold text-foreground">Số tiền chuyển khoản</dt>
           <dd className="font-semibold text-accent">{formatVnd(amount)}</dd>
         </div>
         <div className="flex items-center justify-between gap-2">

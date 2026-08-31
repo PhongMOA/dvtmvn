@@ -31,6 +31,7 @@ export default async function ProfilePage() {
         defaultPhone={user.phone ?? ""}
         defaultProvince={user.province ?? ""}
         defaultDistrict={user.district ?? ""}
+        defaultWard={user.ward ?? ""}
         defaultAddress={user.address ?? ""}
       />
     </div>

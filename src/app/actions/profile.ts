@@ -24,12 +24,14 @@ export async function updateProfile(
   const phone = String(formData.get("phone") ?? "").trim();
   const province = String(formData.get("province") ?? "").trim();
   const district = String(formData.get("district") ?? "").trim();
+  const ward = String(formData.get("ward") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
 
   if (!phone) return { error: "Thiếu số điện thoại." };
   if (!/^[0-9+ ]{8,15}$/.test(phone)) return { error: "Số điện thoại không hợp lệ." };
   if (!province) return { error: "Thiếu tỉnh/thành." };
   if (!district) return { error: "Thiếu quận/huyện." };
+  if (!ward) return { error: "Thiếu phường/xã." };
   if (!address) return { error: "Thiếu địa chỉ chi tiết." };
 
   // MVP: GHTK fee chỉ xác thực được cấp tỉnh/thành — đủ để sau này tính phí ship.
@@ -45,7 +47,7 @@ export async function updateProfile(
   try {
     await prisma.user.update({
       where: { id: user.id },
-      data: { phone, province, district, address },
+      data: { phone, province, district, ward, address },
     });
   } catch {
     return { error: "Cập nhật thông tin thất bại, vui lòng thử lại." };

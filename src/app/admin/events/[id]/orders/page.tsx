@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { checkInOrder } from "@/app/actions/admin-orders";
+import { checkInOrder, retryGhtkOrder } from "@/app/actions/admin-orders";
 import { parseComboItems } from "@/lib/combo";
 import { AdminSearchForm } from "@/components/admin-search-form";
 import { AdminPagination } from "@/components/admin-pagination";
@@ -96,6 +96,7 @@ export default async function EventOrdersPage({
               <TableHead>Số lượng</TableHead>
               <TableHead>Thời gian đặt</TableHead>
               <TableHead>Thanh toán</TableHead>
+              <TableHead>Vận chuyển</TableHead>
               <TableHead>Check-in</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
@@ -126,6 +127,35 @@ export default async function EventOrdersPage({
                     <Badge variant="outline" className="text-muted-foreground">
                       Hết hạn
                     </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {order.paymentStatus !== "paid" ? (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  ) : order.ghtkLabel ? (
+                    <div className="text-sm">
+                      <span className="font-mono font-medium text-foreground">
+                        {order.ghtkLabel}
+                      </span>
+                      <div className="text-xs text-muted-foreground">
+                        {order.ghtkStatusText ?? "Đã tạo đơn"}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-start gap-1.5">
+                      <Badge
+                        variant="outline"
+                        className="border-destructive/40 text-destructive"
+                        title={order.ghtkError ?? undefined}
+                      >
+                        {order.ghtkError ? "Lỗi tạo đơn" : "Chưa tạo đơn"}
+                      </Badge>
+                      <form action={retryGhtkOrder.bind(null, order.id)}>
+                        <Button type="submit" size="sm" variant="outline">
+                          Tạo đơn ship
+                        </Button>
+                      </form>
+                    </div>
                   )}
                 </TableCell>
                 <TableCell>

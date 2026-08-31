@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { TicketQr } from "@/components/ticket-qr";
+import { ShipmentStatus } from "@/components/shipment-status";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { parseComboItems } from "@/lib/combo";
@@ -66,8 +67,9 @@ export default async function MyTicketsPage() {
             return (
               <div
                 key={order.id}
-                className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6"
               >
+               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-heading text-2xl tracking-wide text-foreground">
@@ -120,6 +122,17 @@ export default async function MyTicketsPage() {
                     </span>
                   )}
                 </div>
+               </div>
+
+                {order.paymentStatus === "paid" && (
+                  <ShipmentStatus
+                    orderId={order.id}
+                    label={order.ghtkLabel}
+                    statusText={order.ghtkStatusText}
+                    syncedAt={order.ghtkSyncedAt?.toISOString() ?? null}
+                    error={order.ghtkError}
+                  />
+                )}
               </div>
             );
           })}

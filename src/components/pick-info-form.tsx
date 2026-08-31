@@ -12,12 +12,14 @@ export function PickInfoForm({
   defaultTel,
   defaultProvince,
   defaultDistrict,
+  defaultWard,
   defaultAddress,
 }: {
   defaultName: string;
   defaultTel: string;
   defaultProvince: string;
   defaultDistrict: string;
+  defaultWard: string;
   defaultAddress: string;
 }) {
   const [state, formAction, isPending] = useActionState(updatePickInfo, {
@@ -35,7 +37,7 @@ export function PickInfoForm({
     // truyền defaultValue mới xuống trong khi form còn mounted -> Input uncontrolled
     // sẽ báo lỗi "changing the default value". Đổi key buộc React remount.
     <form
-      key={[defaultName, defaultTel, defaultProvince, defaultDistrict, defaultAddress].join("|")}
+      key={[defaultName, defaultTel, defaultProvince, defaultDistrict, defaultWard, defaultAddress].join("|")}
       action={formAction}
       className="mt-4 flex flex-col gap-4"
     >
@@ -83,12 +85,22 @@ export function PickInfoForm({
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
+        <Label htmlFor="pickWard">Phường/Xã</Label>
+        <Input
+          id="pickWard"
+          name="pickWard"
+          defaultValue={defaultWard}
+          placeholder="VD: Phường Gò Vấp"
+          required
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="pickAddress">Địa chỉ chi tiết</Label>
         <Input
           id="pickAddress"
           name="pickAddress"
           defaultValue={defaultAddress}
-          placeholder="Số nhà, tên đường, phường/xã"
+          placeholder="Số nhà, tên đường"
           required
         />
       </div>
