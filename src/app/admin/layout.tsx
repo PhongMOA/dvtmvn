@@ -37,6 +37,15 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           >
             Gửi thông báo
           </Link>
+          <Link
+            href="/admin/settings"
+            className={cn(
+              buttonVariants({ size: "sm", variant: "outline" }),
+              "shrink-0 whitespace-nowrap",
+            )}
+          >
+            Cấu hình
+          </Link>
           <AdminScanLink />
         </div>
       </div>

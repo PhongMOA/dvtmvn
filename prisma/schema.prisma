@@ -157,3 +157,15 @@ model SepayTransaction {
   orderId         String?
   createdAt       DateTime @default(now())
 }
+
+// Cấu hình cửa hàng dùng chung — singleton, luôn chỉ 1 bản ghi id = "default"
+// (xem src/lib/shop-setting.ts, tự tạo bản ghi rỗng nếu chưa có). Hiện chứa
+// thông tin kho lấy hàng để tạo đơn ship GHTK (pick_name/pick_tel/pick_address).
+// Sửa tại /admin/settings.
+model ShopSetting {
+  id          String   @id @default("default")
+  pickName    String   @default("")
+  pickTel     String   @default("")
+  pickAddress String   @default("")
+  updatedAt   DateTime @updatedAt
+}
