@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 
 const PAGE_SIZE = 20;
-const CHART_DAYS = 14;
+const CHART_DAYS = 60;
 
 /** Khoá ngày "YYYY-MM-DD" theo giờ Việt Nam (đơn lưu UTC). */
 const vnDayKey = (date: Date) =>
@@ -172,7 +172,7 @@ export default async function AdminAllOrdersPage({
   const comboSold = paidOrders.reduce((sum, o) => sum + o.quantity, 0);
   const shipCollected = paidOrders.reduce((sum, o) => sum + o.shipFee, 0);
 
-  // --- Dữ liệu biểu đồ: 14 ngày gần nhất (giờ VN) -----------------------------
+  // --- Dữ liệu biểu đồ: 60 ngày gần nhất (giờ VN); component tự cắt 14/30/60 ---
   const todayKey = vnDayKey(new Date());
   const anchor = new Date(`${todayKey}T00:00:00Z`);
   const chartDays: string[] = [];
