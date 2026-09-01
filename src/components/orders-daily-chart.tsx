@@ -46,7 +46,7 @@ export function OrdersDailyChart({ data }: { data: OrdersDailyPoint[] }) {
         </p>
       </div>
 
-      <div className="mt-4 flex items-stretch gap-1 sm:gap-2">
+      <div className="mt-8 flex items-stretch gap-1 sm:gap-2">
         {/* trục dọc: mốc cao nhất */}
         <div className="flex w-10 shrink-0 flex-col justify-between py-1 text-right text-[10px] text-muted-foreground tabular-nums">
           <span>{formatVndShort(maxRevenue)}</span>
@@ -60,10 +60,18 @@ export function OrdersDailyChart({ data }: { data: OrdersDailyPoint[] }) {
             return (
               <div
                 key={d.day}
-                className="group flex flex-1 flex-col items-center gap-1"
-                title={`${d.label}: ${formatVnd(d.revenue)} · ${d.orders} đơn`}
+                className="group relative flex flex-1 flex-col items-center gap-1"
               >
-                <div className="flex h-40 w-full flex-col justify-end">
+                <div className="relative flex h-40 w-full flex-col justify-end">
+                  {/* Tooltip hover: số tiền nhận vào của cột */}
+                  <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 rounded-md border border-border bg-background px-2 py-1 text-center whitespace-nowrap opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                    <span className="block text-[11px] font-semibold text-foreground tabular-nums">
+                      {formatVnd(d.revenue)}
+                    </span>
+                    <span className="block text-[10px] text-muted-foreground">
+                      {d.label} · {d.orders} đơn
+                    </span>
+                  </div>
                   <span className="mb-0.5 text-center text-[10px] leading-none text-muted-foreground tabular-nums">
                     {d.orders || ""}
                   </span>
