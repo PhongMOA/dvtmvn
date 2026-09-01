@@ -11,11 +11,12 @@ const USER_LINKS = [
 ] as const;
 
 // Admin không cần "Vé của tôi"/"Thông tin tài khoản" ở tầm với nhanh — thay
-// bằng 2 tác vụ hay dùng nhất tại sự kiện. "Đơn hàng" trỏ về danh sách sự
-// kiện (đơn hàng phân theo từng sự kiện: /admin/events/[id]/orders).
+// bằng 2 tác vụ hay dùng nhất tại sự kiện. "Đơn hàng" trỏ về view tổng tất cả
+// đơn (/admin/orders — có bộ lọc + thống kê); đơn theo từng sự kiện vẫn xem ở
+// /admin/events/[id]/orders.
 const ADMIN_LINKS = [
   { href: "/admin/scan", label: "Quét QR", icon: QrCode },
-  { href: "/admin/events", label: "Đơn hàng", icon: ClipboardList },
+  { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList },
 ] as const;
 
 /**
