@@ -91,7 +91,7 @@ export function OrdersDailyChart({ data }: { data: OrdersDailyPoint[] }) {
 
         <div
           className={cn(
-            "flex flex-1 items-end",
+            "flex min-w-0 flex-1 items-end",
             dense ? "gap-px sm:gap-0.5" : "gap-1 sm:gap-2",
           )}
         >
@@ -101,7 +101,7 @@ export function OrdersDailyChart({ data }: { data: OrdersDailyPoint[] }) {
             return (
               <div
                 key={d.day}
-                className="group relative flex min-w-0 flex-1 flex-col items-center gap-1"
+                className="group relative flex w-0 min-w-0 flex-1 flex-col items-center gap-1"
               >
                 <div className="relative flex h-40 w-full flex-col justify-end">
                   {/* Tooltip hover: số tiền nhận vào của cột */}
@@ -130,14 +130,14 @@ export function OrdersDailyChart({ data }: { data: OrdersDailyPoint[] }) {
                     }}
                   />
                 </div>
-                <span
-                  className={cn(
-                    "text-[10px] whitespace-nowrap text-muted-foreground tabular-nums",
-                    !showLabel && "invisible",
+                {/* nhãn ngày: absolute + centered nên không ép chiều rộng cột */}
+                <div className="relative h-3 w-full">
+                  {showLabel && (
+                    <span className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] leading-none whitespace-nowrap text-muted-foreground tabular-nums">
+                      {d.shortLabel}
+                    </span>
                   )}
-                >
-                  {d.shortLabel}
-                </span>
+                </div>
               </div>
             );
           })}
