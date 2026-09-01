@@ -384,6 +384,21 @@ export function ghtkStatusColorClass(statusId: string | null | undefined): strin
   }
 }
 
+/**
+ * Nhóm trạng thái vận chuyển GHTK cho bộ lọc ở /admin/orders — gộp nhiều
+ * status_id thành các giai đoạn dễ hiểu cho ban tổ chức. Không xét việc đơn đã
+ * có label hay chưa (trạng thái "chưa tạo đơn" trang lọc xử lý riêng).
+ */
+export const GHTK_STATUS_GROUPS = {
+  processing: ["1", "2", "3", "8", "12", "123", "128"],
+  delivering: ["4", "10", "127"],
+  delivered: ["5", "6", "11"],
+  cancelled: ["-1"],
+  returned: ["7", "9", "13", "20", "21"],
+} as const;
+
+export type GhtkStatusGroup = keyof typeof GHTK_STATUS_GROUPS;
+
 export type ShipmentStatusResult =
   | { ok: true; status: string; statusText: string }
   | { ok: false; error: string };

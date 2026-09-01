@@ -20,6 +20,7 @@ export async function checkInOrder(orderId: string) {
     await prisma.order.update({ where: { id: orderId }, data: { status: "checked_in" } });
   }
   revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+  revalidatePath("/admin/orders");
 }
 
 /**
@@ -37,6 +38,7 @@ export async function retryGhtkOrder(orderId: string) {
 
   await fulfillPaidOrder(orderId);
   revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+  revalidatePath("/admin/orders");
 }
 
 export type CancelShipmentResult =
@@ -85,6 +87,7 @@ export async function cancelGhtkShipment(
   });
 
   revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+  revalidatePath("/admin/orders");
   revalidatePath("/my-tickets");
   return { ok: true };
 }

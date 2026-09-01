@@ -20,6 +20,15 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
         </p>
         <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
           <Link
+            href="/admin/orders"
+            className={cn(
+              buttonVariants({ size: "sm", variant: "outline" }),
+              "shrink-0 whitespace-nowrap",
+            )}
+          >
+            Đơn hàng
+          </Link>
+          <Link
             href="/admin/users"
             className={cn(
               buttonVariants({ size: "sm", variant: "outline" }),
