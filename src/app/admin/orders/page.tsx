@@ -6,6 +6,10 @@ import { AdminCancelShipment } from "@/components/admin-cancel-shipment";
 import { AdminOrderFilters } from "@/components/admin-order-filters";
 import { AdminPagination } from "@/components/admin-pagination";
 import {
+  OrdersDailyChart,
+  type OrdersDailyPoint,
+} from "@/components/orders-daily-chart";
+import {
   GHTK_STATUS_GROUPS,
   type GhtkStatusGroup,
   ghtkStatusColorClass,
@@ -24,6 +28,16 @@ import {
 } from "@/components/ui/table";
 
 const PAGE_SIZE = 20;
+const CHART_DAYS = 14;
+
+/** Khoá ngày "YYYY-MM-DD" theo giờ Việt Nam (đơn lưu UTC). */
+const vnDayKey = (date: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
@@ -158,6 +172,58 @@ export default async function AdminAllOrdersPage({
   const comboSold = paidOrders.reduce((sum, o) => sum + o.quantity, 0);
   const shipCollected = paidOrders.reduce((sum, o) => sum + o.shipFee, 0);
 
+  // --- Dữ liệu biểu đồ: 14 ngày gần nhất (giờ VN) -----------------------------
+  const todayKey = vnDayKey(new Date());
+  const anchor = new Date(`${todayKey}T00:00:00Z`);
+  const chartDays: string[] = [];
+  for (let i = CHART_DAYS - 1; i >= 0; i--) {
+    const d = new Date(anchor);
+    d.setUTCDate(d.getUTCDate() - i);
+    chartDays.push(d.toISOString().slice(0, 10));
+  }
+  const chartSince = new Date(`${chartDays[0]}T00:00:00+07:00`);
+
+  const [createdRows, paidRows] = await Promise.all([
+    prisma.order.findMany({
+      where: { createdAt: { gte: chartSince } },
+      select: { createdAt: true },
+    }),
+    prisma.order.findMany({
+      where: { paymentStatus: "paid", paidAt: { gte: chartSince } },
+      select: {
+        paidAt: true,
+        quantity: true,
+        shipFee: true,
+        comboType: { select: { price: true } },
+      },
+    }),
+  ]);
+
+  const byDay = new Map(
+    chartDays.map((d) => [d, { orders: 0, revenue: 0 }]),
+  );
+  for (const r of createdRows) {
+    const bucket = byDay.get(vnDayKey(r.createdAt));
+    if (bucket) bucket.orders++;
+  }
+  for (const r of paidRows) {
+    if (!r.paidAt) continue;
+    const bucket = byDay.get(vnDayKey(r.paidAt));
+    if (bucket) bucket.revenue += r.comboType.price * r.quantity + r.shipFee;
+  }
+
+  const chartData: OrdersDailyPoint[] = chartDays.map((d) => {
+    const [y, m, day] = d.split("-");
+    const bucket = byDay.get(d)!;
+    return {
+      day: d,
+      label: `${day}/${m}/${y}`,
+      shortLabel: `${day}/${m}`,
+      orders: bucket.orders,
+      revenue: bucket.revenue,
+    };
+  });
+
   const totalPages = Math.max(1, Math.ceil(matchCount / PAGE_SIZE));
   const page = Math.min(
     Math.max(1, Number.isFinite(pageRaw) ? pageRaw : 1),
@@ -216,6 +282,8 @@ export default async function AdminAllOrdersPage({
           hint="đã TT nhưng chưa có mã GHTK"
         />
       </div>
+
+      <OrdersDailyChart data={chartData} />
 
       <AdminOrderFilters q={q} payment={payment} ship={ship} checkin={checkin} />
 
