@@ -35,11 +35,12 @@ function DialogPopup({
   className,
   children,
   showClose = true,
+  backdropClassName,
   ...props
-}: DialogPrimitive.Popup.Props & { showClose?: boolean }) {
+}: DialogPrimitive.Popup.Props & { showClose?: boolean; backdropClassName?: string }) {
   return (
     <DialogPortal>
-      <DialogBackdrop />
+      <DialogBackdrop className={backdropClassName} />
       <DialogPrimitive.Popup
         data-slot="dialog-popup"
         className={cn(
