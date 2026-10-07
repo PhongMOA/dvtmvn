@@ -133,7 +133,7 @@ export default async function AdminUsersPage({
                   <TableCell className="text-sm text-muted-foreground">
                     {user.phone ?? "—"}
                   </TableCell>
-                  <TableCell className="max-w-[220px] text-sm text-muted-foreground">
+                  <TableCell className="min-w-[200px] max-w-[280px] text-sm whitespace-normal break-words text-muted-foreground">
                     {[user.address, user.ward, user.district, user.province]
                       .filter(Boolean)
                       .join(", ") || "—"}
