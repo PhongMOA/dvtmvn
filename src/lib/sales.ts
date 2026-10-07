@@ -1,3 +1,5 @@
+import { VN_TIME_ZONE } from "@/lib/datetime";
+
 // Thời điểm mở bán các gói combo của sự kiện hiện tại (giờ Việt Nam, UTC+7).
 // Trước mốc này: trang chủ hiện đồng hồ đếm ngược ở hero và khoá phần đặt combo.
 // Muốn đổi ngày mở bán -> sửa hằng số này rồi deploy lại (đã chốt với user:
@@ -12,5 +14,6 @@ export function formatSalesStartDate(): string {
   return new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "full",
     timeStyle: "short",
+    timeZone: VN_TIME_ZONE,
   }).format(SALES_START_AT);
 }

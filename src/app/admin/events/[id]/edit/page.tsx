@@ -2,11 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { updateEvent } from "@/app/actions/admin-events";
 import { EventForm } from "@/components/event-form";
-
-function toDatetimeLocal(date: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
+import { toVnDatetimeLocal } from "@/lib/datetime";
 
 export default async function EditEventPage({
   params,
@@ -31,7 +27,7 @@ export default async function EditEventPage({
             description: event.description ?? "",
             posterUrl: event.posterUrl ?? "",
             venue: event.venue,
-            startAt: toDatetimeLocal(event.startAt),
+            startAt: toVnDatetimeLocal(event.startAt),
           }}
         />
       </div>

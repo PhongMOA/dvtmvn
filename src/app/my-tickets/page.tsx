@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { parseComboItems } from "@/lib/combo";
 import { cn } from "@/lib/utils";
+import { VN_TIME_ZONE } from "@/lib/datetime";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "long",
     timeStyle: "short",
+    timeZone: VN_TIME_ZONE,
   }).format(date);
 }
 

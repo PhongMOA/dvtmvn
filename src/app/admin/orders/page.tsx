@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { VN_TIME_ZONE } from "@/lib/datetime";
 
 const PAGE_SIZE = 20;
 const CHART_DAYS = 60;
@@ -33,7 +34,7 @@ const CHART_DAYS = 60;
 /** Khoá ngày "YYYY-MM-DD" theo giờ Việt Nam (đơn lưu UTC). */
 const vnDayKey = (date: Date) =>
   new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
+    timeZone: VN_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -43,6 +44,7 @@ function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: VN_TIME_ZONE,
   }).format(date);
 }
 

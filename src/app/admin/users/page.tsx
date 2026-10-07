@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { VN_TIME_ZONE } from "@/lib/datetime";
 
 const PAGE_SIZE = 20;
 
@@ -22,6 +23,7 @@ function formatDate(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: VN_TIME_ZONE,
   }).format(date);
 }
 

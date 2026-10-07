@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { fromVnDatetimeLocal } from "@/lib/datetime";
 
 export type EventFormState = { error: string | null };
 
@@ -28,7 +29,7 @@ function parseEventForm(formData: FormData): EventInput {
 function validateEventInput(input: EventInput): string | null {
   if (!input.title) return "Thiếu tên sự kiện.";
   if (!input.venue) return "Thiếu địa điểm.";
-  if (!input.startAt || Number.isNaN(Date.parse(input.startAt)))
+  if (!input.startAt || Number.isNaN(fromVnDatetimeLocal(input.startAt).getTime()))
     return "Thời gian bắt đầu không hợp lệ.";
   return null;
 }
@@ -50,7 +51,7 @@ export async function createEvent(
         description: input.description || null,
         posterUrl: input.posterUrl || null,
         venue: input.venue,
-        startAt: new Date(input.startAt),
+        startAt: fromVnDatetimeLocal(input.startAt),
         status: "draft",
       },
     });
@@ -81,7 +82,7 @@ export async function updateEvent(
         description: input.description || null,
         posterUrl: input.posterUrl || null,
         venue: input.venue,
-        startAt: new Date(input.startAt),
+        startAt: fromVnDatetimeLocal(input.startAt),
       },
     });
   } catch {

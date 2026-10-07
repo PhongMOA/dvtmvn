@@ -7,11 +7,13 @@ import { ghtkStatusColorClass } from "@/lib/ghtk";
 import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { VN_TIME_ZONE } from "@/lib/datetime";
 
 function formatDateTime(iso: string) {
   return new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: VN_TIME_ZONE,
   }).format(new Date(iso));
 }
 

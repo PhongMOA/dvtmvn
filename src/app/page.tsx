@@ -12,11 +12,13 @@ import { SALES_START_AT, isSalesOpen } from "@/lib/sales";
 import { SalesCountdown } from "@/components/sales-countdown";
 import { FloatingParticles } from "@/components/floating-particles";
 import { cn } from "@/lib/utils";
+import { VN_TIME_ZONE } from "@/lib/datetime";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "full",
     timeStyle: "short",
+    timeZone: VN_TIME_ZONE,
   }).format(date);
 }
 
