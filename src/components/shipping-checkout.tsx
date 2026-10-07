@@ -24,7 +24,7 @@ type Summary = Extract<PrepareCheckoutResult, { ok: true }>;
 
 function isProfileComplete(p: CheckoutProfile): boolean {
   return Boolean(
-    p.phone && p.province && p.district && p.ward && p.address,
+    p.phone && p.province && p.ward && p.address,
   );
 }
 

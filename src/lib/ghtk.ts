@@ -8,14 +8,18 @@
  * Auth: header `Token: <token>` + `X-Client-Source: <mã shop>`.
  *
  * Dùng 3 endpoint:
- *   - `GET  /services/shipment/fee`      — tính phí ship + kiểm tra địa chỉ (chỉ
- *      thực sự validate được cấp TỈNH/THÀNH; quận/phường sai vẫn ra phí).
+ *   - `GET  /services/shipment/fee`      — tính phí ship + kiểm tra địa chỉ (đã
+ *      kiểm chứng: validate được cấp TỈNH/THÀNH; quận sai vẫn ra phí).
  *   - `POST /services/shipment/order`    — tạo đơn vận chuyển sau khi khách thanh
  *      toán — admin bấm thủ công (xem src/lib/order-fulfillment.ts). BẮT BUỘC có `ward` (phường/xã) cho
  *      cả điểm lấy lẫn điểm giao.
  *   - `GET  /services/shipment/v2/{label}` — tra trạng thái đơn.
  *
  * Tên tỉnh phải gần đúng chuẩn GHTK ("Hà Nội", "Hồ Chí Minh"/"TP. Hồ Chí Minh"...).
+ *
+ * Địa chỉ 2 cấp (sau sáp nhập 7/2025): theo docs GHTK hiện tại, cả API tính phí lẫn
+ * tạo đơn chỉ BẮT BUỘC province + ward; district/pick_district tuỳ chọn. Nên
+ * Quận/Huyện ở mọi form là tuỳ chọn — rỗng thì KHÔNG gửi field đó (xem withoutEmpty).
  */
 
 const BASE_URL = (
@@ -53,6 +57,11 @@ export type PickLocationCheck = LocationCheck;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Bỏ các field rỗng — GHTK coi district="" khác với không gửi district. */
+function withoutEmpty(params: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== ""));
+}
+
 /**
  * Gọi `GET /services/shipment/fee`. Thử lại 1 lần khi GHTK trả success:false rỗng
  * (endpoint fee thỉnh thoảng hiccup) hoặc lỗi mạng/5xx.
@@ -62,7 +71,7 @@ async function fetchFee(params: Record<string, string>): Promise<LocationCheck> 
     return { status: "unavailable", detail: "NOT_CONFIGURED" };
   }
 
-  const url = `${BASE_URL}/services/shipment/fee?${new URLSearchParams(params).toString()}`;
+  const url = `${BASE_URL}/services/shipment/fee?${new URLSearchParams(withoutEmpty(params)).toString()}`;
 
   let lastDetail = "unknown";
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -111,15 +120,19 @@ async function fetchFee(params: Record<string, string>): Promise<LocationCheck> 
  */
 export async function checkLocationServiceable(input: {
   province: string;
+  /** "" = địa chỉ 2 cấp, không có quận/huyện */
   district: string;
+  ward: string;
   address: string;
 }): Promise<LocationCheck> {
   return fetchFee({
     pick_province: input.province,
     pick_district: input.district,
+    pick_ward: input.ward,
     province: input.province,
     district: input.district,
-    address: input.address || input.district,
+    ward: input.ward,
+    address: input.address || input.ward,
     weight: "500",
   });
 }
@@ -135,17 +148,21 @@ export const checkPickLocation = checkLocationServiceable;
 export async function estimateShippingFee(input: {
   pickProvince: string;
   pickDistrict: string;
+  pickWard: string;
   toProvince: string;
   toDistrict: string;
+  toWard: string;
   toAddress: string;
   weightGram: number;
 }): Promise<LocationCheck> {
   return fetchFee({
     pick_province: input.pickProvince,
     pick_district: input.pickDistrict,
+    pick_ward: input.pickWard,
     province: input.toProvince,
     district: input.toDistrict,
-    address: input.toAddress || input.toDistrict,
+    ward: input.toWard,
+    address: input.toAddress || input.toWard,
     weight: String(Math.max(1, Math.round(input.weightGram))),
   });
 }
@@ -216,14 +233,14 @@ export async function createGhtkOrder(
       pick_name: input.pick.name,
       pick_tel: input.pick.tel,
       pick_province: input.pick.province,
-      pick_district: input.pick.district,
+      ...(input.pick.district ? { pick_district: input.pick.district } : {}),
       pick_ward: input.pick.ward,
       pick_address: input.pick.address,
       pick_money: 0, // khách đã trả trước cho shop, GHTK không thu hộ
       name: input.to.name,
       tel: input.to.tel,
       province: input.to.province,
-      district: input.to.district,
+      ...(input.to.district ? { district: input.to.district } : {}),
       ward: input.to.ward,
       address: input.to.address,
       hamlet: "Khác",

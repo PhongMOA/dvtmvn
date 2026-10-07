@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
  * bước xác nhận lúc đặt combo. Chỉ là fragment (không phải <form>) — component
  * cha bọc <form> và xử lý submit. Tên field: province / district / ward / address.
  *
- * MVP: khi lưu, server chỉ validate được cấp Tỉnh/Thành qua GHTK (xem
- * src/lib/ghtk.ts). Quận/Huyện + Phường/Xã thu dạng text tự do — cần để tính phí
- * và tạo đơn ship GHTK (GHTK bắt buộc có Phường/Xã khi tạo đơn).
+ * Khi lưu, server kiểm tra địa chỉ qua API tính phí GHTK (xem src/lib/ghtk.ts).
+ * GHTK chỉ bắt buộc Tỉnh + Phường; Quận/Huyện tuỳ chọn cho địa chỉ 2 cấp sau sáp
+ * nhập 7/2025.
  */
 export function AddressFields({
   idPrefix,
@@ -39,13 +39,15 @@ export function AddressFields({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor={`${idPrefix}-district`}>Quận/Huyện</Label>
+          <Label htmlFor={`${idPrefix}-district`}>
+            Quận/Huyện{" "}
+            <span className="text-muted-foreground">(bỏ trống nếu đã sáp nhập)</span>
+          </Label>
           <Input
             id={`${idPrefix}-district`}
             name="district"
             defaultValue={defaultDistrict}
             placeholder="VD: Quận Gò Vấp"
-            required
           />
         </div>
       </div>
@@ -55,7 +57,7 @@ export function AddressFields({
           id={`${idPrefix}-ward`}
           name="ward"
           defaultValue={defaultWard}
-          placeholder="VD: Phường 5"
+          placeholder="VD: Phường Hạnh Thông"
           required
         />
       </div>

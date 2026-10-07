@@ -58,7 +58,7 @@ export function ProfileModalClient({
         <DialogHeader>
           <DialogTitle>BỔ SUNG THÔNG TIN LIÊN HỆ</DialogTitle>
           <DialogDescription>
-            Vui lòng bổ sung số điện thoại và địa chỉ giao hàng để chúng tôi liên
+            Vui lòng bổ sung số điện thoại, link Facebook và địa chỉ giao hàng để chúng tôi liên
             hệ khi giao vé/combo. Bạn có thể tắt hộp thoại này, nhưng nó sẽ tiếp
             tục hiện lại cho tới khi bạn điền đủ thông tin.
           </DialogDescription>
@@ -94,7 +94,7 @@ export function ProfileModalClient({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="modal-facebookUrl">
-              Link Facebook <span className="text-muted-foreground">(không bắt buộc)</span>
+              Link Facebook
             </Label>
             <Input
               id="modal-facebookUrl"
@@ -103,6 +103,7 @@ export function ProfileModalClient({
               defaultValue={defaultFacebookUrl}
               placeholder="https://facebook.com/ten.cua.ban"
               maxLength={200}
+              required
             />
           </div>
           <AddressFields

@@ -73,6 +73,12 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
           router.push(`/sign-in?callbackUrl=${encodeURIComponent("/cart")}`);
           return;
         }
+        if (result.error === "MISSING_FACEBOOK") {
+          toast.error("Vui lòng bổ sung link Facebook trước khi đặt combo.", {
+            action: { label: "Cập nhật", onClick: () => router.push("/profile") },
+          });
+          return;
+        }
         toast.error(result.error);
         router.refresh(); // lấy lại tồn kho mới nhất
         return;

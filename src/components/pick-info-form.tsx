@@ -74,13 +74,15 @@ export function PickInfoForm({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="pickDistrict">Quận/Huyện</Label>
+          <Label htmlFor="pickDistrict">
+            Quận/Huyện{" "}
+            <span className="text-muted-foreground">(bỏ trống nếu đã sáp nhập)</span>
+          </Label>
           <Input
             id="pickDistrict"
             name="pickDistrict"
             defaultValue={defaultDistrict}
             placeholder="VD: Quận Ba Đình"
-            required
           />
         </div>
       </div>

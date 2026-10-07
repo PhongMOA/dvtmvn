@@ -28,10 +28,10 @@ model User {
   image         String?
   phone         String? // bắt buộc bổ sung sau khi đăng nhập lần đầu (xem ProfileModal) — cần để liên hệ khi giao/nhận combo
   // Địa chỉ giao hàng, tách cấp để tính phí GHTK. `address` giờ là địa chỉ CHI TIẾT
-  // (số nhà, tên đường). Cả 3 (province/district/address) + phone đều bắt buộc bổ
-  // sung trước khi đặt combo (xem ProfileModal, actions/booking.ts).
+  // (số nhà, tên đường). province/ward/address + phone bắt buộc bổ sung trước khi
+  // đặt combo (xem ProfileModal, actions/booking.ts); district tuỳ chọn (địa chỉ 2 cấp).
   province      String? // tỉnh/thành, validate qua GHTK fee khi lưu
-  district      String? // quận/huyện (MVP chưa validate chặt cấp này)
+  district      String? // quận/huyện — tuỳ chọn, null với địa chỉ sau sáp nhập 7/2025
   ward          String? // phường/xã — text tự do, không validate; bắt buộc khi tạo đơn GHTK
   address       String? // số nhà + tên đường
   facebookUrl   String? // link Facebook cá nhân (tuỳ chọn) — để shop liên hệ khi cần, sửa ở /profile

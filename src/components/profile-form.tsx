@@ -64,7 +64,7 @@ export function ProfileForm({
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="facebookUrl">
-          Link Facebook <span className="text-muted-foreground">(không bắt buộc)</span>
+          Link Facebook
         </Label>
         <Input
           id="facebookUrl"
@@ -73,6 +73,7 @@ export function ProfileForm({
           defaultValue={defaultFacebookUrl}
           placeholder="https://facebook.com/ten.cua.ban"
           maxLength={200}
+          required
         />
       </div>
       <div className="flex flex-col gap-1.5">

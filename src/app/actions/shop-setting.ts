@@ -38,13 +38,13 @@ export async function updatePickInfo(
   if (!pickTel) return { error: "Thiếu số điện thoại." };
   if (!/^[0-9+ ]{8,15}$/.test(pickTel)) return { error: "Số điện thoại không hợp lệ." };
   if (!pickProvince) return { error: "Thiếu tỉnh/thành." };
-  if (!pickDistrict) return { error: "Thiếu quận/huyện." };
   if (!pickWard) return { error: "Thiếu phường/xã." };
   if (!pickAddress) return { error: "Thiếu địa chỉ chi tiết." };
 
   const check = await checkPickLocation({
     province: pickProvince,
     district: pickDistrict,
+    ward: pickWard,
     address: pickAddress,
   });
 
@@ -52,7 +52,7 @@ export async function updatePickInfo(
     return {
       error:
         'GHTK không nhận diện được địa chỉ này. Kiểm tra lại tên Tỉnh/Thành và ' +
-        'Quận/Huyện đúng theo GHTK (vd "Hà Nội", "TP. Hồ Chí Minh", "Quận Ba Đình").',
+        'Phường/Xã đúng theo GHTK (vd "Hà Nội", "Phường Ba Đình").',
     };
   }
 

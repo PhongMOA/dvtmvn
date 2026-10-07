@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ProfileModalClient } from "@/components/profile-modal-client";
 
 /**
- * Server wrapper: tính needsProfile (thiếu phone / tỉnh / quận / địa chỉ) từ DB mỗi lần
+ * Server wrapper: tính needsProfile (thiếu phone / Facebook / tỉnh / phường / địa chỉ) từ DB mỗi lần
  * layout render, rồi giao cho client component xử lý hiển thị/tắt modal.
  * Đặt trong root layout nên áp dụng cho mọi trang sau khi đăng nhập.
  */
@@ -27,8 +27,8 @@ export async function ProfileModal() {
 
   const needsProfile =
     !user.phone ||
+    !user.facebookUrl ||
     !user.province ||
-    !user.district ||
     !user.ward ||
     !user.address;
 

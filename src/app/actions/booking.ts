@@ -78,6 +78,7 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
     where: { id: user.id },
     select: {
       name: true,
+      facebookUrl: true,
       phone: true,
       province: true,
       district: true,
@@ -85,6 +86,10 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
       address: true,
     },
   });
+  // Link Facebook bắt buộc (để shop liên hệ). ProfileModal tắt được nên chặn cả ở
+  // đây; client bắt mã lỗi này để dẫn khách sang /profile.
+  if (!profileRow?.facebookUrl) return { ok: false, error: "MISSING_FACEBOOK" };
+
   const profile: CheckoutProfile = {
     name: profileRow?.name ?? "",
     phone: profileRow?.phone ?? "",
@@ -208,7 +213,6 @@ export async function prepareCheckout(
   if (!phone) return { ok: false, error: "Thiếu số điện thoại." };
   if (!PHONE_RE.test(phone)) return { ok: false, error: "Số điện thoại không hợp lệ." };
   if (!province) return { ok: false, error: "Thiếu tỉnh/thành." };
-  if (!district) return { ok: false, error: "Thiếu quận/huyện." };
   if (!ward) return { ok: false, error: "Thiếu phường/xã." };
   if (!address) return { ok: false, error: "Thiếu địa chỉ chi tiết." };
 
@@ -236,7 +240,6 @@ export async function prepareCheckout(
   });
   const profileWasComplete = Boolean(
     profileRow?.province &&
-      profileRow?.district &&
       profileRow?.ward &&
       profileRow?.address,
   );
@@ -244,7 +247,7 @@ export async function prepareCheckout(
     try {
       await prisma.user.update({
         where: { id: user.id },
-        data: { phone, province, district, ward, address },
+        data: { phone, province, district: district || null, ward, address },
       });
     } catch {
       /* không critical */
@@ -254,8 +257,10 @@ export async function prepareCheckout(
   const estimate = await estimateShippingFee({
     pickProvince: shop.pickProvince,
     pickDistrict: shop.pickDistrict,
+    pickWard: shop.pickWard,
     toProvince: province,
     toDistrict: district,
+    toWard: ward,
     toAddress: address,
     weightGram: COMBO_WEIGHT_GRAM * orderItemsQuantity(order.items),
   });
@@ -264,8 +269,8 @@ export async function prepareCheckout(
     return {
       ok: false,
       error:
-        'GHTK không giao tới địa chỉ này. Kiểm tra lại tên Tỉnh/Thành đúng theo ' +
-        'GHTK (vd "Hà Nội", "TP. Hồ Chí Minh").',
+        'GHTK không giao tới địa chỉ này. Kiểm tra lại tên Tỉnh/Thành và Phường/Xã ' +
+        '(vd "TP. Hồ Chí Minh", "Phường Hạnh Thông").',
     };
   }
   if (estimate.status !== "ok") {
@@ -284,7 +289,7 @@ export async function prepareCheckout(
       shipName: name || user.name || user.email || null,
       shipPhone: phone,
       shipProvince: province,
-      shipDistrict: district,
+      shipDistrict: district || null,
       shipWard: ward,
       shipAddress: address,
       shipFee,
