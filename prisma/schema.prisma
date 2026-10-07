@@ -157,7 +157,7 @@ model Order {
   shipAddress    String?
   shipFee        Int       @default(0) // VND
 
-  // Đơn vận chuyển GHTK — tạo tự động sau khi thanh toán thành công (xem
+  // Đơn vận chuyển GHTK — admin tạo thủ công sau khi đơn đã thanh toán (xem
   // src/lib/order-fulfillment.ts). ghtkError giữ lý do tạo thất bại để admin
   // bấm tạo lại tại /admin/events/[id]/orders.
   ghtkLabel      String?

@@ -5,19 +5,21 @@ import { sendPushToTokens } from "@/lib/push";
 import { createGhtkOrder, GHTK_STATUS_TEXT } from "@/lib/ghtk";
 
 /**
- * Chạy toàn bộ side-effect sau khi 1 đơn chuyển sang "paid": gửi push + tạo đơn
- * vận chuyển GHTK. Gọi từ webhook SePay (route.ts) và từ skipPayment (admin).
+ * Side-effect sau khi 1 đơn chuyển sang "paid": gửi push "thanh toán thành công".
+ * Gọi từ webhook SePay (route.ts) và từ skipPayment (admin).
+ *
+ * KHÔNG tự tạo đơn vận chuyển GHTK — admin tạo thủ công bằng nút "Tạo đơn ship"
+ * ở /admin/orders (xem createGhtkShipmentForOrder bên dưới).
  *
  * BEST-EFFORT — không bao giờ throw: webhook SePay retry dựa trên HTTP status,
- * lỗi push/GHTK không được làm hỏng response webhook. Idempotent: SePay có thể
- * gửi lại cùng 1 giao dịch tới 7 lần, và admin có thể bấm "tạo lại đơn ship".
+ * lỗi push không được làm hỏng response webhook.
  */
 export async function fulfillPaidOrder(orderId: string): Promise<void> {
   let order;
   try {
     order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { comboType: true, user: true },
+      include: { comboType: true },
     });
   } catch (err) {
     console.error("fulfillPaidOrder: không load được đơn", orderId, err);
@@ -25,7 +27,6 @@ export async function fulfillPaidOrder(orderId: string): Promise<void> {
   }
   if (!order || order.paymentStatus !== "paid") return;
 
-  // 1. Push "thanh toán thành công"
   try {
     const tokens = await prisma.deviceToken.findMany({
       where: { userId: order.userId },
@@ -43,9 +44,25 @@ export async function fulfillPaidOrder(orderId: string): Promise<void> {
   } catch (err) {
     console.error("fulfillPaidOrder: push thất bại (bỏ qua)", orderId, err);
   }
+}
 
-  // 2. Tạo đơn GHTK — bỏ qua nếu đã có label (idempotent)
-  if (order.ghtkLabel) return;
+/**
+ * Tạo đơn vận chuyển GHTK cho 1 đơn đã thanh toán — admin bấm thủ công ở
+ * /admin/orders. Idempotent: đã có ghtkLabel thì bỏ qua (không tạo trùng). Lỗi
+ * lưu vào ghtkError để admin xem rồi bấm tạo lại; không throw.
+ */
+export async function createGhtkShipmentForOrder(orderId: string): Promise<void> {
+  let order;
+  try {
+    order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { comboType: true, user: true },
+    });
+  } catch (err) {
+    console.error("createGhtkShipmentForOrder: không load được đơn", orderId, err);
+    return;
+  }
+  if (!order || order.paymentStatus !== "paid" || order.ghtkLabel) return;
 
   try {
     const shop = await getShopSetting();
@@ -122,7 +139,7 @@ export async function fulfillPaidOrder(orderId: string): Promise<void> {
       });
     }
   } catch (err) {
-    console.error("fulfillPaidOrder: tạo đơn GHTK lỗi", orderId, err);
+    console.error("createGhtkShipmentForOrder: tạo đơn GHTK lỗi", orderId, err);
     try {
       await prisma.order.update({
         where: { id: orderId },

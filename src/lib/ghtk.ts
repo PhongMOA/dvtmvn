@@ -11,7 +11,7 @@
  *   - `GET  /services/shipment/fee`      — tính phí ship + kiểm tra địa chỉ (chỉ
  *      thực sự validate được cấp TỈNH/THÀNH; quận/phường sai vẫn ra phí).
  *   - `POST /services/shipment/order`    — tạo đơn vận chuyển sau khi khách thanh
- *      toán (xem src/lib/order-fulfillment.ts). BẮT BUỘC có `ward` (phường/xã) cho
+ *      toán — admin bấm thủ công (xem src/lib/order-fulfillment.ts). BẮT BUỘC có `ward` (phường/xã) cho
  *      cả điểm lấy lẫn điểm giao.
  *   - `GET  /services/shipment/v2/{label}` — tra trạng thái đơn.
  *

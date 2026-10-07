@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { fulfillPaidOrder } from "@/lib/order-fulfillment";
+import { createGhtkShipmentForOrder } from "@/lib/order-fulfillment";
 import { cancelGhtkOrder } from "@/lib/ghtk";
 
 export async function checkInOrder(orderId: string) {
@@ -24,8 +24,8 @@ export async function checkInOrder(orderId: string) {
 }
 
 /**
- * Tạo lại đơn vận chuyển GHTK cho đơn đã thanh toán nhưng tạo đơn ship thất bại
- * (ghtkError, chưa có ghtkLabel). fulfillPaidOrder idempotent — nếu đã có label
+ * Admin tạo (hoặc tạo lại khi lỗi) đơn vận chuyển GHTK cho đơn đã thanh toán
+ * (chưa có ghtkLabel). createGhtkShipmentForOrder idempotent — nếu đã có label
  * thì không tạo trùng.
  */
 export async function retryGhtkOrder(orderId: string) {
@@ -36,7 +36,7 @@ export async function retryGhtkOrder(orderId: string) {
   });
   if (!order || order.paymentStatus !== "paid") return;
 
-  await fulfillPaidOrder(orderId);
+  await createGhtkShipmentForOrder(orderId);
   revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
   revalidatePath("/admin/orders");
 }

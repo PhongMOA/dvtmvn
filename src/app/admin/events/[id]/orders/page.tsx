@@ -157,7 +157,9 @@ export default async function EventOrdersPage({
                     <div className="flex flex-col items-start gap-1.5">
                       <Badge
                         variant="outline"
-                        className="border-destructive/40 text-destructive"
+                        className={cn(
+                          order.ghtkError && "border-destructive/40 text-destructive",
+                        )}
                         title={order.ghtkError ?? undefined}
                       >
                         {order.ghtkError ? "Lỗi tạo đơn" : "Chưa tạo đơn"}

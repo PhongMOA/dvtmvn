@@ -69,7 +69,7 @@ export async function skipPayment(orderId: string): Promise<OrderStatusResult> {
     return { ok: true, status: (latest?.paymentStatus ?? "expired") as OrderPaymentStatus };
   }
 
-  // Best-effort: push + tạo đơn GHTK y như webhook thật, để tiến trình phía sau
+  // Best-effort: push y như webhook thật (đơn GHTK do admin tạo thủ công), để tiến trình phía sau
   // được test đầy đủ. fulfillPaidOrder không throw; vẫn bọc try/catch.
   try {
     await fulfillPaidOrder(orderId);

@@ -52,7 +52,7 @@ export function ShipmentStatus({
       <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
         {error
           ? "Đang tạo đơn vận chuyển, vui lòng quay lại sau ít phút."
-          : "Đơn vận chuyển sẽ được tạo sau khi thanh toán được xác nhận."}
+          : "Shop đang chuẩn bị hàng — mã vận đơn sẽ hiện ở đây khi đơn được giao cho GHTK."}
       </div>
     );
   }

@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
       data: { orderId: order.id },
     });
 
-    // Best-effort: gửi push + tạo đơn vận chuyển GHTK. fulfillPaidOrder không bao
+    // Best-effort: gửi push (đơn GHTK do admin tạo thủ công). fulfillPaidOrder không bao
     // giờ throw, nhưng vẫn bọc try/catch để chắc chắn response webhook luôn 200
     // (SePay retry dựa trên response không phải 200).
     try {
