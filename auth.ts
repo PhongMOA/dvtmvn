@@ -19,7 +19,18 @@ const mobileGoogleClient = new OAuth2Client();
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
-    Google,
+    Google({
+      // 1 người dùng có thể đăng nhập lần đầu từ app Android (Credentials
+      // provider "mobile-google" ở dưới — provider đó upsert thẳng User theo
+      // email, KHÔNG tạo Account row), rồi sau đó mới đăng nhập Google trên
+      // web. Khi đó PrismaAdapter thấy đã có User cùng email nhưng chưa liên
+      // kết Account -> ném "OAuthAccountNotLinked", web login thất bại im lặng
+      // (redirect về /sign-in?error=..., không có thông báo). Cho phép tự liên
+      // kết theo email: an toàn ở đây vì Google luôn xác minh quyền sở hữu
+      // email (và nhánh mobile cũng đã bắt buộc payload.email_verified === true
+      // trước khi resolve User).
+      allowDangerousEmailAccountLinking: true,
+    }),
     Credentials({
       id: "mobile-google",
       name: "Google (app di động)",
