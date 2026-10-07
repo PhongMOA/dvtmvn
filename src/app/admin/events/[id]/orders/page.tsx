@@ -6,6 +6,7 @@ import { AdminCancelShipment } from "@/components/admin-cancel-shipment";
 import { ghtkStatusColorClass } from "@/lib/ghtk";
 import { cn } from "@/lib/utils";
 import { parseComboItems } from "@/lib/combo";
+import { orderItemsQuantity } from "@/lib/order-items";
 import { AdminSearchForm } from "@/components/admin-search-form";
 import { AdminPagination } from "@/components/admin-pagination";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ export default async function EventOrdersPage({
   if (!event) notFound();
 
   const where: Prisma.OrderWhereInput = {
-    comboType: { eventId: id },
+    items: { some: { comboType: { eventId: id } } },
     ...(q
       ? {
           OR: [
@@ -48,7 +49,11 @@ export default async function EventOrdersPage({
             { user: { name: { contains: q, mode: "insensitive" } } },
             { user: { email: { contains: q, mode: "insensitive" } } },
             { user: { phone: { contains: q, mode: "insensitive" } } },
-            { comboType: { name: { contains: q, mode: "insensitive" } } },
+            {
+              items: {
+                some: { comboType: { name: { contains: q, mode: "insensitive" } } },
+              },
+            },
           ],
         }
       : {}),
@@ -56,7 +61,7 @@ export default async function EventOrdersPage({
 
   const [matchCount, soldAgg] = await Promise.all([
     prisma.order.count({ where }),
-    prisma.order.aggregate({
+    prisma.orderItem.aggregate({
       _sum: { quantity: true },
       where: { comboType: { eventId: id } },
     }),
@@ -68,7 +73,7 @@ export default async function EventOrdersPage({
 
   const orders = await prisma.order.findMany({
     where,
-    include: { user: true, comboType: true },
+    include: { user: true, items: { include: { comboType: true } } },
     orderBy: { createdAt: "asc" },
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
@@ -111,14 +116,28 @@ export default async function EventOrdersPage({
                 <TableCell className="font-medium">
                   {order.user.name ?? order.user.email}
                 </TableCell>
-                <TableCell>{order.comboType.name}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {[
-                    ...(order.comboType.includesTicket ? ["Vé tham gia offline"] : []),
-                    ...parseComboItems(order.comboType.items),
-                  ].join(", ") || "—"}
+                <TableCell>
+                  <div className="flex flex-col gap-0.5">
+                    {order.items.map((item) => (
+                      <span key={item.id} className="whitespace-nowrap">
+                        {item.comboType.name} × {item.quantity}
+                      </span>
+                    ))}
+                  </div>
                 </TableCell>
-                <TableCell>{order.quantity}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  <div className="flex flex-col gap-0.5">
+                    {order.items.map((item) => (
+                      <span key={item.id}>
+                        {[
+                          ...(item.comboType.includesTicket ? ["Vé tham gia offline"] : []),
+                          ...parseComboItems(item.comboType.items),
+                        ].join(", ") || "—"}
+                      </span>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>{orderItemsQuantity(order.items)}</TableCell>
                 <TableCell>{formatDateTime(order.createdAt)}</TableCell>
                 <TableCell>
                   {order.paymentStatus === "paid" && (

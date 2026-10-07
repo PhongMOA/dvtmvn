@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 
 export function ProfileModalClient({
   needsProfile,
+  defaultName,
+  defaultFacebookUrl,
   defaultPhone,
   defaultProvince,
   defaultDistrict,
@@ -24,6 +26,8 @@ export function ProfileModalClient({
   defaultAddress,
 }: {
   needsProfile: boolean;
+  defaultName: string;
+  defaultFacebookUrl: string;
   defaultPhone: string;
   defaultProvince: string;
   defaultDistrict: string;
@@ -63,10 +67,20 @@ export function ProfileModalClient({
             "changing the default value state ... after being initialized" khi server
             component cha truyền defaultValue mới xuống trong lúc modal vẫn mounted. */}
         <form
-          key={[defaultPhone, defaultProvince, defaultDistrict, defaultWard, defaultAddress].join("|")}
+          key={[defaultName, defaultFacebookUrl, defaultPhone, defaultProvince, defaultDistrict, defaultWard, defaultAddress].join("|")}
           action={formAction}
           className="mt-4 flex flex-col gap-4"
         >
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="modal-name">Họ tên</Label>
+            <Input
+              id="modal-name"
+              name="name"
+              defaultValue={defaultName}
+              maxLength={100}
+              required
+            />
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="modal-phone">Số điện thoại</Label>
             <Input
@@ -76,6 +90,19 @@ export function ProfileModalClient({
               defaultValue={defaultPhone}
               placeholder="09xxxxxxxx"
               required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="modal-facebookUrl">
+              Link Facebook <span className="text-muted-foreground">(không bắt buộc)</span>
+            </Label>
+            <Input
+              id="modal-facebookUrl"
+              name="facebookUrl"
+              inputMode="url"
+              defaultValue={defaultFacebookUrl}
+              placeholder="https://facebook.com/ten.cua.ban"
+              maxLength={200}
             />
           </div>
           <AddressFields

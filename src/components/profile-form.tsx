@@ -9,16 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function ProfileForm({
-  name,
+  defaultName,
   email,
+  defaultFacebookUrl,
   defaultPhone,
   defaultProvince,
   defaultDistrict,
   defaultWard,
   defaultAddress,
 }: {
-  name: string;
+  defaultName: string;
   email: string;
+  defaultFacebookUrl: string;
   defaultPhone: string;
   defaultProvince: string;
   defaultDistrict: string;
@@ -42,17 +44,36 @@ export function ProfileForm({
     // form vẫn đang mounted — Input (uncontrolled) sẽ báo lỗi "changing the default
     // value ... after being initialized". Đổi key buộc React remount lại như init mới.
     <form
-      key={[defaultPhone, defaultProvince, defaultDistrict, defaultWard, defaultAddress].join("|")}
+      key={[defaultName, defaultFacebookUrl, defaultPhone, defaultProvince, defaultDistrict, defaultWard, defaultAddress].join("|")}
       action={formAction}
       className="mt-8 flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="name">Họ tên</Label>
-        <Input id="name" defaultValue={name} disabled />
+        <Input
+          id="name"
+          name="name"
+          defaultValue={defaultName}
+          maxLength={100}
+          required
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
         <Input id="email" defaultValue={email} disabled />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="facebookUrl">
+          Link Facebook <span className="text-muted-foreground">(không bắt buộc)</span>
+        </Label>
+        <Input
+          id="facebookUrl"
+          name="facebookUrl"
+          inputMode="url"
+          defaultValue={defaultFacebookUrl}
+          placeholder="https://facebook.com/ten.cua.ban"
+          maxLength={200}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="phone">Số điện thoại</Label>

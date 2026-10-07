@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getShopSetting } from "@/lib/shop-setting";
 import { sendPushToTokens } from "@/lib/push";
 import { createGhtkOrder, GHTK_STATUS_TEXT } from "@/lib/ghtk";
+import {
+  describeOrderItems,
+  orderItemsQuantity,
+  orderItemsTotal,
+} from "@/lib/order-items";
 
 /**
  * Side-effect sau khi 1 đơn chuyển sang "paid": gửi push "thanh toán thành công".
@@ -19,7 +24,7 @@ export async function fulfillPaidOrder(orderId: string): Promise<void> {
   try {
     order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { comboType: true },
+      include: { items: { include: { comboType: true } } },
     });
   } catch (err) {
     console.error("fulfillPaidOrder: không load được đơn", orderId, err);
@@ -37,7 +42,7 @@ export async function fulfillPaidOrder(orderId: string): Promise<void> {
         tokens.map((t) => t.token),
         {
           title: "Thanh toán thành công",
-          body: `${order.comboType.name} x${order.quantity} đã sẵn sàng — xem vé trong "Vé của tôi".`,
+          body: `${describeOrderItems(order.items)} đã sẵn sàng — xem vé trong "Vé của tôi".`,
         },
       );
     }
@@ -56,7 +61,7 @@ export async function createGhtkShipmentForOrder(orderId: string): Promise<void>
   try {
     order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { comboType: true, user: true },
+      include: { items: { include: { comboType: true } }, user: true },
     });
   } catch (err) {
     console.error("createGhtkShipmentForOrder: không load được đơn", orderId, err);
@@ -112,9 +117,9 @@ export async function createGhtkShipmentForOrder(orderId: string): Promise<void>
         ward: order.shipWard,
         address: order.shipAddress,
       },
-      productName: `${order.comboType.name} x${order.quantity}`,
-      quantity: order.quantity,
-      value: order.comboType.price * order.quantity,
+      productName: describeOrderItems(order.items),
+      quantity: orderItemsQuantity(order.items),
+      value: orderItemsTotal(order.items),
       note: `Đơn ${order.orderCode}`,
     });
 

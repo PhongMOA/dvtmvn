@@ -14,6 +14,8 @@ export async function ProfileModal() {
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
+      name: true,
+      facebookUrl: true,
       phone: true,
       province: true,
       district: true,
@@ -33,6 +35,8 @@ export async function ProfileModal() {
   return (
     <ProfileModalClient
       needsProfile={needsProfile}
+      defaultName={user.name ?? ""}
+      defaultFacebookUrl={user.facebookUrl ?? ""}
       defaultPhone={user.phone ?? ""}
       defaultProvince={user.province ?? ""}
       defaultDistrict={user.district ?? ""}

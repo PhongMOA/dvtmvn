@@ -1,5 +1,6 @@
 import { signIn } from "@/auth";
 import { SignInButton } from "@/components/sign-in-button";
+import { PasswordAuthForm } from "@/components/password-auth-form";
 
 export default async function SignInPage({
   searchParams,
@@ -8,6 +9,7 @@ export default async function SignInPage({
   const callbackUrlRaw = params?.callbackUrl;
   const callbackUrl =
     typeof callbackUrlRaw === "string" ? callbackUrlRaw : "/";
+  const defaultMode = params?.mode === "register" ? "register" : "sign-in";
 
   // Auth.js redirect về đây kèm ?error=<code> khi luồng OAuth lỗi. Nếu không
   // hiện gì, user chỉ thấy "bấm đăng nhập xong quay lại trang này" mà không
@@ -27,7 +29,8 @@ export default async function SignInPage({
           ĐĂNG NHẬP
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Đăng nhập để đặt vé và lưu lại vé của bạn.
+          Đăng nhập bằng Google hoặc tạo tài khoản bằng email để đặt vé và
+          lưu lại vé của bạn.
         </p>
         {errorMessage && (
           <p className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -43,6 +46,12 @@ export default async function SignInPage({
             }}
           />
         </div>
+        <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          hoặc dùng email
+          <span className="h-px flex-1 bg-border" />
+        </div>
+        <PasswordAuthForm callbackUrl={callbackUrl} defaultMode={defaultMode} />
       </div>
     </div>
   );

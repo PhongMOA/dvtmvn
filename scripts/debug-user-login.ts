@@ -20,7 +20,7 @@ async function main() {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { accounts: true, sessions: true, orders: true, deviceTokens: true },
+    include: { accounts: true, sessions: true, orders: { include: { items: true } }, deviceTokens: true },
   });
 
   if (!user) {
@@ -76,7 +76,7 @@ async function main() {
     console.log({
       orderCode: o.orderCode,
       paymentStatus: o.paymentStatus,
-      quantity: o.quantity,
+      quantity: o.items.reduce((s, i) => s + i.quantity, 0),
       createdAt: o.createdAt,
     });
   }

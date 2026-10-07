@@ -14,7 +14,7 @@ async function main() {
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
     take: 10,
-    include: { comboType: true },
+    include: { items: { include: { comboType: true } } },
   });
 
   console.log("=== 10 ĐƠN GẦN NHẤT ===");
@@ -23,9 +23,8 @@ async function main() {
       [
         `code=${o.orderCode}`,
         `status=${o.paymentStatus}`,
-        `qty=${o.quantity}`,
-        `expect=${o.comboType.price * o.quantity}đ`,
-        `combo=${o.comboType.name}`,
+        `expect=${o.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0) + o.shipFee}đ`,
+        `items=${o.items.map((i) => `${i.comboType.name}×${i.quantity}`).join(",")}`,
         `expiresAt=${o.expiresAt.toISOString()}`,
         `expired?=${o.paymentStatus === "pending" && o.expiresAt < new Date()}`,
         `createdAt=${o.createdAt.toISOString()}`,
@@ -70,7 +69,8 @@ async function main() {
       console.log(`  ${code}: không thấy trong 10 đơn gần nhất`);
       continue;
     }
-    const expect = order.comboType.price * order.quantity;
+    const expect =
+      order.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0) + order.shipFee;
     console.log(
       `  ${code}: order.status=${order.paymentStatus}, ` +
         `số tiền webhook=${t.transferAmount}đ vs cần=${expect}đ -> ` +

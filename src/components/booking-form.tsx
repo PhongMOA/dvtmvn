@@ -3,43 +3,57 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { bookCombo, type CheckoutProfile } from "@/app/actions/booking";
-import { ShippingCheckout } from "@/components/shipping-checkout";
-import {
-  Dialog,
-  DialogPopup,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { ShoppingCart } from "lucide-react";
+import { bookCombos } from "@/app/actions/booking";
+import { CheckoutDialog, type PendingCheckout } from "@/components/checkout-dialog";
+import { addToCart, useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+/**
+ * Chọn số lượng 1 combo rồi:
+ *   - "Thêm vào giỏ": cộng vào giỏ hàng (localStorage) để gom nhiều loại combo
+ *     và thanh toán 1 lần ở /cart.
+ *   - "Đặt ngay": giữ chỗ riêng combo này luôn (bỏ qua giỏ hàng).
+ */
 export function BookingForm({
   comboTypeId,
+  comboName,
   remainingQuantity,
 }: {
   comboTypeId: string;
+  comboName: string;
   remainingQuantity: number;
 }) {
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
+  const [checkout, setCheckout] = useState<PendingCheckout | null>(null);
   const router = useRouter();
-
-  // Sau khi bookCombo() giữ chỗ thành công: mở modal "xác nhận thông tin nhận
-  // hàng" → bước tóm tắt phí ship → mới điều hướng sang trang thanh toán.
-  const [checkout, setCheckout] = useState<{
-    orderId: string;
-    profile: CheckoutProfile;
-  } | null>(null);
+  const cart = useCart();
 
   const soldOut = remainingQuantity < 1;
+  const inCart = cart.find((line) => line.comboTypeId === comboTypeId)?.quantity ?? 0;
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleAddToCart() {
+    if (inCart >= remainingQuantity) {
+      toast.error(`Giỏ hàng đã có ${inCart} — combo này chỉ còn ${remainingQuantity}.`);
+      return;
+    }
+    const next = addToCart(comboTypeId, quantity, remainingQuantity);
+    const added = next - inCart;
+    toast.success(
+      added < quantity
+        ? `Chỉ thêm được ${added} "${comboName}" (còn ${remainingQuantity}).`
+        : `Đã thêm ${added} "${comboName}" vào giỏ.`,
+      { action: { label: "Xem giỏ", onClick: () => router.push("/cart") } },
+    );
+  }
+
+  function handleBuyNow(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const result = await bookCombo(comboTypeId, quantity);
+      const result = await bookCombos([{ comboTypeId, quantity }]);
       if (!result.ok) {
         if (result.error === "UNAUTHORIZED") {
           router.push(`/sign-in?callbackUrl=${encodeURIComponent("/")}`);
@@ -54,66 +68,50 @@ export function BookingForm({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="flex items-end gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={`quantity-${comboTypeId}`} className="sr-only">
-            Số lượng
-          </Label>
-          <Input
-            id={`quantity-${comboTypeId}`}
-            type="number"
-            min={1}
-            max={Math.max(remainingQuantity, 1)}
-            value={quantity}
+      <form onSubmit={handleBuyNow} className="flex flex-col gap-2">
+        <div className="flex items-end gap-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`quantity-${comboTypeId}`} className="sr-only">
+              Số lượng
+            </Label>
+            <Input
+              id={`quantity-${comboTypeId}`}
+              type="number"
+              min={1}
+              max={Math.max(remainingQuantity, 1)}
+              value={quantity}
+              disabled={soldOut || isPending}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setQuantity(
+                  Number.isNaN(v) ? 1 : Math.min(Math.max(v, 1), remainingQuantity),
+                );
+              }}
+              className="w-16"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
             disabled={soldOut || isPending}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setQuantity(
-                Number.isNaN(v) ? 1 : Math.min(Math.max(v, 1), remainingQuantity),
-              );
-            }}
-            className="w-20"
-          />
+            onClick={handleAddToCart}
+            className="flex-1"
+          >
+            <ShoppingCart />
+            Thêm vào giỏ
+          </Button>
+          <Button type="submit" disabled={soldOut || isPending} className="flex-1">
+            {soldOut ? "Hết hàng" : isPending ? "Đang đặt..." : "Đặt ngay"}
+          </Button>
         </div>
-        <Button type="submit" disabled={soldOut || isPending} className="flex-1">
-          {soldOut ? "Hết hàng" : isPending ? "Đang đặt..." : "Đặt combo"}
-        </Button>
+        {inCart > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Đã có {inCart} trong giỏ hàng.
+          </p>
+        )}
       </form>
 
-      <Dialog
-        open={checkout !== null}
-        onOpenChange={(next) => {
-          // Đóng modal = bỏ ngang: đơn pending tự hết hạn sau 15' và hoàn kho
-          // (expireStaleOrdersForCombo), không cần xử lý thêm ở đây.
-          if (!next) setCheckout(null);
-        }}
-      >
-        <DialogPopup>
-          <DialogHeader>
-            <DialogTitle>XÁC NHẬN THÔNG TIN NHẬN HÀNG</DialogTitle>
-            <DialogDescription>
-              Kiểm tra/sửa địa chỉ nhận combo. Bấm &quot;Tiếp tục&quot; để xem phí
-              ship và tổng tiền trước khi thanh toán. Đơn được giữ chỗ trong 15
-              phút.
-            </DialogDescription>
-          </DialogHeader>
-          {checkout && (
-            <div className="mt-4">
-              <ShippingCheckout
-                orderId={checkout.orderId}
-                variant="dialog"
-                defaultProfile={checkout.profile}
-                onProceed={() => {
-                  toast.success(
-                    "Đã giữ chỗ! Vui lòng chuyển khoản trong 15 phút để hoàn tất.",
-                  );
-                  router.push(`/orders/${checkout.orderId}/pay`);
-                }}
-              />
-            </div>
-          )}
-        </DialogPopup>
-      </Dialog>
+      <CheckoutDialog checkout={checkout} onClose={() => setCheckout(null)} />
     </>
   );
 }

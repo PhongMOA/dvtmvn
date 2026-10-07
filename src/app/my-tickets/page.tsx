@@ -27,7 +27,9 @@ export default async function MyTicketsPage() {
 
   const orders = await prisma.order.findMany({
     where: { userId: session.user.id },
-    include: { comboType: { include: { event: true } } },
+    include: {
+      items: { include: { comboType: { include: { event: true } } } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -61,10 +63,9 @@ export default async function MyTicketsPage() {
       ) : (
         <div className="mt-8 flex flex-col gap-4">
           {displayOrders.map((order) => {
-            const items = [
-              ...(order.comboType.includesTicket ? ["1 Vé tham gia offline"] : []),
-              ...parseComboItems(order.comboType.items),
-            ];
+            // Combo trong 1 đơn thường cùng 1 event — lấy event của dòng đầu
+            // làm tiêu đề thẻ.
+            const event = order.items[0]?.comboType.event;
 
             return (
               <div
@@ -75,7 +76,7 @@ export default async function MyTicketsPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-heading text-2xl tracking-wide text-foreground">
-                      {order.comboType.event.title}
+                      {event?.title ?? "Đơn hàng"}
                     </h2>
                     {order.paymentStatus === "pending" && (
                       <Badge variant="outline" className="border-accent text-accent">
@@ -93,18 +94,28 @@ export default async function MyTicketsPage() {
                       </Badge>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {order.comboType.event.venue} ·{" "}
-                    {formatDateTime(order.comboType.event.startAt)}
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-foreground">
-                    {order.comboType.name} × {order.quantity}
-                  </p>
-                  <ul className="mt-1 text-sm text-muted-foreground">
-                    {items.map((item) => (
-                      <li key={item}>• {item}</li>
-                    ))}
-                  </ul>
+                  {event && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {event.venue} · {formatDateTime(event.startAt)}
+                    </p>
+                  )}
+                  {order.items.map((item) => (
+                    <div key={item.id} className="mt-2">
+                      <p className="text-sm font-medium text-foreground">
+                        {item.comboType.name} × {item.quantity}
+                      </p>
+                      <ul className="mt-1 text-sm text-muted-foreground">
+                        {[
+                          ...(item.comboType.includesTicket
+                            ? ["1 Vé tham gia offline"]
+                            : []),
+                          ...parseComboItems(item.comboType.items),
+                        ].map((content) => (
+                          <li key={content}>• {content}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
                 <div className="flex justify-center">
                   {order.paymentStatus === "paid" && (

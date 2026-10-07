@@ -23,11 +23,12 @@ export default async function ProfilePage() {
         THÔNG TIN TÀI KHOẢN
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Số điện thoại và địa chỉ dùng để liên hệ khi giao vé/combo.
+        Họ tên, số điện thoại, Facebook và địa chỉ dùng để liên hệ khi giao vé/combo.
       </p>
       <ProfileForm
-        name={user.name ?? ""}
+        defaultName={user.name ?? ""}
         email={user.email}
+        defaultFacebookUrl={user.facebookUrl ?? ""}
         defaultPhone={user.phone ?? ""}
         defaultProvince={user.province ?? ""}
         defaultDistrict={user.district ?? ""}

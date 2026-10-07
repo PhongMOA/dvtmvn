@@ -16,6 +16,7 @@ import {
 } from "@/lib/ghtk";
 import { cn } from "@/lib/utils";
 import { parseComboItems } from "@/lib/combo";
+import { orderItemsQuantity, orderItemsTotal } from "@/lib/order-items";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -108,8 +109,20 @@ export default async function AdminAllOrdersPage({
         { user: { name: { contains: q, mode: "insensitive" } } },
         { user: { email: { contains: q, mode: "insensitive" } } },
         { user: { phone: { contains: q, mode: "insensitive" } } },
-        { comboType: { name: { contains: q, mode: "insensitive" } } },
-        { comboType: { event: { title: { contains: q, mode: "insensitive" } } } },
+        {
+          items: {
+            some: {
+              OR: [
+                { comboType: { name: { contains: q, mode: "insensitive" } } },
+                {
+                  comboType: {
+                    event: { title: { contains: q, mode: "insensitive" } },
+                  },
+                },
+              ],
+            },
+          },
+        },
       ],
     });
   }
@@ -159,19 +172,21 @@ export default async function AdminAllOrdersPage({
     prisma.order.findMany({
       where: { paymentStatus: "paid" },
       select: {
-        quantity: true,
         shipFee: true,
-        comboType: { select: { price: true } },
+        items: { select: { quantity: true, unitPrice: true } },
       },
     }),
     prisma.order.count({ where }),
   ]);
 
   const revenue = paidOrders.reduce(
-    (sum, o) => sum + o.comboType.price * o.quantity + o.shipFee,
+    (sum, o) => sum + orderItemsTotal(o.items) + o.shipFee,
     0,
   );
-  const comboSold = paidOrders.reduce((sum, o) => sum + o.quantity, 0);
+  const comboSold = paidOrders.reduce(
+    (sum, o) => sum + orderItemsQuantity(o.items),
+    0,
+  );
   const shipCollected = paidOrders.reduce((sum, o) => sum + o.shipFee, 0);
 
   // --- Dữ liệu biểu đồ: 60 ngày gần nhất (giờ VN); component tự cắt 14/30/60 ---
@@ -194,9 +209,8 @@ export default async function AdminAllOrdersPage({
       where: { paymentStatus: "paid", paidAt: { gte: chartSince } },
       select: {
         paidAt: true,
-        quantity: true,
         shipFee: true,
-        comboType: { select: { price: true } },
+        items: { select: { quantity: true, unitPrice: true } },
       },
     }),
   ]);
@@ -211,7 +225,7 @@ export default async function AdminAllOrdersPage({
   for (const r of paidRows) {
     if (!r.paidAt) continue;
     const bucket = byDay.get(vnDayKey(r.paidAt));
-    if (bucket) bucket.revenue += r.comboType.price * r.quantity + r.shipFee;
+    if (bucket) bucket.revenue += orderItemsTotal(r.items) + r.shipFee;
   }
 
   const chartData: OrdersDailyPoint[] = chartDays.map((d) => {
@@ -234,7 +248,10 @@ export default async function AdminAllOrdersPage({
 
   const orders = await prisma.order.findMany({
     where,
-    include: { user: true, comboType: { include: { event: true } } },
+    include: {
+      user: true,
+      items: { include: { comboType: { include: { event: true } } } },
+    },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
@@ -322,24 +339,36 @@ export default async function AdminAllOrdersPage({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
-                    <Link
-                      href={`/admin/events/${order.comboType.eventId}/orders`}
-                      className="text-sm font-medium text-foreground hover:text-accent hover:underline"
-                    >
-                      {order.comboType.event.title}
-                    </Link>
-                    <span className="text-xs text-muted-foreground">
-                      {[
-                        order.comboType.name,
-                        ...(order.comboType.includesTicket
-                          ? ["Vé offline"]
-                          : []),
-                        ...parseComboItems(order.comboType.items),
-                      ].join(" · ")}
-                    </span>
+                    {[
+                      ...new Map(
+                        order.items.map((item) => [
+                          item.comboType.eventId,
+                          item.comboType.event,
+                        ]),
+                      ).values(),
+                    ].map((event) => (
+                      <Link
+                        key={event.id}
+                        href={`/admin/events/${event.id}/orders`}
+                        className="text-sm font-medium text-foreground hover:text-accent hover:underline"
+                      >
+                        {event.title}
+                      </Link>
+                    ))}
+                    {order.items.map((item) => (
+                      <span key={item.id} className="text-xs text-muted-foreground">
+                        {[
+                          `${item.comboType.name} × ${item.quantity}`,
+                          ...(item.comboType.includesTicket ? ["Vé offline"] : []),
+                          ...parseComboItems(item.comboType.items),
+                        ].join(" · ")}
+                      </span>
+                    ))}
                   </div>
                 </TableCell>
-                <TableCell className="tabular-nums">{order.quantity}</TableCell>
+                <TableCell className="tabular-nums">
+                  {orderItemsQuantity(order.items)}
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDateTime(order.createdAt)}
                 </TableCell>

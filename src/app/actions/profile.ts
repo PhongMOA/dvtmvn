@@ -15,18 +15,46 @@ export type ProfileFormState = {
   warning?: string;
 };
 
+/**
+ * Chuẩn hoá link Facebook: rỗng -> null (tuỳ chọn); thiếu scheme thì thêm https://.
+ * Chỉ nhận domain facebook.com / fb.com (kể cả www., m., web.) và phải có path —
+ * trả false nếu không hợp lệ.
+ */
+function normalizeFacebookUrl(raw: string): string | null | false {
+  const value = raw.trim();
+  if (!value) return null;
+  if (value.length > 200) return false;
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+  } catch {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/^(www|m|web)\./, "");
+  if (host !== "facebook.com" && host !== "fb.com") return false;
+  if (url.pathname === "/" && !url.search) return false;
+  url.protocol = "https:";
+  return url.toString();
+}
+
 export async function updateProfile(
   _prevState: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
   const user = await requireUser();
 
+  const name = String(formData.get("name") ?? "").trim();
+  const facebookUrl = normalizeFacebookUrl(String(formData.get("facebookUrl") ?? ""));
   const phone = String(formData.get("phone") ?? "").trim();
   const province = String(formData.get("province") ?? "").trim();
   const district = String(formData.get("district") ?? "").trim();
   const ward = String(formData.get("ward") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
 
+  if (!name) return { error: "Thiếu họ tên." };
+  if (name.length > 100) return { error: "Họ tên quá dài (tối đa 100 ký tự)." };
+  if (facebookUrl === false)
+    return { error: "Link Facebook không hợp lệ (vd https://facebook.com/ten.cua.ban)." };
   if (!phone) return { error: "Thiếu số điện thoại." };
   if (!/^[0-9+ ]{8,15}$/.test(phone)) return { error: "Số điện thoại không hợp lệ." };
   if (!province) return { error: "Thiếu tỉnh/thành." };
@@ -47,7 +75,7 @@ export async function updateProfile(
   try {
     await prisma.user.update({
       where: { id: user.id },
-      data: { phone, province, district, ward, address },
+      data: { name, facebookUrl, phone, province, district, ward, address },
     });
   } catch {
     return { error: "Cập nhật thông tin thất bại, vui lòng thử lại." };

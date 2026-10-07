@@ -34,7 +34,11 @@ model User {
   district      String? // quận/huyện (MVP chưa validate chặt cấp này)
   ward          String? // phường/xã — text tự do, không validate; bắt buộc khi tạo đơn GHTK
   address       String? // số nhà + tên đường
+  facebookUrl   String? // link Facebook cá nhân (tuỳ chọn) — để shop liên hệ khi cần, sửa ở /profile
   role          String    @default("user") // "user" | "admin". Quyền admin = role == "admin" HOẶC email khớp ADMIN_EMAIL (admin bootstrap từ env, luôn admin, không set/gỡ được qua UI). Xem src/lib/auth-helpers.ts.
+  // Hash scrypt của mật khẩu (tài khoản đăng ký thủ công, xem src/lib/password.ts).
+  // null = tài khoản chỉ đăng nhập Google.
+  passwordHash  String?
   emailVerified DateTime? // required bởi @auth/prisma-adapter (schema chuẩn Auth.js), không dùng cho logic app
   createdAt     DateTime  @default(now())
   orders        Order[]
@@ -123,7 +127,7 @@ model ComboType {
   remainingQuantity Int
   createdAt         DateTime @default(now())
   event             Event    @relation(fields: [eventId], references: [id])
-  orders            Order[]
+  orderItems        OrderItem[]
 }
 
 // Thanh toán qua SePay (chuyển khoản ngân hàng, xác nhận tự động qua webhook —
@@ -131,11 +135,15 @@ model ComboType {
 // "pending", giữ chỗ bằng cách trừ remainingQuantity ngay (đã chốt với user), quá
 // hạn expiresAt mà chưa thanh toán thì tự chuyển "expired" + hoàn lại kho (xem
 // src/lib/order-expiry.ts). status (booked|checked_in) chỉ có ý nghĩa khi đã "paid".
+//
+// 1 đơn gồm nhiều dòng combo (OrderItem) — khách gom nhiều loại combo trong giỏ
+// hàng rồi thanh toán 1 lần. Cột cũ "comboTypeId"/"quantity" (thời 1 đơn = 1
+// combo) vẫn còn trong DB dạng nullable để bản deploy cũ không vỡ trong lúc
+// chuyển đổi, nhưng đã bỏ khỏi schema — KHÔNG dùng nữa, sẽ drop sau (xem
+// scripts/apply-cart-checkout-migration.ts).
 model Order {
   id            String    @id @default(uuid())
-  comboTypeId   String
   userId        String
-  quantity      Int
   qrToken       String    @unique @default(uuid())
   status        String    @default("booked") // booked | checked_in
   orderCode     String    @unique // mã ngắn nhúng vào nội dung chuyển khoản để webhook khớp đơn
@@ -143,8 +151,8 @@ model Order {
   expiresAt     DateTime // hạn chuyển khoản, hết hạn mà còn pending -> expired + hoàn kho
   paidAt        DateTime?
   createdAt     DateTime  @default(now())
-  comboType     ComboType @relation(fields: [comboTypeId], references: [id])
   user          User      @relation(fields: [userId], references: [id])
+  items         OrderItem[]
 
   // Snapshot thông tin nhận hàng + phí ship GHTK đã chốt ở bước tóm tắt trước
   // thanh toán (user có thể sửa profile sau — đơn phải giữ nguyên giá trị lúc
@@ -166,6 +174,22 @@ model Order {
   ghtkStatusText String?
   ghtkError      String?
   ghtkSyncedAt   DateTime?
+}
+
+// 1 dòng combo trong đơn. unitPrice chụp giá combo lúc đặt — admin sửa giá combo
+// sau đó không làm lệch số tiền phải chuyển khoản của đơn đang chờ (webhook so
+// khớp theo tổng unitPrice × quantity + shipFee, xem src/lib/order-items.ts).
+model OrderItem {
+  id          String    @id @default(uuid())
+  orderId     String
+  comboTypeId String
+  quantity    Int
+  unitPrice   Int // VND
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  comboType   ComboType @relation(fields: [comboTypeId], references: [id])
+
+  @@index([orderId])
+  @@index([comboTypeId])
 }
 
 // Log mọi giao dịch webhook SePay đã nhận — id chính là id giao dịch phía SePay,

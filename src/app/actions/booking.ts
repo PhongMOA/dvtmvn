@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
 import {
   expireOrderIfPastDue,
-  expireStaleOrdersForCombo,
+  expireStaleOrdersForCombos,
 } from "@/lib/order-expiry";
+import { orderItemsQuantity, orderItemsTotal } from "@/lib/order-items";
 import { generateOrderCode, PAYMENT_WINDOW_MINUTES } from "@/lib/sepay";
 import { getShopSetting } from "@/lib/shop-setting";
 import { COMBO_WEIGHT_GRAM, estimateShippingFee } from "@/lib/ghtk";
@@ -24,16 +25,26 @@ export type BookComboResult =
   | {
       ok: true;
       orderId: string;
+      orderCode: string;
       // Giá trị hồ sơ hiện có (có thể rỗng/điền một phần) để hiện sẵn trong
       // bước xác nhận thông tin nhận hàng — không bắt user gõ lại từ đầu.
       profile: CheckoutProfile;
     }
   | { ok: false; error: string };
 
-export async function bookCombo(
-  comboTypeId: string,
-  quantity: number,
-): Promise<BookComboResult> {
+export type BookingLine = { comboTypeId: string; quantity: number };
+
+// Giới hạn số dòng combo khác nhau trong 1 đơn — chặn payload bất thường.
+const MAX_LINES = 20;
+
+class BookingError extends Error {}
+
+/**
+ * Giữ chỗ 1 đơn gồm 1 hoặc nhiều dòng combo ("Đặt ngay" = 1 dòng; giỏ hàng =
+ * nhiều dòng). Trừ kho TẤT CẢ các dòng trong cùng 1 transaction — thiếu hàng ở
+ * bất kỳ dòng nào thì huỷ cả đơn, không giữ chỗ lưng chừng.
+ */
+export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult> {
   let user;
   try {
     user = await requireUser();
@@ -41,8 +52,23 @@ export async function bookCombo(
     return { ok: false, error: "UNAUTHORIZED" };
   }
 
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    return { ok: false, error: "Số lượng không hợp lệ." };
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return { ok: false, error: "Chưa chọn combo nào." };
+  }
+  // Gộp các dòng trùng combo (phòng client gửi lặp).
+  const merged = new Map<string, number>();
+  for (const line of lines) {
+    if (
+      typeof line?.comboTypeId !== "string" ||
+      !Number.isInteger(line.quantity) ||
+      line.quantity < 1
+    ) {
+      return { ok: false, error: "Số lượng không hợp lệ." };
+    }
+    merged.set(line.comboTypeId, (merged.get(line.comboTypeId) ?? 0) + line.quantity);
+  }
+  if (merged.size > MAX_LINES) {
+    return { ok: false, error: "Đơn có quá nhiều loại combo." };
   }
 
   // Hồ sơ giao hàng KHÔNG còn chặn cứng ở đây — bước "xác nhận thông tin nhận
@@ -68,66 +94,67 @@ export async function bookCombo(
     address: profileRow?.address ?? "",
   };
 
-  // Dọn trước các đơn "pending" đã quá hạn của combo này để hoàn lại kho — không
-  // có cron nên tận dụng ngay lúc có người đặt mới (xem lib/order-expiry.ts).
-  await expireStaleOrdersForCombo(comboTypeId);
+  // Dọn trước các đơn "pending" đã quá hạn của các combo này để hoàn lại kho —
+  // không có cron nên tận dụng ngay lúc có người đặt mới (xem lib/order-expiry.ts).
+  await expireStaleOrdersForCombos([...merged.keys()]);
 
   let orderId: string;
+  let orderCode: string;
   try {
     const order = await prisma.$transaction(async (tx) => {
-      // Conditional atomic update: DB chỉ decrement nếu WHERE khớp (còn đủ hàng
-      // VÀ event của combo đang "open") trong CÙNG 1 câu lệnh — an toàn chống
-      // oversell kể cả khi đổi sang DB có connection pool thật, không chỉ nhờ
-      // SQLite tự serialize transaction.
-      const { count } = await tx.comboType.updateMany({
-        where: {
-          id: comboTypeId,
-          remainingQuantity: { gte: quantity },
-          event: { status: "open" },
-        },
-        data: { remainingQuantity: { decrement: quantity } },
-      });
+      const items: { comboTypeId: string; quantity: number; unitPrice: number }[] = [];
 
-      if (count === 0) {
+      for (const [comboTypeId, quantity] of merged) {
+        // Conditional atomic update: DB chỉ decrement nếu WHERE khớp (còn đủ
+        // hàng VÀ event của combo đang "open") trong CÙNG 1 câu lệnh — an toàn
+        // chống oversell. Lỗi ở dòng nào thì throw -> rollback cả transaction.
+        const { count } = await tx.comboType.updateMany({
+          where: {
+            id: comboTypeId,
+            remainingQuantity: { gte: quantity },
+            event: { status: "open" },
+          },
+          data: { remainingQuantity: { decrement: quantity } },
+        });
+
         const combo = await tx.comboType.findUnique({
           where: { id: comboTypeId },
           include: { event: true },
         });
-        if (!combo) throw new Error("COMBO_NOT_FOUND");
-        if (combo.event.status !== "open") throw new Error("EVENT_NOT_OPEN");
-        throw new Error("NOT_ENOUGH_STOCK");
+        if (!combo) throw new BookingError("Có combo không còn tồn tại, vui lòng tải lại trang.");
+        if (count === 0) {
+          if (combo.event.status !== "open") throw new BookingError("Sự kiện đã ngừng bán.");
+          throw new BookingError(
+            combo.remainingQuantity < 1
+              ? `Combo "${combo.name}" đã hết hàng.`
+              : `Combo "${combo.name}" chỉ còn ${combo.remainingQuantity}.`,
+          );
+        }
+        items.push({ comboTypeId, quantity, unitPrice: combo.price });
       }
 
       // Đơn tạo ra ở trạng thái "pending" — chỉ thành "paid" khi webhook SePay
       // xác nhận đã nhận đúng số tiền + đúng orderCode (xem api/webhooks/sepay).
       return tx.order.create({
         data: {
-          comboTypeId,
           userId: user.id,
-          quantity,
           orderCode: generateOrderCode(),
           paymentStatus: "pending",
           expiresAt: new Date(Date.now() + PAYMENT_WINDOW_MINUTES * 60 * 1000),
+          items: { create: items },
         },
       });
     });
     orderId = order.id;
+    orderCode = order.orderCode;
   } catch (err) {
-    if (err instanceof Error && err.message === "EVENT_NOT_OPEN") {
-      return { ok: false, error: "Sự kiện đã ngừng bán." };
-    }
-    if (err instanceof Error && err.message === "NOT_ENOUGH_STOCK") {
-      return { ok: false, error: "Combo đã hết hàng." };
-    }
-    if (err instanceof Error && err.message === "COMBO_NOT_FOUND") {
-      return { ok: false, error: "Combo không tồn tại." };
-    }
+    if (err instanceof BookingError) return { ok: false, error: err.message };
     return { ok: false, error: "Đặt combo thất bại, vui lòng thử lại." };
   }
 
   revalidatePath("/");
   revalidatePath("/my-tickets");
-  return { ok: true, orderId, profile };
+  return { ok: true, orderId, orderCode, profile };
 }
 
 export type PrepareCheckoutResult =
@@ -159,9 +186,9 @@ export async function prepareCheckout(
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { comboType: true },
+    include: { items: true },
   });
-  if (!order || order.userId !== user.id) {
+  if (!order || order.userId !== user.id || order.items.length === 0) {
     return { ok: false, error: "Không tìm thấy đơn hàng." };
   }
   if (order.paymentStatus === "paid") {
@@ -230,7 +257,7 @@ export async function prepareCheckout(
     toProvince: province,
     toDistrict: district,
     toAddress: address,
-    weightGram: COMBO_WEIGHT_GRAM * order.quantity,
+    weightGram: COMBO_WEIGHT_GRAM * orderItemsQuantity(order.items),
   });
 
   if (estimate.status === "rejected") {
@@ -248,7 +275,7 @@ export async function prepareCheckout(
     };
   }
 
-  const comboTotal = order.comboType.price * order.quantity;
+  const comboTotal = orderItemsTotal(order.items);
   const shipFee = estimate.fee;
 
   await prisma.order.update({

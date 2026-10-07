@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { orderItemsTotal } from "@/lib/order-items";
 import { extractOrderCodeFromContent } from "@/lib/sepay";
 import { fulfillPaidOrder } from "@/lib/order-fulfillment";
 
@@ -105,14 +106,16 @@ export async function POST(req: NextRequest) {
 
   const order = await prisma.order.findUnique({
     where: { orderCode },
-    include: { comboType: true },
+    include: { items: true },
   });
 
-  if (!order || order.paymentStatus !== "pending") {
+  // items rỗng = đơn tạo từ bản cũ chưa được backfill OrderItem — không tự xác
+  // nhận (số tiền tính ra chỉ còn phí ship), để admin đối soát thủ công.
+  if (!order || order.paymentStatus !== "pending" || order.items.length === 0) {
     return NextResponse.json({ success: true });
   }
 
-  const expectedAmount = order.comboType.price * order.quantity + order.shipFee;
+  const expectedAmount = orderItemsTotal(order.items) + order.shipFee;
   if (payload.transferAmount !== expectedAmount) {
     // Sai số tiền — không tự xác nhận, để admin đối soát qua log SepayTransaction.
     return NextResponse.json({ success: true });

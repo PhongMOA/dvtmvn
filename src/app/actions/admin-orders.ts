@@ -5,12 +5,20 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { createGhtkShipmentForOrder } from "@/lib/order-fulfillment";
 import { cancelGhtkOrder } from "@/lib/ghtk";
+import { describeOrderItems, orderItemsQuantity } from "@/lib/order-items";
+
+// Đơn có thể gồm combo của nhiều event -> revalidate trang đơn của từng event.
+function revalidateEventOrderPages(items: { comboType: { eventId: string } }[]) {
+  for (const eventId of new Set(items.map((item) => item.comboType.eventId))) {
+    revalidatePath(`/admin/events/${eventId}/orders`);
+  }
+}
 
 export async function checkInOrder(orderId: string) {
   await requireAdmin();
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { comboType: true },
+    include: { items: { include: { comboType: true } } },
   });
   if (!order) return;
 
@@ -19,7 +27,7 @@ export async function checkInOrder(orderId: string) {
   if (order.paymentStatus === "paid") {
     await prisma.order.update({ where: { id: orderId }, data: { status: "checked_in" } });
   }
-  revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+  revalidateEventOrderPages(order.items);
   revalidatePath("/admin/orders");
 }
 
@@ -32,12 +40,12 @@ export async function retryGhtkOrder(orderId: string) {
   await requireAdmin();
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { comboType: true },
+    include: { items: { include: { comboType: true } } },
   });
   if (!order || order.paymentStatus !== "paid") return;
 
   await createGhtkShipmentForOrder(orderId);
-  revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+  revalidateEventOrderPages(order.items);
   revalidatePath("/admin/orders");
 }
 
@@ -61,7 +69,7 @@ export async function cancelGhtkShipment(
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { comboType: true },
+    include: { items: { include: { comboType: true } } },
   });
   if (!order) return { ok: false, error: "Không tìm thấy đơn." };
   if (!order.ghtkLabel) return { ok: false, error: "Đơn chưa có mã vận chuyển." };
@@ -86,7 +94,7 @@ export async function cancelGhtkShipment(
     },
   });
 
-  revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+  revalidateEventOrderPages(order.items);
   revalidatePath("/admin/orders");
   revalidatePath("/my-tickets");
   return { ok: true };
@@ -100,7 +108,7 @@ export async function getOrderByQrToken(qrToken: string) {
   await requireAdmin();
   const order = await prisma.order.findUnique({
     where: { qrToken },
-    include: { comboType: true, user: true },
+    include: { items: { include: { comboType: true } }, user: true },
   });
   if (!order) return { ok: false as const, error: "NOT_FOUND" as const };
   if (order.paymentStatus !== "paid") {
@@ -112,10 +120,10 @@ export async function getOrderByQrToken(qrToken: string) {
   return {
     ok: true as const,
     orderCode: order.orderCode,
-    comboName: order.comboType.name,
+    comboName: describeOrderItems(order.items),
     userName: order.user.name ?? order.user.email,
     phone: order.user.phone,
-    quantity: order.quantity,
+    quantity: orderItemsQuantity(order.items),
   };
 }
 
@@ -131,7 +139,7 @@ export async function checkInByQrToken(qrToken: string) {
   await requireAdmin();
   const order = await prisma.order.findUnique({
     where: { qrToken },
-    include: { comboType: true, user: true },
+    include: { items: { include: { comboType: true } }, user: true },
   });
   if (!order) return { ok: false as const, error: "NOT_FOUND" as const };
   if (order.paymentStatus !== "paid") {
@@ -144,11 +152,11 @@ export async function checkInByQrToken(qrToken: string) {
     where: { id: order.id },
     data: { status: "checked_in" },
   });
-  revalidatePath(`/admin/events/${order.comboType.eventId}/orders`);
+  revalidateEventOrderPages(order.items);
   return {
     ok: true as const,
-    comboName: order.comboType.name,
+    comboName: describeOrderItems(order.items),
     userName: order.user.name ?? order.user.email,
-    quantity: order.quantity,
+    quantity: orderItemsQuantity(order.items),
   };
 }

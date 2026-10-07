@@ -4,6 +4,24 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "@/lib/prisma";
+import { normalizeEmail, verifyPassword } from "@/lib/password";
+
+// Tài khoản đăng ký bằng email + mật khẩu KHÔNG xác minh email (chưa có dịch vụ
+// gửi mail). Kẻ xấu có thể đăng ký trước bằng email của người khác, đặt mật khẩu,
+// chờ chủ thật đăng nhập Google (tự liên kết theo email, xem
+// allowDangerousEmailAccountLinking) rồi dùng mật khẩu đó vào chung tài khoản.
+// Chặn: lần đầu Google xác nhận chủ email đăng nhập, mật khẩu đặt khi email CHƯA
+// được xác minh bị vô hiệu + đánh dấu emailVerified. Chủ thật vẫn vào bằng
+// Google; nếu chính họ đặt mật khẩu đó thì phải dùng Google từ đó.
+async function claimEmailVerifiedByGoogle(email: string) {
+  await prisma.user.updateMany({
+    where: {
+      email: { equals: normalizeEmail(email), mode: "insensitive" },
+      emailVerified: null,
+    },
+    data: { passwordHash: null, emailVerified: new Date() },
+  });
+}
 
 // Google chặn OAuth authorization endpoint khi user-agent là embedded WebView
 // (lỗi "disallowed_useragent", chính sách từ 2/2023) — nên Google Provider
@@ -65,15 +83,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // với email chưa xác minh (vd tài khoản Workspace/email phụ) có thể
         // chiếm quyền vào đúng User đã tồn tại của email đó.
         if (payload.email_verified !== true) return null;
+        await claimEmailVerifiedByGoogle(payload.email);
 
         // Tìm/tạo User giống cách PrismaAdapter làm cho Google Provider —
         // cùng 1 bảng User, khớp theo email để 1 người dùng chung tài khoản
         // dù đăng nhập từ web hay từ app.
         const user = await prisma.user.upsert({
           where: { email: payload.email },
-          update: { name: payload.name ?? undefined, image: payload.picture ?? undefined },
+          // Không ghi đè name: user có thể tự sửa họ tên ở /profile — chỉ lấy tên
+          // Google lúc tạo tài khoản lần đầu.
+          update: { image: payload.picture ?? undefined },
           create: { email: payload.email, name: payload.name, image: payload.picture },
         });
+        return { id: user.id, email: user.email, name: user.name, image: user.image };
+      },
+    }),
+    Credentials({
+      // Đăng ký/đăng nhập thủ công không qua Google — tài khoản tạo ở
+      // src/app/actions/password-auth.ts, mật khẩu hash scrypt (lib/password.ts).
+      id: "password",
+      name: "Email + mật khẩu",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Mật khẩu", type: "password" },
+      },
+      async authorize(credentials) {
+        const email = credentials?.email;
+        const password = credentials?.password;
+        if (typeof email !== "string" || typeof password !== "string") return null;
+        if (!email || !password) return null;
+
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: normalizeEmail(email), mode: "insensitive" } },
+        });
+        // Tài khoản chỉ có Google (passwordHash null) -> không đăng nhập bằng
+        // mật khẩu được. Cùng 1 thông báo lỗi cho mọi trường hợp để không lộ
+        // email nào đã đăng ký.
+        if (!user?.passwordHash) return null;
+        if (!(await verifyPassword(password, user.passwordHash))) return null;
         return { id: user.id, email: user.email, name: user.name, image: user.image };
       },
     }),
@@ -83,6 +130,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/sign-in",
   },
   callbacks: {
+    async signIn({ account, profile }) {
+      if (account?.provider === "google" && profile?.email && profile.email_verified) {
+        await claimEmailVerifiedByGoogle(profile.email);
+      }
+      return true;
+    },
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub;

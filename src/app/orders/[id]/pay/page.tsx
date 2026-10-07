@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { buildVietQrUrl, getBankTransferInfo } from "@/lib/sepay";
+import { describeOrderItems, orderItemsTotal } from "@/lib/order-items";
 import { PaymentPendingClient } from "@/components/payment-pending-client";
 import { PayCheckoutGate } from "@/components/pay-checkout-gate";
 import { CopyButton } from "@/components/copy-button";
@@ -31,15 +32,20 @@ export default async function OrderPaymentPage({
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { comboType: true, user: true },
+    include: { items: { include: { comboType: true } }, user: true },
   });
-  if (!order || order.userId !== session.user.id) notFound();
+  // items rỗng: đơn tạo từ bản cũ chưa được backfill OrderItem — không hiện QR
+  // (tổng tiền sẽ sai).
+  if (!order || order.userId !== session.user.id || order.items.length === 0) {
+    notFound();
+  }
 
   if (order.paymentStatus === "paid") {
     redirect("/my-tickets");
   }
 
-  const comboTotal = order.comboType.price * order.quantity;
+  const comboTotal = orderItemsTotal(order.items);
+  const itemsLabel = describeOrderItems(order.items);
   const amount = comboTotal + order.shipFee;
 
   if (order.paymentStatus === "expired") {
@@ -49,7 +55,7 @@ export default async function OrderPaymentPage({
           ĐƠN ĐÃ HẾT HẠN
         </h1>
         <p className="mt-4 text-muted-foreground">
-          Đơn {order.comboType.name} × {order.quantity} đã quá hạn chuyển khoản
+          Đơn {itemsLabel} đã quá hạn chuyển khoản
           và bị huỷ. Vui lòng đặt lại combo.
         </p>
         <Link href="/" className={`${buttonVariants()} mt-6`}>
@@ -69,7 +75,7 @@ export default async function OrderPaymentPage({
           XÁC NHẬN THÔNG TIN NHẬN HÀNG
         </h1>
         <p className="mt-2 text-center text-sm text-muted-foreground">
-          {order.comboType.name} × {order.quantity} — kiểm tra địa chỉ để tính phí
+          {itemsLabel} — kiểm tra địa chỉ để tính phí
           ship trước khi thanh toán.
         </p>
         <div className="mt-6">
@@ -98,7 +104,7 @@ export default async function OrderPaymentPage({
         QUÉT MÃ ĐỂ THANH TOÁN
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        {order.comboType.name} × {order.quantity} — giữ nguyên nội dung chuyển
+        {itemsLabel} — giữ nguyên nội dung chuyển
         khoản để hệ thống tự động xác nhận.
       </p>
 

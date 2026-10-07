@@ -3,7 +3,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/auth-helpers";
-import { expireStaleOrdersForCombo } from "@/lib/order-expiry";
+import { expireStaleOrdersForCombos } from "@/lib/order-expiry";
 import { BookingForm } from "@/components/booking-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,15 +53,13 @@ export default async function Home() {
 
   // Dọn các đơn "pending" đã quá hạn của MỌI combo thuộc event này trước khi
   // hiển thị tồn kho. Không có cron nên trước đây việc hoàn kho chỉ được kích
-  // hoạt lúc user đặt lại ĐÚNG combo đó (xem expireStaleOrdersForCombo) hoặc
+  // hoạt lúc user đặt lại ĐÚNG combo đó (xem expireStaleOrdersForCombos) hoặc
   // lúc trang thanh toán của ĐÚNG đơn đó đang mở tự poll — nếu user rời trang
   // thanh toán giữa chừng mà không ai đặt lại combo, đơn "treo" vô thời hạn,
   // trang chủ hiện thiếu hàng ảo. Trang chủ là nơi hiển thị tồn kho cho tất cả
   // user nên tận dụng làm điểm dọn dẹp chung, không cần đợi 1 trong 2 điều
   // kiện trên xảy ra.
-  await Promise.all(
-    event.comboTypes.map((combo) => expireStaleOrdersForCombo(combo.id)),
-  );
+  await expireStaleOrdersForCombos(event.comboTypes.map((combo) => combo.id));
   event.comboTypes = await prisma.comboType.findMany({
     where: { eventId: event.id },
     orderBy: { createdAt: "asc" },
@@ -172,7 +170,8 @@ export default async function Home() {
           CHỌN COMBO
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Đặt combo xong quét mã VietQR chuyển khoản trong 15 phút để giữ chỗ —
+          Thêm nhiều combo vào giỏ để thanh toán 1 lần, hoặc bấm &quot;Đặt
+          ngay&quot;. Đặt xong quét mã VietQR chuyển khoản trong 15 phút để giữ chỗ —
           hệ thống tự động xác nhận, không cần chờ duyệt thủ công.
         </p>
 
@@ -224,15 +223,15 @@ export default async function Home() {
                     ))}
                   </ul>
 
-                  <p className="text-xs text-muted-foreground">
-                    {soldOut
-                      ? "Đã hết hàng"
-                      : `Còn lại ${combo.remainingQuantity}/${combo.totalQuantity}`}
-                  </p>
+                  {/* Không công khai số lượng tồn — chỉ báo khi đã hết hàng. */}
+                  {soldOut && (
+                    <p className="text-xs text-muted-foreground">Đã hết hàng</p>
+                  )}
 
                   {session?.user ? (
                     <BookingForm
                       comboTypeId={combo.id}
+                      comboName={combo.name}
                       remainingQuantity={combo.remainingQuantity}
                     />
                   ) : (

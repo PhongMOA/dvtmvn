@@ -19,6 +19,7 @@ export const ERROR_MESSAGE: Record<string, string> = {
 export type OrderInfo = {
   qrToken: string;
   orderCode: string;
+  /** mô tả các dòng combo, vd "Combo A × 2, Combo B × 1" */
   comboName: string;
   userName: string;
   phone: string | null;
@@ -99,7 +100,7 @@ export function useCheckinScan() {
     if (res.ok) {
       setConfirmed(true);
       toast.success(
-        `Check-in thành công: ${order.comboName} × ${order.quantity} — ${order.userName}`,
+        `Check-in thành công: ${order.comboName} — ${order.userName}`,
       );
     } else {
       // Trạng thái đổi giữa lúc tra cứu và lúc xác nhận (vd admin khác vừa
@@ -165,8 +166,9 @@ export function ScanResultCard({
 
       <div className="mt-3 border-t border-white/20 pt-3">
         <p className="text-xs uppercase tracking-wide text-white/60">Số vé</p>
-        <p className="text-base">
-          {result.order.comboName} × {result.order.quantity}
+        <p className="text-base">{result.order.comboName}</p>
+        <p className="text-sm text-white/70">
+          Tổng {result.order.quantity} combo
         </p>
       </div>
       <p className="mt-2 text-xs text-white/50">

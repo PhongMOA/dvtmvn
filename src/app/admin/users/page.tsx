@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { orderItemsQuantity } from "@/lib/order-items";
 import { isAdminEmail } from "@/lib/auth-helpers";
 import { AdminDeleteUserButton } from "@/components/admin-delete-user-button";
 import { AdminSetAdminButton } from "@/components/admin-set-admin-button";
@@ -64,7 +65,7 @@ export default async function AdminUsersPage({
       _count: { select: { orders: true } },
       orders: {
         where: { paymentStatus: "paid" },
-        select: { quantity: true },
+        select: { items: { select: { quantity: true } } },
       },
     },
   });
@@ -102,7 +103,7 @@ export default async function AdminUsersPage({
           <TableBody>
             {users.map((user) => {
               const paidQuantity = user.orders.reduce(
-                (sum, order) => sum + order.quantity,
+                (sum, order) => sum + orderItemsQuantity(order.items),
                 0,
               );
               const envAdmin = isAdminEmail(user.email);
