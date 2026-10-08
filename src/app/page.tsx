@@ -8,7 +8,7 @@ import { BookingForm } from "@/components/booking-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { parseComboItems } from "@/lib/combo";
-import { SALES_START_AT, isSalesOpen } from "@/lib/sales";
+import { getSalesConfig } from "@/lib/sales";
 import { SalesCountdown } from "@/components/sales-countdown";
 import { FloatingParticles } from "@/components/floating-particles";
 import { cn } from "@/lib/utils";
@@ -67,11 +67,14 @@ export default async function Home() {
 
   const now = new Date();
   // Admin luôn thấy giao diện "sau countdown" (đủ combo + đặt hàng) để xem
-  // trước/kiểm thử, kể cả khi chưa tới SALES_START_AT công khai. Server action
+  // trước/kiểm thử, kể cả khi chưa tới giờ mở bán công khai. Server action
   // bookCombo không chặn theo isSalesOpen (chỉ theo event.status) nên admin đặt
   // thử được luôn.
-  const admin = await isAdmin(session?.user);
-  const publicSalesOpen = isSalesOpen(now);
+  const [admin, sales] = await Promise.all([
+    isAdmin(session?.user),
+    getSalesConfig(now),
+  ]);
+  const publicSalesOpen = sales.salesOpen;
   const salesOpen = publicSalesOpen || admin;
   const adminPreview = admin && !publicSalesOpen;
 
@@ -136,7 +139,8 @@ export default async function Home() {
           {!salesOpen && (
             <div className="mt-2">
               <SalesCountdown
-                targetIso={SALES_START_AT.toISOString()}
+                targetIso={sales.salesStartAt.toISOString()}
+                title={sales.countdownTitle}
                 serverNowMs={now.getTime()}
               />
             </div>

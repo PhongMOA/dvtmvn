@@ -16,7 +16,7 @@ export default async function CartPage() {
   }
 
   // Cùng quy tắc trang chủ: chưa tới giờ mở bán công khai thì chỉ admin đặt được.
-  const salesOpen = isSalesOpen() || (await isAdmin(session.user));
+  const salesOpen = (await isSalesOpen()) || (await isAdmin(session.user));
   if (!salesOpen) {
     return (
       <div className="mx-auto w-full max-w-md px-4 py-16 text-center">

@@ -1,19 +1,18 @@
-import { VN_TIME_ZONE } from "@/lib/datetime";
+import { getShopSetting } from "@/lib/shop-setting";
 
-// Thời điểm mở bán các gói combo của sự kiện hiện tại (giờ Việt Nam, UTC+7).
-// Trước mốc này: trang chủ hiện đồng hồ đếm ngược ở hero và khoá phần đặt combo.
-// Muốn đổi ngày mở bán -> sửa hằng số này rồi deploy lại (đã chốt với user:
-// lưu bằng hằng số trong code, không thêm field vào schema).
-export const SALES_START_AT = new Date("2026-11-04T00:00:00+07:00");
-
-export function isSalesOpen(now: Date = new Date()): boolean {
-  return now.getTime() >= SALES_START_AT.getTime();
+// Thời điểm mở bán combo + tiêu đề đồng hồ đếm ngược ở trang chủ. Lưu trong
+// ShopSetting (salesStartAt / countdownTitle), admin sửa tại /admin/settings.
+// Trước mốc này: trang chủ chỉ hiện hero + countdown và khoá phần đặt combo
+// (admin vẫn xem trước được).
+export async function getSalesConfig(now: Date = new Date()) {
+  const setting = await getShopSetting();
+  return {
+    salesStartAt: setting.salesStartAt,
+    countdownTitle: setting.countdownTitle,
+    salesOpen: now.getTime() >= setting.salesStartAt.getTime(),
+  };
 }
 
-export function formatSalesStartDate(): string {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "full",
-    timeStyle: "short",
-    timeZone: VN_TIME_ZONE,
-  }).format(SALES_START_AT);
+export async function isSalesOpen(now: Date = new Date()): Promise<boolean> {
+  return (await getSalesConfig(now)).salesOpen;
 }

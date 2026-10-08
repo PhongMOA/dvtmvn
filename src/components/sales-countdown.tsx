@@ -10,9 +10,11 @@ import { useRouter } from "next/navigation";
 export function SalesCountdown({
   targetIso,
   serverNowMs,
+  title,
 }: {
   targetIso: string;
   serverNowMs: number;
+  title: string;
 }) {
   const router = useRouter();
   const targetMs = new Date(targetIso).getTime();
@@ -40,9 +42,11 @@ export function SalesCountdown({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="font-heading text-2xl leading-none tracking-wide text-foreground sm:text-3xl">
-        Doomsday is coming
-      </p>
+      {title && (
+        <p className="font-heading text-2xl leading-none tracking-wide text-foreground sm:text-3xl">
+          {title}
+        </p>
+      )}
       <div className="flex gap-2 sm:gap-3">
         {cells.map((cell) => (
           <div

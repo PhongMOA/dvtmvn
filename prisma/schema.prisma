@@ -221,5 +221,9 @@ model ShopSetting {
   pickDistrict String   @default("") // tên quận/huyện đúng theo GHTK, vd "Quận Ba Đình"
   pickWard     String   @default("") // tên phường/xã — bắt buộc khi tạo đơn GHTK
   pickAddress  String   @default("") // số nhà + đường (địa chỉ chi tiết)
+  // Đồng hồ đếm ngược ở trang chủ: trước salesStartAt chỉ hiện hero + countdown,
+  // khoá đặt combo (admin vẫn xem trước được). Admin sửa tại /admin/settings.
+  salesStartAt   DateTime @default("2026-11-03T17:00:00.000Z") // = 04/11/2026 00:00 giờ VN
+  countdownTitle String   @default("Doomsday is coming")
   updatedAt    DateTime @updatedAt
 }

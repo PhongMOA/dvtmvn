@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { SHOP_SETTING_ID } from "@/lib/shop-setting";
 import { checkPickLocation } from "@/lib/ghtk";
+import { fromVnDatetimeLocal } from "@/lib/datetime";
 
 // success/warning optional để phân biệt state khởi tạo {error: null} với state sau
 // khi lưu — xem ProfileFormState. warning: lưu được nhưng chưa xác thực với GHTK.
@@ -94,5 +95,45 @@ export async function updatePickInfo(
     };
   }
 
+  return { error: null, success: true };
+}
+
+export type SalesCountdownFormState = { error: string | null; success?: boolean };
+
+/**
+ * Lưu giờ mở bán combo + tiêu đề đồng hồ đếm ngược ở trang chủ. Chỉ admin.
+ * Giờ nhập từ <input type="datetime-local"> hiểu theo giờ Việt Nam.
+ */
+export async function updateSalesCountdown(
+  _prevState: SalesCountdownFormState,
+  formData: FormData,
+): Promise<SalesCountdownFormState> {
+  await requireAdmin();
+
+  const rawStartAt = String(formData.get("salesStartAt") ?? "").trim();
+  const countdownTitle = String(formData.get("countdownTitle") ?? "").trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(rawStartAt)) {
+    return { error: "Giờ mở bán không hợp lệ." };
+  }
+  const salesStartAt = fromVnDatetimeLocal(rawStartAt);
+  if (Number.isNaN(salesStartAt.getTime())) {
+    return { error: "Giờ mở bán không hợp lệ." };
+  }
+  if (countdownTitle.length > 100) return { error: "Tiêu đề quá dài (tối đa 100 ký tự)." };
+
+  try {
+    await prisma.shopSetting.upsert({
+      where: { id: SHOP_SETTING_ID },
+      create: { id: SHOP_SETTING_ID, salesStartAt, countdownTitle },
+      update: { salesStartAt, countdownTitle },
+    });
+  } catch {
+    return { error: "Lưu cấu hình thất bại, vui lòng thử lại." };
+  }
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/");
+  revalidatePath("/cart");
   return { error: null, success: true };
 }
