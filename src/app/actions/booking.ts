@@ -89,7 +89,6 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
     where: { id: user.id },
     select: {
       name: true,
-      facebookUrl: true,
       phone: true,
       province: true,
       district: true,
@@ -97,9 +96,6 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
       address: true,
     },
   });
-  // Link Facebook bắt buộc (để shop liên hệ). ProfileModal tắt được nên chặn cả ở
-  // đây; client bắt mã lỗi này để dẫn khách sang /profile.
-  if (!profileRow?.facebookUrl) return { ok: false, error: "MISSING_FACEBOOK" };
 
   const profile: CheckoutProfile = {
     name: profileRow?.name ?? "",

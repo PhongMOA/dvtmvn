@@ -22,7 +22,6 @@ import { Label } from "@/components/ui/label";
 const REQUIRED_FIELDS = [
   ["name", "Họ tên"],
   ["phone", "Số điện thoại"],
-  ["facebookUrl", "Link Facebook"],
   ["province", "Tỉnh/Thành phố"],
   ["ward", "Phường/Xã"],
   ["address", "Địa chỉ chi tiết"],
@@ -60,7 +59,6 @@ export function ProfileModalClient({
   const [values, setValues] = useState<Record<RequiredField, string>>({
     name: defaultName,
     phone: defaultPhone,
-    facebookUrl: defaultFacebookUrl,
     province: defaultProvince,
     ward: defaultWard,
     address: defaultAddress,
@@ -89,7 +87,7 @@ export function ProfileModalClient({
         <DialogHeader>
           <DialogTitle>BỔ SUNG THÔNG TIN LIÊN HỆ</DialogTitle>
           <DialogDescription>
-            Vui lòng bổ sung số điện thoại, link Facebook và địa chỉ giao hàng để chúng tôi liên
+            Vui lòng bổ sung số điện thoại và địa chỉ giao hàng để chúng tôi liên
             hệ khi giao vé/combo. Bạn có thể tắt hộp thoại này, nhưng nó sẽ tiếp
             tục hiện lại cho tới khi bạn điền đủ thông tin.
           </DialogDescription>
@@ -146,7 +144,8 @@ export function ProfileModalClient({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="modal-facebookUrl">
-              Link Facebook <MissingHint show={missing.facebookUrl} />
+              Link Facebook{" "}
+              <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
             </Label>
             <Input
               id="modal-facebookUrl"
@@ -154,9 +153,7 @@ export function ProfileModalClient({
               inputMode="url"
               defaultValue={defaultFacebookUrl}
               placeholder="https://facebook.com/ten.cua.ban"
-              className={missing.facebookUrl ? MISSING_INPUT_CLASS : undefined}
               maxLength={200}
-              required
             />
           </div>
           <AddressFields

@@ -53,7 +53,6 @@ export async function updateProfile(
 
   if (!name) return { error: "Thiếu họ tên." };
   if (name.length > 100) return { error: "Họ tên quá dài (tối đa 100 ký tự)." };
-  if (facebookUrl === null) return { error: "Thiếu link Facebook." };
   if (facebookUrl === false)
     return { error: "Link Facebook không hợp lệ (vd https://facebook.com/ten.cua.ban)." };
   if (!phone) return { error: "Thiếu số điện thoại." };

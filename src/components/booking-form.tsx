@@ -59,12 +59,6 @@ export function BookingForm({
           router.push(`/sign-in?callbackUrl=${encodeURIComponent("/")}`);
           return;
         }
-        if (result.error === "MISSING_FACEBOOK") {
-          toast.error("Vui lòng bổ sung link Facebook trước khi đặt combo.", {
-            action: { label: "Cập nhật", onClick: () => router.push("/profile") },
-          });
-          return;
-        }
         toast.error(result.error);
         return;
       }

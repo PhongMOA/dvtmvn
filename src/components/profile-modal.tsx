@@ -27,7 +27,6 @@ export async function ProfileModal() {
 
   const needsProfile =
     !user.phone ||
-    !user.facebookUrl ||
     !user.province ||
     !user.ward ||
     !user.address;
