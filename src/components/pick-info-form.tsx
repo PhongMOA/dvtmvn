@@ -64,7 +64,7 @@ export function PickInfoForm({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="pickProvince">Tỉnh/Thành</Label>
+          <Label htmlFor="pickProvince">Tỉnh/Thành phố</Label>
           <Input
             id="pickProvince"
             name="pickProvince"
@@ -75,14 +75,13 @@ export function PickInfoForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="pickDistrict">
-            Quận/Huyện{" "}
-            <span className="text-muted-foreground">(bỏ trống nếu đã sáp nhập)</span>
+            Quận/Huyện <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
           </Label>
           <Input
             id="pickDistrict"
             name="pickDistrict"
             defaultValue={defaultDistrict}
-            placeholder="VD: Quận Ba Đình"
+            placeholder="Bỏ trống nếu đã sáp nhập"
           />
         </div>
       </div>

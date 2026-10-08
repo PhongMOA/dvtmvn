@@ -23,7 +23,7 @@ const REQUIRED_FIELDS = [
   ["name", "Họ tên"],
   ["phone", "Số điện thoại"],
   ["facebookUrl", "Link Facebook"],
-  ["province", "Tỉnh/Thành"],
+  ["province", "Tỉnh/Thành phố"],
   ["ward", "Phường/Xã"],
   ["address", "Địa chỉ chi tiết"],
 ] as const;

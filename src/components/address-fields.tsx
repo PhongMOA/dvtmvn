@@ -46,7 +46,7 @@ export function AddressFields({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`${idPrefix}-province`}>
-            Tỉnh/Thành <MissingHint show={highlight?.province} />
+            Tỉnh/Thành phố <MissingHint show={highlight?.province} />
           </Label>
           <Input
             id={`${idPrefix}-province`}
@@ -59,14 +59,14 @@ export function AddressFields({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`${idPrefix}-district`}>
-            Quận/Huyện{" "}
-            <span className="text-muted-foreground">(bỏ trống nếu đã sáp nhập)</span>
+            {/* Label giữ 1 dòng để ô nhập thẳng hàng với Tỉnh/Thành phố bên cạnh. */}
+            Quận/Huyện <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
           </Label>
           <Input
             id={`${idPrefix}-district`}
             name="district"
             defaultValue={defaultDistrict}
-            placeholder="VD: Quận Gò Vấp"
+            placeholder="Bỏ trống nếu đã sáp nhập"
           />
         </div>
       </div>
