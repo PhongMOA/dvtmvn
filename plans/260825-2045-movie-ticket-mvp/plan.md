@@ -1,7 +1,7 @@
 ---
 title: "Web đặt vé xem phim offline — MVP"
 description: "Next.js full-stack app cho phép user xem 1 phim đang mở bán, đăng nhập Google, đặt vé (thanh toán trực tiếp tại sự kiện), nhận QR code; admin quản lý event và check-in thủ công."
-status: in-progress
+status: completed
 priority: P2
 effort: 18h
 tags: [fullstack, nextjs, prisma, auth, mvp]

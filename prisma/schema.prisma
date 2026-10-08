@@ -48,6 +48,8 @@ model User {
   accounts      Account[]
   sessions      Session[]
   deviceTokens  DeviceToken[]
+  seatAllowances SeatAllowance[]
+  seatBookings  SeatBooking[]
 }
 
 // Token push (FCM) của app Android — 1 user có thể cài trên nhiều thiết bị
@@ -112,6 +114,50 @@ model Event {
   status      String      @default("draft") // draft | open | closed
   createdAt   DateTime    @default(now())
   comboTypes  ComboType[]
+
+  // Chọn ghế theo lượt (xem src/lib/seat-allowance.ts): user đã mua vé được mở
+  // chọn ghế lần lượt từ seatOpenAt, mỗi lượt seatBatchSize người, cách nhau
+  // seatTurnMinutes phút. null = chưa mở chọn ghế. Sửa tại /admin/events/[id]/seats.
+  seatOpenAt      DateTime?
+  seatTurnMinutes Int       @default(15)
+  seatBatchSize   Int       @default(1)
+  seatAllowances  SeatAllowance[]
+  seatBookings    SeatBooking[]
+}
+
+// Quyền chọn ghế của 1 user cho 1 event. Snapshot lúc admin "Chốt danh sách";
+// đơn paid sau đó được nối cuối hàng (rank lớn nhất + 1) hoặc tăng ticketCount.
+// unlockAt = seatOpenAt + floor(rank / seatBatchSize) × seatTurnMinutes.
+model SeatAllowance {
+  id          String   @id @default(uuid())
+  eventId     String
+  userId      String
+  rank        Int // 0-based, theo paidAt của đơn có vé đầu tiên
+  ticketCount Int // Σ quantity OrderItem (combo includesTicket) của các đơn paid
+  unlockAt    DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, rank])
+}
+
+// 1 ghế đã chọn. seatCode theo sơ đồ tĩnh src/lib/seats/layout.ts. Unique
+// (eventId, seatCode) là chốt chặn cuối chống trùng ghế — confirm còn khoá
+// advisory lock theo event để re-validate luật ghế lẻ trên state mới nhất.
+model SeatBooking {
+  id        String   @id @default(uuid())
+  eventId   String
+  seatCode  String
+  userId    String
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, seatCode])
+  @@index([eventId, userId])
 }
 
 // 1 combo = 1 gói bán ra của 1 event, có thể gồm vé + merchandise hoặc chỉ

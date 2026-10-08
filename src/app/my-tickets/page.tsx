@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { TicketQr } from "@/components/ticket-qr";
 import { ShipmentStatus } from "@/components/shipment-status";
+import { SeatTurnCard } from "@/components/seat-turn-card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { parseComboItems } from "@/lib/combo";
@@ -44,6 +45,20 @@ export default async function MyTicketsPage() {
     .map((order) => order.id);
   await Promise.all(staleOrderIds.map((id) => expireOrderIfPastDue(id)));
 
+  // Lượt chọn ghế (chỉ có sau khi admin "Chốt danh sách" ở event).
+  const [seatAllowances, seatBookings] = await Promise.all([
+    prisma.seatAllowance.findMany({
+      where: { userId: session.user.id, ticketCount: { gt: 0 } },
+      include: { event: { select: { title: true } } },
+      orderBy: { unlockAt: "asc" },
+    }),
+    prisma.seatBooking.findMany({
+      where: { userId: session.user.id },
+      select: { eventId: true, seatCode: true },
+      orderBy: { seatCode: "asc" },
+    }),
+  ]);
+
   const displayOrders = orders.map((order) =>
     staleOrderIds.includes(order.id)
       ? { ...order, paymentStatus: "expired" as const }
@@ -55,6 +70,23 @@ export default async function MyTicketsPage() {
       <h1 className="font-heading text-4xl tracking-wide text-primary">
         VÉ CỦA TÔI
       </h1>
+
+      {seatAllowances.length > 0 && (
+        <div className="mt-6 flex flex-col gap-3">
+          {seatAllowances.map((allowance) => (
+            <SeatTurnCard
+              key={allowance.id}
+              eventId={allowance.eventId}
+              eventTitle={allowance.event.title}
+              unlockAt={allowance.unlockAt.toISOString()}
+              ticketCount={allowance.ticketCount}
+              seats={seatBookings
+                .filter((b) => b.eventId === allowance.eventId)
+                .map((b) => b.seatCode)}
+            />
+          ))}
+        </div>
+      )}
 
       {displayOrders.length === 0 ? (
         <p className="mt-6 text-muted-foreground">

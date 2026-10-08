@@ -91,6 +91,12 @@ export default async function AdminEventsPage() {
                     >
                       Đơn hàng
                     </Link>
+                    <Link
+                      href={`/admin/events/${event.id}/seats`}
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    >
+                      Chọn ghế
+                    </Link>
                     {event.status === "open" ? (
                       <form action={closeEvent.bind(null, event.id)}>
                         <Button type="submit" variant="secondary" size="sm">

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireUser } from "@/lib/auth-helpers";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { fulfillPaidOrder } from "@/lib/order-fulfillment";
+import { syncSeatAllowanceForOrder } from "@/lib/seat-allowance";
 import { getGhtkShipmentStatus } from "@/lib/ghtk";
 
 export type OrderPaymentStatus = "pending" | "paid" | "expired";
@@ -76,6 +77,7 @@ export async function skipPayment(orderId: string): Promise<OrderStatusResult> {
   } catch (err) {
     console.error("fulfillPaidOrder (skipPayment) lỗi:", err);
   }
+  await syncSeatAllowanceForOrder(orderId);
 
   return { ok: true, status: "paid" };
 }
