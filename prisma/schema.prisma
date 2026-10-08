@@ -35,7 +35,7 @@ model User {
   ward          String? // phường/xã — text tự do, không validate; bắt buộc khi tạo đơn GHTK
   address       String? // số nhà + tên đường
   facebookUrl   String? // link Facebook cá nhân (tuỳ chọn) — để shop liên hệ khi cần, sửa ở /profile
-  role          String    @default("user") // "user" | "admin". Quyền admin = role == "admin" HOẶC email khớp ADMIN_EMAIL (admin bootstrap từ env, luôn admin, không set/gỡ được qua UI). Xem src/lib/auth-helpers.ts.
+  role          String    @default("user") // "user" | "admin" | "tester" (tester: đặt thử combo trước giờ mở bán như admin, không vào /admin — xem canPreviewSales). Quyền admin = role == "admin" HOẶC email khớp ADMIN_EMAIL (admin bootstrap từ env, luôn admin, không set/gỡ được qua UI). Xem src/lib/auth-helpers.ts.
   // Hash scrypt của mật khẩu (tài khoản đăng ký thủ công, xem src/lib/password.ts).
   // null = tài khoản chỉ đăng nhập Google.
   passwordHash  String?

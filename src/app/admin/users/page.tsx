@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { orderItemsQuantity } from "@/lib/order-items";
 import { isAdminEmail } from "@/lib/auth-helpers";
 import { AdminDeleteUserButton } from "@/components/admin-delete-user-button";
+import { AdminSetTesterButton } from "@/components/admin-set-tester-button";
 import { AdminSetAdminButton } from "@/components/admin-set-admin-button";
 import { AdminSearchForm } from "@/components/admin-search-form";
 import { AdminPagination } from "@/components/admin-pagination";
@@ -129,6 +130,8 @@ export default async function AdminUsersPage({
               const displayName = user.name ?? user.email;
               const facebookHref = safeFacebookHref(user.facebookUrl);
               const canToggleAdmin = !envAdmin && !isSelf;
+              const tester = !admin && user.role === "tester";
+              const canToggleTester = !admin;
               const canDelete = !admin && user._count.orders === 0;
 
               return (
@@ -152,6 +155,11 @@ export default async function AdminUsersPage({
                         {admin && (
                           <Badge variant="outline" className="border-accent text-accent">
                             Admin
+                          </Badge>
+                        )}
+                        {tester && (
+                          <Badge variant="outline" className="border-primary text-primary">
+                            Tester
                           </Badge>
                         )}
                       </span>
@@ -179,8 +187,15 @@ export default async function AdminUsersPage({
                     {formatDate(user.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {canToggleAdmin || canDelete ? (
+                    {canToggleAdmin || canToggleTester || canDelete ? (
                       <div className="flex justify-end gap-2">
+                        {canToggleTester && (
+                          <AdminSetTesterButton
+                            userId={user.id}
+                            label={displayName}
+                            isTester={tester}
+                          />
+                        )}
                         {canToggleAdmin && (
                           <AdminSetAdminButton
                             userId={user.id}

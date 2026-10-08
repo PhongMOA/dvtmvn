@@ -59,3 +59,34 @@ export async function setUserAdmin(
   revalidatePath("/admin/users");
   return { ok: true };
 }
+
+export type SetUserTesterResult =
+  | { ok: true }
+  | { ok: false; error: "NOT_FOUND" | "IS_ADMIN" };
+
+// Cấp/gỡ quyền tester (User.role == "tester"): được xem trước + đặt thử combo
+// khi chưa mở bán công khai như admin (xem canPreviewSales), nhưng KHÔNG vào
+// được /admin. Admin đã có sẵn quyền này nên không đổi admin thành tester —
+// muốn hạ thì "Gỡ admin" trước.
+export async function setUserTester(
+  userId: string,
+  makeTester: boolean,
+): Promise<SetUserTesterResult> {
+  await requireAdmin();
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, role: true },
+  });
+  if (!user) return { ok: false, error: "NOT_FOUND" };
+  if (user.role === "admin" || isAdminEmail(user.email)) {
+    return { ok: false, error: "IS_ADMIN" };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { role: makeTester ? "tester" : "user" },
+  });
+  revalidatePath("/admin/users");
+  return { ok: true };
+}

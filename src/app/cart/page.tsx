@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/auth-helpers";
+import { canPreviewSales } from "@/lib/auth-helpers";
 import { expireStaleOrdersForCombos } from "@/lib/order-expiry";
 import { parseComboItems } from "@/lib/combo";
 import { isSalesOpen } from "@/lib/sales";
@@ -15,8 +15,8 @@ export default async function CartPage() {
     redirect(`/sign-in?callbackUrl=${encodeURIComponent("/cart")}`);
   }
 
-  // Cùng quy tắc trang chủ: chưa tới giờ mở bán công khai thì chỉ admin đặt được.
-  const salesOpen = (await isSalesOpen()) || (await isAdmin(session.user));
+  // Cùng quy tắc trang chủ: chưa tới giờ mở bán công khai thì chỉ admin/tester đặt được.
+  const salesOpen = (await isSalesOpen()) || (await canPreviewSales(session.user));
   if (!salesOpen) {
     return (
       <div className="mx-auto w-full max-w-md px-4 py-16 text-center">

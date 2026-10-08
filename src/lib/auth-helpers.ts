@@ -26,6 +26,25 @@ export async function isAdmin(
   return record?.role === "admin";
 }
 
+/**
+ * Được xem trước/đặt thử combo khi chưa tới giờ mở bán công khai: admin HOẶC
+ * tester (User.role == "tester", cấp ở /admin/users). Tester chỉ có quyền này —
+ * KHÔNG vào được /admin hay gọi server action admin (vẫn chặn bằng isAdmin).
+ * Đọc role từ DB như isAdmin để cấp/gỡ có hiệu lực ngay.
+ */
+export async function canPreviewSales(
+  user?: { id?: string | null; email?: string | null } | null,
+): Promise<boolean> {
+  if (!user) return false;
+  if (isAdminEmail(user.email)) return true;
+  if (!user.id) return false;
+  const record = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  });
+  return record?.role === "admin" || record?.role === "tester";
+}
+
 /** Bắt buộc đã đăng nhập — dùng trong Server Actions ghi dữ liệu. Throw nếu chưa login. */
 export async function requireUser() {
   const session = await auth();

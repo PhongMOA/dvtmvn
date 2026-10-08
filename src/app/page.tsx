@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { isAdmin } from "@/lib/auth-helpers";
+import { canPreviewSales, isAdmin } from "@/lib/auth-helpers";
 import { expireStaleOrdersForCombos } from "@/lib/order-expiry";
 import { BookingForm } from "@/components/booking-form";
 import { buttonVariants } from "@/components/ui/button";
@@ -66,17 +66,18 @@ export default async function Home() {
   });
 
   const now = new Date();
-  // Admin luôn thấy giao diện "sau countdown" (đủ combo + đặt hàng) để xem
-  // trước/kiểm thử, kể cả khi chưa tới giờ mở bán công khai. Server action
-  // bookCombo không chặn theo isSalesOpen (chỉ theo event.status) nên admin đặt
-  // thử được luôn.
-  const [admin, sales] = await Promise.all([
+  // Admin và tester luôn thấy giao diện "sau countdown" (đủ combo + đặt hàng)
+  // để xem trước/kiểm thử, kể cả khi chưa tới giờ mở bán công khai. Server
+  // action bookCombo không chặn theo isSalesOpen (chỉ theo event.status) nên
+  // admin/tester đặt thử được luôn.
+  const [preview, admin, sales] = await Promise.all([
+    canPreviewSales(session?.user),
     isAdmin(session?.user),
     getSalesConfig(now),
   ]);
   const publicSalesOpen = sales.salesOpen;
-  const salesOpen = publicSalesOpen || admin;
-  const adminPreview = admin && !publicSalesOpen;
+  const salesOpen = publicSalesOpen || preview;
+  const previewMode = preview && !publicSalesOpen;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -127,8 +128,8 @@ export default async function Home() {
         <FloatingParticles className="pointer-events-none opacity-80 mix-blend-screen" />
         <div className="relative mx-auto flex max-w-5xl flex-col gap-6 px-4 py-16 sm:py-24">
           <Badge className="w-fit bg-primary/15 text-primary" variant="outline">
-            {adminPreview
-              ? "XEM TRƯỚC (ADMIN) — CHƯA MỞ BÁN CÔNG KHAI"
+            {previewMode
+              ? `XEM TRƯỚC (${admin ? "ADMIN" : "TESTER"}) — CHƯA MỞ BÁN CÔNG KHAI`
               : salesOpen
                 ? "ĐANG MỞ BÁN"
                 : "SẮP MỞ BÁN"}
