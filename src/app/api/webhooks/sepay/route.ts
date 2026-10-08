@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { orderItemsTotal } from "@/lib/order-items";
+import { orderAmountDue } from "@/lib/order-items";
 import { extractOrderCodeFromContent } from "@/lib/sepay";
 import { fulfillPaidOrder } from "@/lib/order-fulfillment";
 
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
-  const expectedAmount = orderItemsTotal(order.items) + order.shipFee;
+  const expectedAmount = orderAmountDue(order);
   if (payload.transferAmount !== expectedAmount) {
     // Sai số tiền — không tự xác nhận, để admin đối soát qua log SepayTransaction.
     return NextResponse.json({ success: true });

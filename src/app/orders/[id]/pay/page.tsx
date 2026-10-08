@@ -4,7 +4,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { buildVietQrUrl, getBankTransferInfo } from "@/lib/sepay";
-import { describeOrderItems, orderItemsTotal } from "@/lib/order-items";
+import {
+  describeOrderItems,
+  orderAmountDue,
+  orderItemsTotal,
+} from "@/lib/order-items";
+import { parseCoupon } from "@/lib/coupons";
 import { PaymentPendingClient } from "@/components/payment-pending-client";
 import { PayCheckoutGate } from "@/components/pay-checkout-gate";
 import { CopyButton } from "@/components/copy-button";
@@ -46,7 +51,8 @@ export default async function OrderPaymentPage({
 
   const comboTotal = orderItemsTotal(order.items);
   const itemsLabel = describeOrderItems(order.items);
-  const amount = comboTotal + order.shipFee;
+  const amount = orderAmountDue(order);
+  const couponCode = parseCoupon(order.coupon)?.code;
 
   if (order.paymentStatus === "expired") {
     return (
@@ -120,6 +126,16 @@ export default async function OrderPaymentPage({
           <dt className="text-muted-foreground">Tiền combo</dt>
           <dd className="font-medium text-foreground">{formatVnd(comboTotal)}</dd>
         </div>
+        {order.discountAmount > 0 && (
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">
+              Giảm giá{couponCode ? ` (${couponCode})` : ""}
+            </dt>
+            <dd className="font-medium text-primary">
+              −{formatVnd(order.discountAmount)}
+            </dd>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">Phí ship (GHTK)</dt>
           <dd className="font-medium text-foreground">

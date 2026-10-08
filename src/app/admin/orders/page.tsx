@@ -16,7 +16,7 @@ import {
 } from "@/lib/ghtk";
 import { cn } from "@/lib/utils";
 import { parseComboItems } from "@/lib/combo";
-import { orderItemsQuantity, orderItemsTotal } from "@/lib/order-items";
+import { orderAmountDue, orderItemsQuantity } from "@/lib/order-items";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -173,6 +173,7 @@ export default async function AdminAllOrdersPage({
       where: { paymentStatus: "paid" },
       select: {
         shipFee: true,
+        discountAmount: true,
         items: { select: { quantity: true, unitPrice: true } },
       },
     }),
@@ -180,7 +181,7 @@ export default async function AdminAllOrdersPage({
   ]);
 
   const revenue = paidOrders.reduce(
-    (sum, o) => sum + orderItemsTotal(o.items) + o.shipFee,
+    (sum, o) => sum + orderAmountDue(o),
     0,
   );
   const comboSold = paidOrders.reduce(
@@ -210,6 +211,7 @@ export default async function AdminAllOrdersPage({
       select: {
         paidAt: true,
         shipFee: true,
+        discountAmount: true,
         items: { select: { quantity: true, unitPrice: true } },
       },
     }),
@@ -225,7 +227,7 @@ export default async function AdminAllOrdersPage({
   for (const r of paidRows) {
     if (!r.paidAt) continue;
     const bucket = byDay.get(vnDayKey(r.paidAt));
-    if (bucket) bucket.revenue += orderItemsTotal(r.items) + r.shipFee;
+    if (bucket) bucket.revenue += orderAmountDue(r);
   }
 
   const chartData: OrdersDailyPoint[] = chartDays.map((d) => {

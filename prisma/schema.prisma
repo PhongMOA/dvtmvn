@@ -39,6 +39,9 @@ model User {
   // Hash scrypt của mật khẩu (tài khoản đăng ký thủ công, xem src/lib/password.ts).
   // null = tài khoản chỉ đăng nhập Google.
   passwordHash  String?
+  // Ví mã giảm giá cấp thẳng cho user (JSON array, xem src/lib/coupons.ts) — cấp
+  // bằng scripts/grant-coupon.ts. Mỗi lần áp vào đơn trừ 1 lượt.
+  coupons       Json?
   emailVerified DateTime? // required bởi @auth/prisma-adapter (schema chuẩn Auth.js), không dùng cho logic app
   createdAt     DateTime  @default(now())
   orders        Order[]
@@ -164,6 +167,12 @@ model Order {
   shipWard       String?
   shipAddress    String?
   shipFee        Int       @default(0) // VND
+
+  // Mã giảm giá đã áp (snapshot từ ví User.coupons, quantity 1) — để hoàn lượt
+  // đúng mã khi đơn hết hạn. discountAmount chỉ trừ vào tiền combo, không trừ
+  // phí ship: số tiền chuyển khoản = tiền combo − discountAmount + shipFee.
+  coupon         Json?
+  discountAmount Int       @default(0) // VND
 
   // Đơn vận chuyển GHTK — admin tạo thủ công sau khi đơn đã thanh toán (xem
   // src/lib/order-fulfillment.ts). ghtkError giữ lý do tạo thất bại để admin

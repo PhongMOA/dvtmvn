@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
 import {
@@ -11,6 +12,16 @@ import { orderItemsQuantity, orderItemsTotal } from "@/lib/order-items";
 import { generateOrderCode, PAYMENT_WINDOW_MINUTES } from "@/lib/sepay";
 import { getShopSetting } from "@/lib/shop-setting";
 import { COMBO_WEIGHT_GRAM, estimateShippingFee } from "@/lib/ghtk";
+import {
+  couponDiscount,
+  couponOptions,
+  lockUserCoupons,
+  parseCoupon,
+  returnCoupon,
+  takeCoupon,
+  type Coupon,
+  type CouponOption,
+} from "@/lib/coupons";
 
 export type CheckoutProfile = {
   name: string;
@@ -162,9 +173,36 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
   return { ok: true, orderId, orderCode, profile };
 }
 
+export type CheckoutSummary = {
+  comboTotal: number;
+  shipFee: number;
+  discount: number;
+  total: number;
+  // Mã giảm giá trong ví user (đã cộng lại lượt của mã đơn đang dùng) + mã đang áp.
+  coupons: CouponOption[];
+  appliedCode: string | null;
+};
+
 export type PrepareCheckoutResult =
-  | { ok: true; comboTotal: number; shipFee: number; total: number }
+  | ({ ok: true } & CheckoutSummary)
   | { ok: false; error: string };
+
+function buildSummary(
+  comboTotal: number,
+  shipFee: number,
+  wallet: unknown,
+  applied: Coupon | null,
+): CheckoutSummary {
+  const discount = applied ? couponDiscount(applied, comboTotal) : 0;
+  return {
+    comboTotal,
+    shipFee,
+    discount,
+    total: comboTotal - discount + shipFee,
+    coupons: couponOptions(wallet, applied, comboTotal),
+    appliedCode: applied?.code ?? null,
+  };
+}
 
 const PHONE_RE = /^[0-9+ ]{8,15}$/;
 
@@ -236,7 +274,7 @@ export async function prepareCheckout(
   // luôn được snapshot vào Order bên dưới.
   const profileRow = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { province: true, district: true, ward: true, address: true },
+    select: { province: true, district: true, ward: true, address: true, coupons: true },
   });
   const profileWasComplete = Boolean(
     profileRow?.province &&
@@ -299,5 +337,83 @@ export async function prepareCheckout(
   revalidatePath(`/orders/${order.id}/pay`);
   revalidatePath("/my-tickets");
 
-  return { ok: true, comboTotal, shipFee, total: comboTotal + shipFee };
+  return {
+    ok: true,
+    ...buildSummary(comboTotal, shipFee, profileRow?.coupons, parseCoupon(order.coupon)),
+  };
+}
+
+class CouponError extends Error {}
+
+/**
+ * Áp / đổi / bỏ mã giảm giá cho đơn đang chờ thanh toán (bước tóm tắt). Chỉ
+ * giảm trên tiền combo, không giảm phí ship. Áp mã = trừ 1 lượt trong ví ngay
+ * (giữ lượt cho đơn này); đổi mã/bỏ mã = hoàn lượt mã cũ; đơn hết hạn thì
+ * expireOrderIfPastDue hoàn lượt.
+ *
+ * Khoá dòng Order rồi tới User (cùng thứ tự với expireOrderIfPastDue) để 2
+ * request song song không trừ/hoàn lượt chồng lên nhau.
+ */
+export async function applyCoupon(
+  orderId: string,
+  code: string | null,
+): Promise<PrepareCheckoutResult> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { ok: false, error: "Vui lòng đăng nhập lại." };
+  }
+
+  await expireOrderIfPastDue(orderId);
+
+  try {
+    const summary = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<
+        { userId: string; paymentStatus: string; coupon: unknown; shipFee: number }[]
+      >`SELECT "userId", "paymentStatus", "coupon", "shipFee" FROM "Order" WHERE "id" = ${orderId} FOR UPDATE`;
+      const order = rows[0];
+      if (!order || order.userId !== user.id) throw new CouponError("Không tìm thấy đơn hàng.");
+      if (order.paymentStatus !== "pending") {
+        throw new CouponError("Đơn không còn chờ thanh toán.");
+      }
+
+      const items = await tx.orderItem.findMany({ where: { orderId } });
+      const comboTotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+
+      let wallet = await lockUserCoupons(tx, user.id);
+      const current = parseCoupon(order.coupon);
+      if ((current?.code ?? null) === code) {
+        return buildSummary(comboTotal, order.shipFee, wallet, current);
+      }
+
+      if (current) wallet = returnCoupon(wallet, current);
+      let applied: Coupon | null = null;
+      if (code) {
+        const taken = takeCoupon(wallet, code);
+        if (!taken) throw new CouponError("Mã giảm giá không còn lượt dùng.");
+        wallet = taken.wallet;
+        applied = taken.coupon;
+      }
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { coupons: wallet as Prisma.InputJsonValue },
+      });
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          coupon: applied ? (applied as Prisma.InputJsonValue) : Prisma.DbNull,
+          discountAmount: applied ? couponDiscount(applied, comboTotal) : 0,
+        },
+      });
+      return buildSummary(comboTotal, order.shipFee, wallet, applied);
+    });
+
+    revalidatePath(`/orders/${orderId}/pay`);
+    return { ok: true, ...summary };
+  } catch (err) {
+    if (err instanceof CouponError) return { ok: false, error: err.message };
+    return { ok: false, error: "Không áp được mã giảm giá, vui lòng thử lại." };
+  }
 }

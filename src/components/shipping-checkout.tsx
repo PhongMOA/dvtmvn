@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  applyCoupon,
   prepareCheckout,
   type CheckoutProfile,
   type PrepareCheckoutResult,
@@ -59,6 +60,18 @@ export function ShippingCheckout({
   const [summary, setSummary] = useState<Summary | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  function handleCouponChange(code: string | null) {
+    if (!summary || code === summary.appliedCode) return;
+    startTransition(async () => {
+      const result = await applyCoupon(orderId, code);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setSummary(result);
+    });
+  }
+
   function handleConfirm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -83,6 +96,56 @@ export function ShippingCheckout({
   if (summary) {
     return (
       <div className="flex flex-col gap-4">
+        {summary.coupons.length > 0 && (
+          <fieldset
+            disabled={isPending}
+            className="flex flex-col gap-2 text-left text-sm"
+          >
+            <legend className="mb-2 font-medium text-foreground">
+              Mã giảm giá của bạn
+            </legend>
+            {[null, ...summary.coupons].map((coupon) => {
+              const code = coupon?.code ?? null;
+              const selected = summary.appliedCode === code;
+              return (
+                <label
+                  key={code ?? "__none"}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-lg border p-3",
+                    selected ? "border-accent bg-accent/5" : "border-border",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name={`coupon-${orderId}`}
+                    checked={selected}
+                    onChange={() => handleCouponChange(code)}
+                    className="accent-accent"
+                  />
+                  {coupon ? (
+                    <span className="flex flex-1 flex-col gap-0.5">
+                      <span className="font-medium text-foreground">
+                        {coupon.code}{" "}
+                        <span className="font-normal text-muted-foreground">
+                          · còn {coupon.quantity} lượt
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        {coupon.description} (−{formatVnd(coupon.discount)})
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-foreground">Không dùng mã</span>
+                  )}
+                </label>
+              );
+            })}
+            <p className="text-xs text-muted-foreground">
+              Mã chỉ giảm trên tiền combo, không giảm phí ship.
+            </p>
+          </fieldset>
+        )}
+
         <dl className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4 text-left text-sm">
           <div className="flex items-center justify-between">
             <dt className="text-muted-foreground">Tiền combo</dt>
@@ -90,6 +153,16 @@ export function ShippingCheckout({
               {formatVnd(summary.comboTotal)}
             </dd>
           </div>
+          {summary.discount > 0 && (
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">
+                Giảm giá ({summary.appliedCode})
+              </dt>
+              <dd className="font-medium text-primary">
+                −{formatVnd(summary.discount)}
+              </dd>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <dt className="text-muted-foreground">Phí ship (GHTK)</dt>
             <dd className="font-medium text-foreground">

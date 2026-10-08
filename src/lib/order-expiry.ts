@@ -1,4 +1,6 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { lockUserCoupons, parseCoupon, returnCoupon } from "@/lib/coupons";
 
 /**
  * Kiểm tra 1 đơn cụ thể: nếu đang "pending" mà đã quá expiresAt thì chuyển
@@ -24,6 +26,20 @@ export async function expireOrderIfPastDue(orderId: string): Promise<void> {
         await tx.comboType.update({
           where: { id: item.comboTypeId },
           data: { remainingQuantity: { increment: item.quantity } },
+        });
+      }
+      // Hoàn lượt mã giảm giá đã áp. Đọc lại coupon TRONG transaction (dòng Order
+      // đã bị khoá bởi updateMany) — có thể vừa được đổi bởi applyCoupon.
+      const latest = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { coupon: true },
+      });
+      const coupon = parseCoupon(latest?.coupon);
+      if (coupon) {
+        const wallet = await lockUserCoupons(tx, order.userId);
+        await tx.user.update({
+          where: { id: order.userId },
+          data: { coupons: returnCoupon(wallet, coupon) as Prisma.InputJsonValue },
         });
       }
     }
