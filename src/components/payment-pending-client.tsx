@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getOrderPaymentStatus } from "@/app/actions/order-status";
+import { getOrderPaymentStatus, skipPayment } from "@/app/actions/order-status";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,9 +23,12 @@ function secondsUntil(iso: string): number {
 export function PaymentPendingClient({
   orderId,
   expiresAt,
+  canSkipPayment = false,
 }: {
   orderId: string;
   expiresAt: string;
+  /** Chỉ admin/tester mới thấy nút "Bỏ qua thanh toán" — xem skipPayment() để rõ lý do chặn ở server. */
+  canSkipPayment?: boolean;
 }) {
   const router = useRouter();
   const [remainingSec, setRemainingSec] = useState(() => secondsUntil(expiresAt));
@@ -35,6 +38,7 @@ export function PaymentPendingClient({
   // cần state riêng.
   const [remoteExpired, setRemoteExpired] = useState(false);
   const [redirectSec, setRedirectSec] = useState(EXPIRED_REDIRECT_SECONDS);
+  const [skipping, setSkipping] = useState(false);
   const timedOut = remainingSec <= 0;
   const expired = timedOut || remoteExpired;
 
@@ -76,6 +80,26 @@ export function PaymentPendingClient({
     if (expired && redirectSec <= 0) router.replace("/");
   }, [expired, redirectSec, router]);
 
+  async function handleSkip() {
+    setSkipping(true);
+    const result = await skipPayment(orderId);
+    setSkipping(false);
+    if (!result.ok) {
+      toast.error(
+        result.error === "FORBIDDEN"
+          ? "Chỉ tài khoản admin/tester mới bỏ qua được thanh toán."
+          : "Không thể bỏ qua thanh toán cho đơn này.",
+      );
+      return;
+    }
+    if (result.status === "paid") {
+      toast.success("Đã bỏ qua thanh toán — đơn được xem như đã thanh toán thành công.");
+      router.push("/my-tickets");
+    } else if (result.status === "expired") {
+      setRemoteExpired(true);
+    }
+  }
+
   const mm = String(Math.floor(remainingSec / 60)).padStart(2, "0");
   const ss = String(remainingSec % 60).padStart(2, "0");
 
@@ -88,6 +112,19 @@ export function PaymentPendingClient({
         </span>{" "}
         để hoàn tất chuyển khoản — trang sẽ tự chuyển khi hệ thống nhận được tiền.
       </p>
+
+      {canSkipPayment && !expired && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={skipping}
+          onClick={handleSkip}
+          className="border-dashed"
+        >
+          {skipping ? "Đang xử lý..." : "⏭️ Bỏ qua thanh toán (test)"}
+        </Button>
+      )}
 
       {/* Không cho đóng (bỏ qua onOpenChange, tắt click ra ngoài, không nút X) và
           nền gần như đặc + blur để mã QR phía sau không quét được nữa. */}

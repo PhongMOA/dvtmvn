@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, requireUser } from "@/lib/auth-helpers";
+import { canPreviewSales, isAdmin, requireUser } from "@/lib/auth-helpers";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { fulfillPaidOrder } from "@/lib/order-fulfillment";
 import { syncSeatAllowanceForOrder } from "@/lib/seat-allowance";
@@ -36,21 +36,27 @@ export async function getOrderPaymentStatus(orderId: string): Promise<OrderStatu
 /**
  * "Bỏ qua thanh toán" — đánh dấu đơn là đã thanh toán thành công mà không cần
  * chuyển khoản thật, để test các tiến trình phía sau (vé, check-in, push...).
- * CHỈ admin (ADMIN_EMAIL hoặc User.role == "admin") mới gọi được — bỏ qua bước
- * chuyển khoản là hành vi nguy hiểm nếu lộ cho khách thật (lấy combo miễn phí),
- * nên chặn ở tầng server action bằng requireAdmin() chứ không chỉ ẩn nút ở UI.
+ * CHỈ admin hoặc tester (User.role == "tester", xem canPreviewSales) mới gọi
+ * được — bỏ qua bước chuyển khoản là hành vi nguy hiểm nếu lộ cho khách thật
+ * (lấy combo miễn phí), nên chặn ở tầng server action chứ không chỉ ẩn nút ở UI.
+ * Tester chỉ bỏ qua được đơn của chính mình; admin bỏ qua được mọi đơn.
  */
 export async function skipPayment(orderId: string): Promise<OrderStatusResult> {
+  let user;
   try {
-    await requireAdmin();
+    user = await requireUser();
   } catch {
+    return { ok: false, error: "FORBIDDEN" };
+  }
+  const [admin, preview] = await Promise.all([isAdmin(user), canPreviewSales(user)]);
+  if (!preview) {
     return { ok: false, error: "FORBIDDEN" };
   }
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
   });
-  if (!order) {
+  if (!order || (!admin && order.userId !== user.id)) {
     return { ok: false, error: "NOT_FOUND" };
   }
   if (order.paymentStatus !== "pending") {

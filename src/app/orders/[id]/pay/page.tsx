@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { canPreviewSales } from "@/lib/auth-helpers";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { buildVietQrUrl, getBankTransferInfo } from "@/lib/sepay";
 import {
@@ -207,6 +208,7 @@ export default async function OrderPaymentPage({
       <PaymentPendingClient
         orderId={order.id}
         expiresAt={order.expiresAt.toISOString()}
+        canSkipPayment={await canPreviewSales(session.user)}
       />
     </div>
   );
