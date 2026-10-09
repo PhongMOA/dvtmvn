@@ -114,6 +114,7 @@ body.editing .seat:not(.blocked) { cursor: cell; }
 .verdict { border-radius: 10px; padding: 12px 14px; background: var(--bg); display: flex; flex-direction: column; gap: 4px; }
 .verdict .res { font-weight: 800; }
 .verdict .why { font-size: .9rem; }
+.verdict .why:empty { display: none; }
 .verdict.pending { background: var(--warn-bg); } .verdict.pending .res { color: var(--warn); }
 .verdict.relaxed { background: var(--warn-bg); } .verdict.relaxed .res { color: var(--warn); }
 .verdict.ok { background: var(--good-bg); } .verdict.ok .res { color: var(--good); }
@@ -346,7 +347,7 @@ function render() {
   const pendingOrphans = !full && picked.length ? newOrphanSeats(taken, picked) : [];
   const suggestion = check && !check.ok ? (check.suggestion || null)
     : pendingOrphans.length ? findContiguousPlacement(taken, tickets, picked) : null;
-  const orphanSet = new Set(check ? (check.orphans || []) : pendingOrphans);
+  const orphanSet = new Set(check ? (check.ok ? [] : check.orphans || []) : pendingOrphans);
   const sugSet = new Set(suggestion || []);
 
   for (const [code, b] of buttons) {
@@ -363,8 +364,7 @@ function render() {
     res = `Chọn thêm ${tickets - picked.length} ghế`;
     if (pendingOrphans.length) { cls = "pending"; why = `Đang để trống ghế lẻ ${pendingOrphans.join(", ")}. Luật sẽ kiểm tra khi chọn đủ số vé.`; }
     else why = "Chưa để trống ghế lẻ nào. Luật được kiểm tra đầy đủ khi chọn đủ số vé.";
-  } else if (check.ok && !check.relaxed) { cls = "ok"; res = "Hợp lệ"; why = "Không tạo thêm ghế lẻ nào."; }
-  else if (check.ok) { cls = "relaxed"; res = "Cho phép (nới luật)"; why = `Để trống ghế lẻ ${check.orphans.join(", ")}, nhưng cùng khu không còn chỗ cho ${tickets} người ngồi liền mà không để ghế lẻ.`; }
+  } else if (check.ok) { cls = "ok"; res = "Hợp lệ"; why = ""; }
   else { cls = "block"; res = "Bị chặn"; why = check.reason; }
   v.className = "verdict " + cls;
   v.querySelector(".res").textContent = res;
