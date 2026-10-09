@@ -30,6 +30,7 @@ export type SeatMapProps = {
   mine?: Set<string>;
   picked?: Set<string>;
   highlight?: string | null; // ghế bị luật báo lỗi
+  suggested?: Set<string>; // ghế gợi ý ngồi liền không để ghế lẻ (viền xanh đứt)
   occupants?: Record<string, string>; // admin: mã ghế -> tên người ngồi
   onSeatClick?: (seat: Seat) => void;
 };
@@ -39,6 +40,7 @@ export function SeatMap({
   mine,
   picked,
   highlight,
+  suggested,
   occupants,
   onSeatClick,
 }: SeatMapProps) {
@@ -67,6 +69,8 @@ export function SeatMap({
           isTaken && "border-transparent bg-muted-foreground/30 text-muted-foreground",
           isMine && "border-accent bg-accent text-accent-foreground",
           isPicked && "border-primary bg-primary text-primary-foreground",
+          suggested?.has(seat.code) &&
+            "outline-2 outline-offset-2 outline-dashed outline-emerald-500",
           highlight === seat.code && "ring-2 ring-destructive ring-offset-1 ring-offset-background",
           clickable && !isPicked && "hover:bg-primary/20",
           occupants && isTaken && "cursor-help",
@@ -132,7 +136,13 @@ function pairs(segment: Seat[]): Seat[][] {
   return groups;
 }
 
-export function SeatLegend({ withPicked = true }: { withPicked?: boolean }) {
+export function SeatLegend({
+  withPicked = true,
+  withSuggested = false,
+}: {
+  withPicked?: boolean;
+  withSuggested?: boolean;
+}) {
   const items: [string, string][] = [
     ["border-primary/60", "Thường"],
     ["border-red-500/70", "VIP"],
@@ -141,6 +151,12 @@ export function SeatLegend({ withPicked = true }: { withPicked?: boolean }) {
     ["border-accent bg-accent", "Ghế của bạn"],
     ...(withPicked ? ([["border-primary bg-primary", "Đang chọn"]] as [string, string][]) : []),
     ["border-border bg-muted opacity-50", "Không thể chọn"],
+    ...(withSuggested
+      ? ([["outline-2 outline-offset-1 outline-dashed outline-emerald-500", "Gợi ý ngồi liền"]] as [
+          string,
+          string,
+        ][])
+      : []),
   ];
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">

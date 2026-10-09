@@ -6,7 +6,12 @@ import { toast } from "sonner";
 import { confirmSeats, getSeatState, type SeatState } from "@/app/actions/seats";
 import { SeatLegend, SeatMap } from "@/components/seat-map";
 import { SEAT_LAYOUT, sweetboxPartner, type Seat } from "@/lib/seats/layout";
-import { validateSelection } from "@/lib/seats/rules";
+import {
+  findContiguousPlacement,
+  formatSeats,
+  newOrphanSeats,
+  validateSelection,
+} from "@/lib/seats/rules";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -82,6 +87,18 @@ export function SeatPicker({ eventId, initial }: { eventId: string; initial: Sea
       ? validateSelection(SEAT_LAYOUT, { taken, picked, ticketsNeeded: state.ticketsLeft })
       : null;
 
+  // Đang chọn dở mà đã để trống ghế lẻ -> cảnh báo nhẹ (chưa chặn: user có thể
+  // tự lấp ở lượt bấm sau). Kèm gợi ý 1 khối ngồi liền không để ghế lẻ.
+  const pendingOrphans =
+    !check && picked.length > 0 ? newOrphanSeats(SEAT_LAYOUT, taken, picked) : [];
+  const suggestion =
+    check && !check.ok
+      ? (check.suggestion ?? null)
+      : pendingOrphans.length > 0
+        ? findContiguousPlacement(SEAT_LAYOUT, taken, state.ticketsLeft, picked)
+        : null;
+  const suggestedSet = new Set(suggestion ?? []);
+
   function handleSeatClick(seat: Seat) {
     if (!unlocked || state.ticketsLeft === 0) return;
     setHighlight(null);
@@ -154,14 +171,44 @@ export function SeatPicker({ eventId, initial }: { eventId: string; initial: Sea
         taken={taken}
         mine={mine}
         picked={pickedSet}
-        highlight={highlight ?? (check && !check.ok ? (check.seat ?? null) : null)}
+        highlight={
+          highlight ?? (check && !check.ok ? (check.seat ?? null) : (pendingOrphans[0] ?? null))
+        }
+        suggested={suggestedSet}
         onSeatClick={unlocked && state.ticketsLeft > 0 ? handleSeatClick : undefined}
       />
-      <SeatLegend />
+      <SeatLegend withSuggested={suggestedSet.size > 0} />
 
       {unlocked && state.ticketsLeft > 0 && (
         <div className="flex flex-col gap-2">
           {check && !check.ok && <p className="text-sm text-destructive">{check.reason}</p>}
+          {pendingOrphans.length > 0 && (
+            <p className="text-sm text-amber-500">
+              Bạn đang để trống ghế lẻ {pendingOrphans.join(", ")}. Hãy chọn luôn ghế đó hoặc đổi
+              chỗ, nếu không sẽ không xác nhận được khi chọn đủ ghế.
+            </p>
+          )}
+          {suggestion && (
+            <div className="flex flex-col gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm">
+              <p className="text-foreground">
+                Gợi ý: <span className="font-medium text-emerald-500">{formatSeats(suggestion)}</span>{" "}
+                (viền xanh) đủ chỗ cho {state.ticketsLeft} người ngồi liền mà không để ghế lẻ. Mỗi
+                ghế lẻ bị bỏ trống sẽ gây khó cho các bạn chọn sau, nên mong bạn chọn sát nhau, sát
+                lối đi hoặc sát ghế đã có người nhé.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                onClick={() => {
+                  setHighlight(null);
+                  setPicked(suggestion);
+                }}
+              >
+                Chọn {formatSeats(suggestion)}
+              </Button>
+            </div>
+          )}
           <Button
             size="lg"
             className="w-fit"
