@@ -68,7 +68,11 @@ export function SeatMap({
       <button
         key={seat.code}
         type="button"
-        disabled={!clickable}
+        // Ghế có người ở admin không disabled: Chrome không phát sự kiện chuột
+        // cho button disabled -> hover/tooltip không chạy. Vẫn không bấm được
+        // vì không có onClick.
+        disabled={!clickable && !(occupant && occupantGroups)}
+        aria-disabled={!clickable}
         onClick={clickable ? () => onSeatClick?.(seat) : undefined}
         title={occupant && !occupantGroups ? `${seat.code} — ${occupant}` : seat.code}
         onMouseEnter={
