@@ -12,6 +12,7 @@ import { getSalesConfig } from "@/lib/sales";
 import { SalesCountdown } from "@/components/sales-countdown";
 import { FloatingParticles } from "@/components/floating-particles";
 import { cn } from "@/lib/utils";
+import { Star } from "lucide-react";
 import { VN_TIME_ZONE } from "@/lib/datetime";
 
 function formatDateTime(date: Date) {
@@ -196,8 +197,19 @@ export default async function Home() {
               return (
                 <div
                   key={combo.id}
-                  className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6"
+                  className={cn(
+                    "relative flex flex-col gap-4 rounded-lg border bg-card p-6",
+                    combo.isRecommended
+                      ? "border-2 border-accent shadow-[0_0_28px_-6px] shadow-accent/60"
+                      : "border-border",
+                  )}
                 >
+                  {combo.isRecommended && (
+                    <Badge className="absolute -top-3 left-6 gap-1 bg-accent px-2.5 text-accent-foreground">
+                      <Star className="size-3 fill-current" />
+                      ĐỀ XUẤT
+                    </Badge>
+                  )}
                   <div>
                     <h3 className="font-heading text-xl tracking-wide text-foreground">
                       {combo.name}
@@ -236,6 +248,7 @@ export default async function Home() {
                       comboName={combo.name}
                       remainingQuantity={combo.remainingQuantity}
                       includesShirt={combo.includesShirt}
+                      includesTicket={combo.includesTicket}
                     />
                   ) : (
                     <Link

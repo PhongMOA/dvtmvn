@@ -61,7 +61,12 @@ export default async function EventCombosPage({
           <TableBody>
             {combos.map((combo) => (
               <TableRow key={combo.id}>
-                <TableCell className="font-medium">{combo.name}</TableCell>
+                <TableCell className="font-medium">
+                  {combo.name}
+                  {combo.isRecommended && (
+                    <Badge className="ml-2 bg-accent text-accent-foreground">Đề xuất</Badge>
+                  )}
+                </TableCell>
                 <TableCell>
                   {formatVnd(combo.price)}
                   {combo.originalPrice && (

@@ -171,6 +171,7 @@ model ComboType {
   price             Int // VND, giá sau giảm (nếu có) — hiển thị thông tin, không xử lý thanh toán online
   originalPrice     Int? // giá gốc trước giảm, hiển thị gạch ngang — null nếu combo này không giảm giá
   includesTicket    Boolean  @default(true)
+  isRecommended     Boolean  @default(false) // "Đề xuất": trang chủ highlight viền + gắn nhãn
   includesShirt     Boolean  @default(false) // combo có áo -> khách phải chọn size cho từng combo
   items             String // JSON string[] mô tả các item kèm theo, vd ["1 Dây đeo","1 Bộ Sticker A6"]
   totalQuantity     Int

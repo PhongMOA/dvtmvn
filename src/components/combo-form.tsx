@@ -13,6 +13,7 @@ type ComboDefaults = {
   originalPrice: number | null;
   includesTicket: boolean;
   includesShirt: boolean;
+  isRecommended: boolean;
   items: string; // mỗi dòng 1 item, đã join từ mảng để hiển thị trong textarea
   totalQuantity: number;
 };
@@ -88,6 +89,18 @@ export function ComboForm({
         />
         <Label htmlFor="includesShirt" className="font-normal">
           Combo có áo (khách phải chọn size khi đặt)
+        </Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          id="isRecommended"
+          name="isRecommended"
+          type="checkbox"
+          defaultChecked={defaults?.isRecommended ?? false}
+          className="h-4 w-4 rounded border-border"
+        />
+        <Label htmlFor="isRecommended" className="font-normal">
+          Đề xuất (làm nổi bật viền + gắn nhãn &quot;Đề xuất&quot; ở trang chủ)
         </Label>
       </div>
       <div className="flex flex-col gap-1.5">

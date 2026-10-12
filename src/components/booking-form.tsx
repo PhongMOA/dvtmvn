@@ -9,6 +9,13 @@ import { CheckoutDialog, type PendingCheckout } from "@/components/checkout-dial
 import { ShirtSizeDialog, type ShirtSizeRequest } from "@/components/shirt-size-dialog";
 import { addToCart, useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogDescription,
+  DialogHeader,
+  DialogPopup,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ShirtSizes } from "@/lib/shirt-sizes";
@@ -18,6 +25,7 @@ import type { ShirtSizes } from "@/lib/shirt-sizes";
  *   - "Thêm vào giỏ": cộng vào giỏ hàng (localStorage) để gom nhiều loại combo
  *     và thanh toán 1 lần ở /cart.
  *   - "Đặt ngay": giữ chỗ riêng combo này luôn (bỏ qua giỏ hàng).
+ * Combo không kèm vé: cả 2 nút hiện modal cảnh báo trước, khách xác nhận mới đi tiếp.
  * Combo có áo: cả 2 nút mở modal chọn size trước (tổng áo = số lượng).
  */
 export function BookingForm({
@@ -25,16 +33,20 @@ export function BookingForm({
   comboName,
   remainingQuantity,
   includesShirt = false,
+  includesTicket = true,
 }: {
   comboTypeId: string;
   comboName: string;
   remainingQuantity: number;
   includesShirt?: boolean;
+  includesTicket?: boolean;
 }) {
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [checkout, setCheckout] = useState<PendingCheckout | null>(null);
   const [sizeRequest, setSizeRequest] = useState<ShirtSizeRequest | null>(null);
+  // Bước tiếp theo sau khi khách xác nhận cảnh báo "combo không kèm vé".
+  const [noTicketNext, setNoTicketNext] = useState<(() => void) | null>(null);
   const router = useRouter();
   const cart = useCart();
 
@@ -46,6 +58,10 @@ export function BookingForm({
       toast.error(`Giỏ hàng đã có ${inCart} — combo này chỉ còn ${remainingQuantity}.`);
       return;
     }
+    withNoTicketNotice(continueAddToCart);
+  }
+
+  function continueAddToCart() {
     if (!includesShirt) {
       addLineToCart();
       return;
@@ -81,6 +97,15 @@ export function BookingForm({
 
   function handleBuyNow(e: React.FormEvent) {
     e.preventDefault();
+    withNoTicketNotice(continueBuyNow);
+  }
+
+  function withNoTicketNotice(next: () => void) {
+    if (includesTicket) next();
+    else setNoTicketNext(() => next);
+  }
+
+  function continueBuyNow() {
     if (!includesShirt) {
       buyNow();
       return;
@@ -154,6 +179,45 @@ export function BookingForm({
         )}
       </form>
 
+      <Dialog
+        open={noTicketNext !== null}
+        onOpenChange={(open) => {
+          if (!open) setNoTicketNext(null);
+        }}
+      >
+        <DialogPopup>
+          <DialogHeader>
+            <DialogTitle>LƯU Ý TRƯỚC KHI MUA</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              Combo này <strong className="text-foreground">không bao gồm vé offline xem phim</strong>.
+              Nếu bạn muốn nâng cấp lên gói Doomsday để có vé xem phim, có thể vào
+              phần &quot;Vé của tôi&quot;, nhưng thời điểm chọn ghế sẽ phụ thuộc vào thời
+              điểm bạn mua vé — do đó hãy cân nhắc kỹ trước khi mua combo này.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-6 flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setNoTicketNext(null)}
+            >
+              Để tôi xem lại
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={() => {
+                const next = noTicketNext;
+                setNoTicketNext(null);
+                next?.();
+              }}
+            >
+              Tôi đã hiểu, tiếp tục
+            </Button>
+          </div>
+        </DialogPopup>
+      </Dialog>
       <ShirtSizeDialog
         request={sizeRequest}
         pending={isPending}
