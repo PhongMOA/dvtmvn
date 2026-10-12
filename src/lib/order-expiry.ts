@@ -9,14 +9,26 @@ import { lockUserCoupons, parseCoupon, returnCoupon } from "@/lib/coupons";
  * lúc (vd webhook vừa đánh dấu "paid" đúng lúc poll page cũng đang check).
  */
 export async function expireOrderIfPastDue(orderId: string): Promise<void> {
+  await releasePendingOrder(orderId, { onlyIfPastDue: true });
+}
+
+/**
+ * Nhả đơn "pending" (→ "expired") + hoàn kho + hoàn lượt mã giảm giá. Mặc định
+ * nhả ngay (khách đóng modal xác nhận trước khi bấm "Thanh toán ngay"); với
+ * onlyIfPastDue chỉ nhả khi đã quá expiresAt. Trả true nếu đơn thực sự được nhả.
+ */
+export async function releasePendingOrder(
+  orderId: string,
+  { onlyIfPastDue = false }: { onlyIfPastDue?: boolean } = {},
+): Promise<boolean> {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { items: true },
   });
-  if (!order || order.paymentStatus !== "pending") return;
-  if (order.expiresAt > new Date()) return;
+  if (!order || order.paymentStatus !== "pending") return false;
+  if (onlyIfPastDue && order.expiresAt > new Date()) return false;
 
-  await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const { count } = await tx.order.updateMany({
       where: { id: orderId, paymentStatus: "pending" },
       data: { paymentStatus: "expired" },
@@ -43,6 +55,7 @@ export async function expireOrderIfPastDue(orderId: string): Promise<void> {
         });
       }
     }
+    return count === 1;
   });
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { CheckoutProfile } from "@/app/actions/booking";
+import { cancelPendingOrder, type CheckoutProfile } from "@/app/actions/booking";
 import { ShippingCheckout } from "@/components/shipping-checkout";
 import {
   Dialog,
@@ -18,24 +19,34 @@ export type PendingCheckout = { orderId: string; profile: CheckoutProfile };
  * Modal "xác nhận thông tin nhận hàng" sau khi bookCombos() giữ chỗ thành công
  * → bước tóm tắt phí ship → điều hướng sang trang thanh toán. Dùng chung cho nút
  * "Đặt ngay" (BookingForm) và nút "Đặt hàng" của giỏ hàng (CartView).
+ *
+ * Đóng modal trước khi bấm "Thanh toán ngay" = huỷ đặt: đơn pending bị nhả ngay
+ * (hoàn kho), không nằm lại ở "Chờ thanh toán". `onPay` chỉ chạy khi khách bấm
+ * "Thanh toán ngay" (giỏ hàng dùng để xoá giỏ đúng lúc đó).
  */
 export function CheckoutDialog({
   checkout,
   onClose,
+  onPay,
 }: {
   checkout: PendingCheckout | null;
   onClose: () => void;
+  onPay?: () => void;
 }) {
   const router = useRouter();
+  // Đã bấm "Thanh toán ngay" → đang điều hướng sang trang thanh toán; không huỷ
+  // đơn nếu modal bị đóng trong lúc chuyển trang.
+  const payingRef = useRef(false);
 
   return (
     <Dialog
       open={checkout !== null}
       onOpenChange={(next) => {
-        // Đóng modal = bỏ ngang: đơn pending tự hết hạn sau 15' và hoàn kho
-        // (expireStaleOrdersForCombos); khách vẫn có thể "Tiếp tục thanh toán"
-        // từ /my-tickets trong thời gian đó.
-        if (!next) onClose();
+        if (next || !checkout) return;
+        if (!payingRef.current) {
+          void cancelPendingOrder(checkout.orderId).then(() => router.refresh());
+        }
+        onClose();
       }}
     >
       <DialogPopup>
@@ -54,6 +65,8 @@ export function CheckoutDialog({
               variant="dialog"
               defaultProfile={checkout.profile}
               onProceed={() => {
+                payingRef.current = true;
+                onPay?.();
                 toast.success(
                   "Đã giữ chỗ! Vui lòng chuyển khoản trong 15 phút để hoàn tất.",
                 );

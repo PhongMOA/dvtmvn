@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth-helpers";
 import {
   expireOrderIfPastDue,
   expireStaleOrdersForCombos,
+  releasePendingOrder,
 } from "@/lib/order-expiry";
 import { orderItemsQuantity, orderItemsTotal } from "@/lib/order-items";
 import { generateOrderCode, PAYMENT_WINDOW_MINUTES } from "@/lib/sepay";
@@ -197,6 +198,33 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
   revalidatePath("/");
   revalidatePath("/my-tickets");
   return { ok: true, orderId, orderCode, profile };
+}
+
+/**
+ * Khách đóng modal "xác nhận thông tin nhận hàng" trước khi bấm "Thanh toán
+ * ngay" = huỷ đặt: nhả đơn pending ngay (hoàn kho + hoàn lượt mã) thay vì để
+ * treo 15' ở "Chờ thanh toán". Giỏ hàng phía client giữ nguyên để đặt lại.
+ */
+export async function cancelPendingOrder(
+  orderId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { ok: false, error: "UNAUTHORIZED" };
+  }
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { userId: true },
+  });
+  if (!order || order.userId !== user.id) {
+    return { ok: false, error: "Không tìm thấy đơn hàng." };
+  }
+  await releasePendingOrder(orderId);
+  revalidatePath("/");
+  revalidatePath("/my-tickets");
+  return { ok: true };
 }
 
 export type CheckoutSummary = {

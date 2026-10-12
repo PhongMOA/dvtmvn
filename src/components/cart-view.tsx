@@ -103,9 +103,8 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
         router.refresh(); // lấy lại tồn kho mới nhất
         return;
       }
-      // Đơn đã giữ chỗ -> làm trống giỏ (nếu khách đóng modal, đơn vẫn nằm ở
-      // "Vé của tôi" để tiếp tục thanh toán; đặt lại từ giỏ sẽ giữ chỗ trùng).
-      clearCart();
+      // Giỏ chỉ được làm trống khi khách bấm "Thanh toán ngay" (onPay); đóng
+      // modal thì đơn bị huỷ và giỏ giữ nguyên để đặt lại.
       setCheckout({ orderId: result.orderId, profile: result.profile });
     });
   }
@@ -116,15 +115,12 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
 
   if (lines.length === 0) {
     return (
-      <>
-        <div className="rounded-lg border border-border bg-card p-8 text-center">
-          <p className="text-muted-foreground">Giỏ hàng trống.</p>
-          <Link href="/" className={cn(buttonVariants(), "mt-4")}>
-            Chọn combo
-          </Link>
-        </div>
-        <CheckoutDialog checkout={checkout} onClose={() => setCheckout(null)} />
-      </>
+      <div className="rounded-lg border border-border bg-card p-8 text-center">
+        <p className="text-muted-foreground">Giỏ hàng trống.</p>
+        <Link href="/" className={cn(buttonVariants(), "mt-4")}>
+          Chọn combo
+        </Link>
+      </div>
     );
   }
 
@@ -310,7 +306,11 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
       </div>
 
       <ShirtSizeDialog request={sizeRequest} onClose={() => setSizeRequest(null)} />
-      <CheckoutDialog checkout={checkout} onClose={() => setCheckout(null)} />
+      <CheckoutDialog
+        checkout={checkout}
+        onClose={() => setCheckout(null)}
+        onPay={clearCart}
+      />
     </div>
   );
 }
