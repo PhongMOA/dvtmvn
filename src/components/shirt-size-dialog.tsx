@@ -49,7 +49,7 @@ export function ShirtSizeDialog({
         if (!next && !pending) onClose();
       }}
     >
-      <DialogPopup className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogPopup className="max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto md:max-w-3xl">
         {request && (
           // key: mở lại modal (combo/số lượng khác) -> reset state nhập size.
           <ShirtSizeForm
@@ -205,17 +205,17 @@ function SizeChart({ selected }: { selected: ShirtSizes }) {
         Bảng thông số size
       </summary>
       <div className="overflow-x-auto border-t border-border">
-        <table className="w-full text-center text-xs tabular-nums">
+        <table className="w-full text-center text-[11px] tabular-nums sm:text-sm">
           <thead>
             <tr className="bg-muted/40">
-              <th className="sticky left-0 bg-card px-2 py-1.5 text-left font-medium text-muted-foreground">
+              <th className="sticky left-0 bg-card px-2 py-1.5 text-left font-medium sm:py-2 text-muted-foreground">
                 Size
               </th>
               {SHIRT_SIZES.map((size) => (
                 <th
                   key={size}
                   className={cn(
-                    "px-2 py-1.5 font-semibold text-foreground",
+                    "px-1.5 py-1.5 font-semibold text-foreground sm:px-2.5 sm:py-2",
                     selected[size] && "bg-accent/20 text-accent",
                   )}
                 >
@@ -227,14 +227,14 @@ function SizeChart({ selected }: { selected: ShirtSizes }) {
           <tbody>
             {SHIRT_SIZE_CHART.map((row) => (
               <tr key={row.label} className="border-t border-border">
-                <th className="sticky left-0 whitespace-nowrap bg-card px-2 py-1.5 text-left font-normal text-muted-foreground">
+                <th className="sticky left-0 whitespace-nowrap bg-card px-2 py-1.5 text-left font-normal sm:py-2 text-muted-foreground">
                   {row.label}
                 </th>
                 {SHIRT_SIZES.map((size) => (
                   <td
                     key={size}
                     className={cn(
-                      "whitespace-nowrap px-2 py-1.5 text-foreground",
+                      "whitespace-nowrap px-1.5 py-1.5 text-foreground sm:px-2.5 sm:py-2",
                       selected[size] && "bg-accent/10",
                     )}
                   >
