@@ -6,29 +6,35 @@ import { toast } from "sonner";
 import { ShoppingCart } from "lucide-react";
 import { bookCombos } from "@/app/actions/booking";
 import { CheckoutDialog, type PendingCheckout } from "@/components/checkout-dialog";
+import { ShirtSizeDialog, type ShirtSizeRequest } from "@/components/shirt-size-dialog";
 import { addToCart, useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { ShirtSizes } from "@/lib/shirt-sizes";
 
 /**
  * Chọn số lượng 1 combo rồi:
  *   - "Thêm vào giỏ": cộng vào giỏ hàng (localStorage) để gom nhiều loại combo
  *     và thanh toán 1 lần ở /cart.
  *   - "Đặt ngay": giữ chỗ riêng combo này luôn (bỏ qua giỏ hàng).
+ * Combo có áo: cả 2 nút mở modal chọn size trước (tổng áo = số lượng).
  */
 export function BookingForm({
   comboTypeId,
   comboName,
   remainingQuantity,
+  includesShirt = false,
 }: {
   comboTypeId: string;
   comboName: string;
   remainingQuantity: number;
+  includesShirt?: boolean;
 }) {
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [checkout, setCheckout] = useState<PendingCheckout | null>(null);
+  const [sizeRequest, setSizeRequest] = useState<ShirtSizeRequest | null>(null);
   const router = useRouter();
   const cart = useCart();
 
@@ -40,7 +46,30 @@ export function BookingForm({
       toast.error(`Giỏ hàng đã có ${inCart} — combo này chỉ còn ${remainingQuantity}.`);
       return;
     }
-    const next = addToCart(comboTypeId, quantity, remainingQuantity);
+    if (!includesShirt) {
+      addLineToCart();
+      return;
+    }
+    // Combo có áo không cắt bớt số lượng được (lệch tổng size) -> chặn trước.
+    if (inCart + quantity > remainingQuantity) {
+      toast.error(
+        `Giỏ hàng đã có ${inCart} — chỉ thêm được tối đa ${remainingQuantity - inCart}.`,
+      );
+      return;
+    }
+    setSizeRequest({
+      comboName,
+      quantity,
+      confirmLabel: "Thêm vào giỏ",
+      onConfirm: (sizes) => {
+        setSizeRequest(null);
+        addLineToCart(sizes);
+      },
+    });
+  }
+
+  function addLineToCart(sizes?: ShirtSizes) {
+    const next = addToCart(comboTypeId, quantity, remainingQuantity, sizes);
     const added = next - inCart;
     toast.success(
       added < quantity
@@ -52,8 +81,22 @@ export function BookingForm({
 
   function handleBuyNow(e: React.FormEvent) {
     e.preventDefault();
+    if (!includesShirt) {
+      buyNow();
+      return;
+    }
+    setSizeRequest({
+      comboName,
+      quantity,
+      confirmLabel: "Đặt ngay",
+      onConfirm: buyNow,
+    });
+  }
+
+  function buyNow(sizes?: ShirtSizes) {
     startTransition(async () => {
-      const result = await bookCombos([{ comboTypeId, quantity }]);
+      const result = await bookCombos([{ comboTypeId, quantity, sizes }]);
+      setSizeRequest(null);
       if (!result.ok) {
         if (result.error === "UNAUTHORIZED") {
           router.push(`/sign-in?callbackUrl=${encodeURIComponent("/")}`);
@@ -111,6 +154,11 @@ export function BookingForm({
         )}
       </form>
 
+      <ShirtSizeDialog
+        request={sizeRequest}
+        pending={isPending}
+        onClose={() => setSizeRequest(null)}
+      />
       <CheckoutDialog checkout={checkout} onClose={() => setCheckout(null)} />
     </>
   );

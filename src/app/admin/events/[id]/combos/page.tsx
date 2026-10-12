@@ -52,6 +52,7 @@ export default async function EventCombosPage({
               <TableHead>Combo</TableHead>
               <TableHead>Giá</TableHead>
               <TableHead>Kèm vé</TableHead>
+              <TableHead>Có áo</TableHead>
               <TableHead>Items</TableHead>
               <TableHead>Còn lại</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
@@ -72,6 +73,11 @@ export default async function EventCombosPage({
                 <TableCell>
                   <Badge variant={combo.includesTicket ? "default" : "outline"}>
                     {combo.includesTicket ? "Có" : "Không"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={combo.includesShirt ? "default" : "outline"}>
+                    {combo.includesShirt ? "Có" : "Không"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">

@@ -27,6 +27,7 @@ export default async function EditComboPage({
             price: combo.price,
             originalPrice: combo.originalPrice,
             includesTicket: combo.includesTicket,
+            includesShirt: combo.includesShirt,
             items: parseComboItems(combo.items).join("\n"),
             totalQuantity: combo.totalQuantity,
           }}

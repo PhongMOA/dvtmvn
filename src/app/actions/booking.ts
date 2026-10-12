@@ -11,6 +11,13 @@ import {
 import { orderItemsQuantity, orderItemsTotal } from "@/lib/order-items";
 import { generateOrderCode, PAYMENT_WINDOW_MINUTES } from "@/lib/sepay";
 import { getShopSetting } from "@/lib/shop-setting";
+import {
+  hasInvalidShirtSizes,
+  mergeShirtSizes,
+  parseShirtSizes,
+  shirtSizesTotal,
+  type ShirtSizes,
+} from "@/lib/shirt-sizes";
 import { COMBO_WEIGHT_GRAM, estimateShippingFee } from "@/lib/ghtk";
 import {
   couponDiscount,
@@ -43,7 +50,8 @@ export type BookComboResult =
     }
   | { ok: false; error: string };
 
-export type BookingLine = { comboTypeId: string; quantity: number };
+// sizes: bắt buộc với combo có áo (ComboType.includesShirt), tổng = quantity.
+export type BookingLine = { comboTypeId: string; quantity: number; sizes?: ShirtSizes };
 
 // Giới hạn số dòng combo khác nhau trong 1 đơn — chặn payload bất thường.
 const MAX_LINES = 20;
@@ -67,7 +75,7 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
     return { ok: false, error: "Chưa chọn combo nào." };
   }
   // Gộp các dòng trùng combo (phòng client gửi lặp).
-  const merged = new Map<string, number>();
+  const merged = new Map<string, { quantity: number; sizes: ShirtSizes }>();
   for (const line of lines) {
     if (
       typeof line?.comboTypeId !== "string" ||
@@ -76,7 +84,14 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
     ) {
       return { ok: false, error: "Số lượng không hợp lệ." };
     }
-    merged.set(line.comboTypeId, (merged.get(line.comboTypeId) ?? 0) + line.quantity);
+    if (hasInvalidShirtSizes(line.sizes)) {
+      return { ok: false, error: "Size áo không hợp lệ." };
+    }
+    const prev = merged.get(line.comboTypeId);
+    merged.set(line.comboTypeId, {
+      quantity: (prev?.quantity ?? 0) + line.quantity,
+      sizes: mergeShirtSizes(prev?.sizes ?? {}, parseShirtSizes(line.sizes)),
+    });
   }
   if (merged.size > MAX_LINES) {
     return { ok: false, error: "Đơn có quá nhiều loại combo." };
@@ -114,9 +129,14 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
   let orderCode: string;
   try {
     const order = await prisma.$transaction(async (tx) => {
-      const items: { comboTypeId: string; quantity: number; unitPrice: number }[] = [];
+      const items: {
+        comboTypeId: string;
+        quantity: number;
+        unitPrice: number;
+        shirtSizes?: Prisma.InputJsonValue;
+      }[] = [];
 
-      for (const [comboTypeId, quantity] of merged) {
+      for (const [comboTypeId, { quantity, sizes }] of merged) {
         // Conditional atomic update: DB chỉ decrement nếu WHERE khớp (còn đủ
         // hàng VÀ event của combo đang "open") trong CÙNG 1 câu lệnh — an toàn
         // chống oversell. Lỗi ở dòng nào thì throw -> rollback cả transaction.
@@ -142,7 +162,17 @@ export async function bookCombos(lines: BookingLine[]): Promise<BookComboResult>
               : `Combo "${combo.name}" chỉ còn ${combo.remainingQuantity}.`,
           );
         }
-        items.push({ comboTypeId, quantity, unitPrice: combo.price });
+        if (combo.includesShirt && shirtSizesTotal(sizes) !== quantity) {
+          throw new BookingError(
+            `Combo "${combo.name}": số áo theo size phải bằng số combo (${quantity}).`,
+          );
+        }
+        items.push({
+          comboTypeId,
+          quantity,
+          unitPrice: combo.price,
+          ...(combo.includesShirt && { shirtSizes: sizes }),
+        });
       }
 
       // Đơn tạo ra ở trạng thái "pending" — chỉ thành "paid" khi webhook SePay

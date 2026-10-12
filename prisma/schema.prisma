@@ -171,6 +171,7 @@ model ComboType {
   price             Int // VND, giá sau giảm (nếu có) — hiển thị thông tin, không xử lý thanh toán online
   originalPrice     Int? // giá gốc trước giảm, hiển thị gạch ngang — null nếu combo này không giảm giá
   includesTicket    Boolean  @default(true)
+  includesShirt     Boolean  @default(false) // combo có áo -> khách phải chọn size cho từng combo
   items             String // JSON string[] mô tả các item kèm theo, vd ["1 Dây đeo","1 Bộ Sticker A6"]
   totalQuantity     Int
   remainingQuantity Int
@@ -240,6 +241,7 @@ model OrderItem {
   comboTypeId String
   quantity    Int
   unitPrice   Int // VND
+  shirtSizes  Json? // combo có áo: {"M": 2, "L": 1}, tổng = quantity (xem lib/shirt-sizes.ts)
   order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   comboType   ComboType @relation(fields: [comboTypeId], references: [id])
 

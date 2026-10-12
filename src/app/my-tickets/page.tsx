@@ -9,6 +9,7 @@ import { SeatTurnCard } from "@/components/seat-turn-card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { parseComboItems } from "@/lib/combo";
+import { formatShirtSizes } from "@/lib/shirt-sizes";
 import { cn } from "@/lib/utils";
 import { VN_TIME_ZONE } from "@/lib/datetime";
 
@@ -136,13 +137,13 @@ export default async function MyTicketsPage() {
                       <p className="text-sm font-medium text-foreground">
                         {item.comboType.name} × {item.quantity}
                       </p>
+                      {formatShirtSizes(item.shirtSizes) && (
+                        <p className="text-sm text-foreground">
+                          Size áo: {formatShirtSizes(item.shirtSizes)}
+                        </p>
+                      )}
                       <ul className="mt-1 text-sm text-muted-foreground">
-                        {[
-                          ...(item.comboType.includesTicket
-                            ? ["1 Vé tham gia offline"]
-                            : []),
-                          ...parseComboItems(item.comboType.items),
-                        ].map((content) => (
+                        {parseComboItems(item.comboType.items).map((content) => (
                           <li key={content}>• {content}</li>
                         ))}
                       </ul>

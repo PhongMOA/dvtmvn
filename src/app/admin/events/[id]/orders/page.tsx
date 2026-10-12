@@ -6,6 +6,7 @@ import { AdminCancelShipment } from "@/components/admin-cancel-shipment";
 import { ghtkStatusColorClass } from "@/lib/ghtk";
 import { cn } from "@/lib/utils";
 import { parseComboItems } from "@/lib/combo";
+import { formatShirtSizes } from "@/lib/shirt-sizes";
 import { orderItemsQuantity } from "@/lib/order-items";
 import { AdminSearchForm } from "@/components/admin-search-form";
 import { AdminPagination } from "@/components/admin-pagination";
@@ -129,10 +130,12 @@ export default async function EventOrdersPage({
                   <div className="flex flex-col gap-0.5">
                     {order.items.map((item) => (
                       <span key={item.id}>
-                        {[
-                          ...(item.comboType.includesTicket ? ["Vé tham gia offline"] : []),
-                          ...parseComboItems(item.comboType.items),
-                        ].join(", ") || "—"}
+                        {parseComboItems(item.comboType.items).join(", ") || "—"}
+                        {formatShirtSizes(item.shirtSizes) && (
+                          <span className="font-medium text-foreground">
+                            {" "}· Size áo: {formatShirtSizes(item.shirtSizes)}
+                          </span>
+                        )}
                       </span>
                     ))}
                   </div>

@@ -7,12 +7,16 @@ import { toast } from "sonner";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { bookCombos } from "@/app/actions/booking";
 import { CheckoutDialog, type PendingCheckout } from "@/components/checkout-dialog";
+import { ShirtSizeDialog, type ShirtSizeRequest } from "@/components/shirt-size-dialog";
 import {
   clearCart,
   removeFromCart,
+  setCartLineSizes,
   setCartQuantity,
   useCart,
+  type CartLine,
 } from "@/lib/cart";
+import { formatShirtSizes, shirtSizesTotal } from "@/lib/shirt-sizes";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -24,6 +28,7 @@ export type CartCombo = {
   price: number;
   originalPrice: number | null;
   remainingQuantity: number;
+  includesShirt: boolean;
   contents: string[];
 };
 
@@ -43,6 +48,7 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const [isPending, startTransition] = useTransition();
   const [checkout, setCheckout] = useState<PendingCheckout | null>(null);
+  const [sizeRequest, setSizeRequest] = useState<ShirtSizeRequest | null>(null);
   const router = useRouter();
 
   const comboById = new Map(combos.map((combo) => [combo.id, combo]));
@@ -57,16 +63,36 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
   const overStock = available.filter(
     (line) => line.quantity > line.combo.remainingQuantity,
   );
+  // Combo có áo mà tổng size ≠ số lượng (vd dòng thêm trước khi combo bật "có áo").
+  const sizeMismatch = available.filter((line) => needsSizes(line, line.combo));
   const subtotal = available.reduce(
     (sum, line) => sum + line.combo.price * line.quantity,
     0,
   );
   const totalQuantity = available.reduce((sum, line) => sum + line.quantity, 0);
 
+  /** Mở modal chọn size cho dòng combo có áo với số lượng mới `quantity`. */
+  function editSizes(line: CartLine, combo: CartCombo, quantity: number) {
+    setSizeRequest({
+      comboName: combo.name,
+      quantity,
+      initialSizes: line.sizes,
+      confirmLabel: "Lưu",
+      onConfirm: (sizes) => {
+        setCartLineSizes(line.comboTypeId, sizes, quantity);
+        setSizeRequest(null);
+      },
+    });
+  }
+
   function handleCheckout() {
     startTransition(async () => {
       const result = await bookCombos(
-        available.map(({ comboTypeId, quantity }) => ({ comboTypeId, quantity })),
+        available.map(({ comboTypeId, quantity, combo, sizes }) => ({
+          comboTypeId,
+          quantity,
+          ...(combo.includesShirt && { sizes }),
+        })),
       );
       if (!result.ok) {
         if (result.error === "UNAUTHORIZED") {
@@ -133,6 +159,28 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
                     {line.combo.contents.join(" · ")}
                   </p>
                 )}
+                {line.combo.includesShirt && (
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs">
+                    {needsSizes(line, line.combo) ? (
+                      <span className="font-medium text-destructive">
+                        Chưa chọn đủ size áo ({shirtSizesTotal(line.sizes ?? {})}/
+                        {line.quantity}).
+                      </span>
+                    ) : (
+                      <span className="text-foreground">
+                        Size áo: {formatShirtSizes(line.sizes)}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => editSizes(line, line.combo!, line.quantity)}
+                      className="font-medium text-accent underline-offset-2 hover:underline disabled:opacity-50"
+                    >
+                      {needsSizes(line, line.combo) ? "Chọn size" : "Sửa size"}
+                    </button>
+                  </div>
+                )}
                 {line.quantity > line.combo.remainingQuantity && (
                   <p className="mt-1 text-xs font-medium text-destructive">
                     {line.combo.remainingQuantity < 1
@@ -150,7 +198,11 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
                     size="icon"
                     aria-label="Giảm số lượng"
                     disabled={isPending || line.quantity <= 1}
-                    onClick={() => setCartQuantity(line.comboTypeId, line.quantity - 1)}
+                    onClick={() =>
+                      line.combo!.includesShirt
+                        ? editSizes(line, line.combo!, line.quantity - 1)
+                        : setCartQuantity(line.comboTypeId, line.quantity - 1)
+                    }
                   >
                     <Minus />
                   </Button>
@@ -159,6 +211,8 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
                     min={1}
                     max={Math.max(line.combo.remainingQuantity, 1)}
                     value={line.quantity}
+                    // Combo có áo: đổi số lượng qua nút +/− (mở modal chọn size).
+                    readOnly={line.combo.includesShirt}
                     disabled={isPending}
                     aria-label={`Số lượng ${line.combo.name}`}
                     onChange={(e) => {
@@ -179,7 +233,11 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
                     disabled={
                       isPending || line.quantity >= line.combo.remainingQuantity
                     }
-                    onClick={() => setCartQuantity(line.comboTypeId, line.quantity + 1)}
+                    onClick={() =>
+                      line.combo!.includesShirt
+                        ? editSizes(line, line.combo!, line.quantity + 1)
+                        : setCartQuantity(line.comboTypeId, line.quantity + 1)
+                    }
                   >
                     <Plus />
                   </Button>
@@ -239,14 +297,24 @@ export function CartView({ combos }: { combos: CartCombo[] }) {
         <Button
           type="button"
           size="lg"
-          disabled={isPending || available.length === 0 || overStock.length > 0}
+          disabled={
+            isPending ||
+            available.length === 0 ||
+            overStock.length > 0 ||
+            sizeMismatch.length > 0
+          }
           onClick={handleCheckout}
         >
           {isPending ? "Đang giữ chỗ..." : "Đặt hàng"}
         </Button>
       </div>
 
+      <ShirtSizeDialog request={sizeRequest} onClose={() => setSizeRequest(null)} />
       <CheckoutDialog checkout={checkout} onClose={() => setCheckout(null)} />
     </div>
   );
+}
+
+function needsSizes(line: CartLine, combo: CartCombo): boolean {
+  return combo.includesShirt && shirtSizesTotal(line.sizes ?? {}) !== line.quantity;
 }

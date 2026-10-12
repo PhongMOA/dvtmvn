@@ -16,6 +16,7 @@ import {
 } from "@/lib/ghtk";
 import { cn } from "@/lib/utils";
 import { parseComboItems } from "@/lib/combo";
+import { formatShirtSizes } from "@/lib/shirt-sizes";
 import { orderAmountDue, orderItemsQuantity } from "@/lib/order-items";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -361,6 +362,9 @@ export default async function AdminAllOrdersPage({
                       <span key={item.id} className="text-xs text-muted-foreground">
                         {[
                           `${item.comboType.name} × ${item.quantity}`,
+                          ...(formatShirtSizes(item.shirtSizes)
+                            ? [`Size áo: ${formatShirtSizes(item.shirtSizes)}`]
+                            : []),
                           ...(item.comboType.includesTicket ? ["Vé offline"] : []),
                           ...parseComboItems(item.comboType.items),
                         ].join(" · ")}

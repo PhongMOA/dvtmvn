@@ -13,6 +13,7 @@ type ComboInput = {
   price: number;
   originalPrice: number | null;
   includesTicket: boolean;
+  includesShirt: boolean;
   items: string; // JSON string, đã convert từ textarea
   totalQuantity: number;
 };
@@ -24,6 +25,7 @@ function parseComboForm(formData: FormData): ComboInput {
     price: Number(formData.get("price") ?? 0),
     originalPrice: originalPriceRaw ? Number(originalPriceRaw) : null,
     includesTicket: formData.get("includesTicket") === "on",
+    includesShirt: formData.get("includesShirt") === "on",
     items: stringifyComboItems(String(formData.get("items") ?? "")),
     totalQuantity: Number(formData.get("totalQuantity") ?? 0),
   };
@@ -60,6 +62,7 @@ export async function createCombo(
         price: input.price,
         originalPrice: input.originalPrice,
         includesTicket: input.includesTicket,
+        includesShirt: input.includesShirt,
         items: input.items,
         totalQuantity: input.totalQuantity,
         remainingQuantity: input.totalQuantity,
@@ -100,6 +103,7 @@ export async function updateCombo(
           price: input.price,
           originalPrice: input.originalPrice,
           includesTicket: input.includesTicket,
+          includesShirt: input.includesShirt,
           items: input.items,
           totalQuantity: input.totalQuantity,
           // Delta atomic — cộng/trừ chênh lệch vào remainingQuantity hiện tại thay

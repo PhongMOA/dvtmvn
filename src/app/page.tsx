@@ -191,10 +191,7 @@ export default async function Home() {
               const discountPercent = combo.originalPrice
                 ? Math.round((1 - combo.price / combo.originalPrice) * 100)
                 : null;
-              const items = [
-                ...(combo.includesTicket ? ["1 Vé tham gia offline"] : []),
-                ...parseComboItems(combo.items),
-              ];
+              const items = parseComboItems(combo.items);
 
               return (
                 <div
@@ -238,6 +235,7 @@ export default async function Home() {
                       comboTypeId={combo.id}
                       comboName={combo.name}
                       remainingQuantity={combo.remainingQuantity}
+                      includesShirt={combo.includesShirt}
                     />
                   ) : (
                     <Link

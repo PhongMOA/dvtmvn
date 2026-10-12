@@ -55,10 +55,8 @@ export default async function CartPage() {
     price: combo.price,
     originalPrice: combo.originalPrice,
     remainingQuantity: combo.remainingQuantity,
-    contents: [
-      ...(combo.includesTicket ? ["1 Vé tham gia offline"] : []),
-      ...parseComboItems(combo.items),
-    ],
+    includesShirt: combo.includesShirt,
+    contents: parseComboItems(combo.items),
   }));
 
   return (
