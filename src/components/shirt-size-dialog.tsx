@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
+  SHIRT_SIZE_CHART,
   SHIRT_SIZES,
   shirtSizesTotal,
   type ShirtSize,
@@ -48,7 +49,7 @@ export function ShirtSizeDialog({
         if (!next && !pending) onClose();
       }}
     >
-      <DialogPopup>
+      <DialogPopup className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         {request && (
           // key: mở lại modal (combo/số lượng khác) -> reset state nhập size.
           <ShirtSizeForm
@@ -107,6 +108,8 @@ function ShirtSizeForm({
             : `chia ${quantity} áo theo size (tổng phải đủ ${quantity}).`}
         </DialogDescription>
       </DialogHeader>
+
+      <SizeChart selected={sizes} />
 
       {quantity === 1 ? (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -191,5 +194,58 @@ function ShirtSizeForm({
         {request.confirmLabel}
       </Button>
     </form>
+  );
+}
+
+/** Bảng thông số size — cột của size đang chọn được tô nổi bật. */
+function SizeChart({ selected }: { selected: ShirtSizes }) {
+  return (
+    <details open className="group mt-4 rounded-md border border-border">
+      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-foreground">
+        Bảng thông số size
+      </summary>
+      <div className="overflow-x-auto border-t border-border">
+        <table className="w-full text-center text-xs tabular-nums">
+          <thead>
+            <tr className="bg-muted/40">
+              <th className="sticky left-0 bg-card px-2 py-1.5 text-left font-medium text-muted-foreground">
+                Size
+              </th>
+              {SHIRT_SIZES.map((size) => (
+                <th
+                  key={size}
+                  className={cn(
+                    "px-2 py-1.5 font-semibold text-foreground",
+                    selected[size] && "bg-accent/20 text-accent",
+                  )}
+                >
+                  {size}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {SHIRT_SIZE_CHART.map((row) => (
+              <tr key={row.label} className="border-t border-border">
+                <th className="sticky left-0 whitespace-nowrap bg-card px-2 py-1.5 text-left font-normal text-muted-foreground">
+                  {row.label}
+                </th>
+                {SHIRT_SIZES.map((size) => (
+                  <td
+                    key={size}
+                    className={cn(
+                      "whitespace-nowrap px-2 py-1.5 text-foreground",
+                      selected[size] && "bg-accent/10",
+                    )}
+                  >
+                    {row.values[size]}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   );
 }

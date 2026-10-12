@@ -172,11 +172,6 @@ export function BookingForm({
             {soldOut ? "Hết hàng" : isPending ? "Đang đặt..." : "Đặt ngay"}
           </Button>
         </div>
-        {inCart > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Đã có {inCart} trong giỏ hàng.
-          </p>
-        )}
       </form>
 
       <Dialog
