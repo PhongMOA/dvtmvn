@@ -6,6 +6,11 @@ import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { TicketQr } from "@/components/ticket-qr";
 import { ShipmentStatus } from "@/components/shipment-status";
 import { SeatTurnCard } from "@/components/seat-turn-card";
+import {
+  UpgradeComboButton,
+  type UpgradeTarget,
+} from "@/components/upgrade-combo-button";
+import { isUpgradeTarget } from "@/lib/order-upgrade";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { parseComboItems } from "@/lib/combo";
@@ -31,8 +36,29 @@ export default async function MyTicketsPage() {
     where: { userId: session.user.id },
     include: {
       items: { include: { comboType: { include: { event: true } } } },
+      upgradeFromOrder: { select: { id: true, orderCode: true } },
+      upgrades: {
+        select: {
+          id: true,
+          orderCode: true,
+          paymentStatus: true,
+          expiresAt: true,
+          upgradeFromItemId: true,
+          items: { select: { quantity: true, comboType: { select: { name: true } } } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: { createdAt: "desc" },
+  });
+
+  // Combo có vé đang bán của các event user đã mua — làm lựa chọn nâng cấp.
+  const eventIds = [
+    ...new Set(orders.flatMap((o) => o.items.map((i) => i.comboType.eventId))),
+  ];
+  const ticketCombos = await prisma.comboType.findMany({
+    where: { eventId: { in: eventIds }, includesTicket: true, event: { status: "open" } },
+    orderBy: { price: "asc" },
   });
 
   // Hoàn kho thật ngay tại đây cho các đơn "pending" đã quá hạn hiển thị ở
@@ -65,6 +91,39 @@ export default async function MyTicketsPage() {
       ? { ...order, paymentStatus: "expired" as const }
       : order,
   );
+
+  /** Lựa chọn nâng cấp cho 1 dòng combo — null nếu dòng không nâng cấp được. */
+  function upgradeOptions(
+    order: (typeof orders)[number],
+    item: (typeof orders)[number]["items"][number],
+  ): { upgradable: number; targets: UpgradeTarget[] } | null {
+    if (order.paymentStatus !== "paid" || order.status === "checked_in") return null;
+    if (item.comboType.includesTicket) return null;
+    const pending = order.upgrades
+      .filter(
+        (u) =>
+          u.upgradeFromItemId === item.id &&
+          u.paymentStatus === "pending" &&
+          u.expiresAt > now,
+      )
+      .reduce((sum, u) => sum + u.items.reduce((s, i) => s + i.quantity, 0), 0);
+    const upgradable = item.quantity - item.upgradedQuantity - pending;
+    if (upgradable < 1) return null;
+    const targets = ticketCombos
+      .filter((combo) =>
+        isUpgradeTarget(combo, { eventId: item.comboType.eventId, unitPrice: item.unitPrice }),
+      )
+      .map((combo) => ({
+        id: combo.id,
+        name: combo.name,
+        price: combo.price,
+        diff: combo.price - item.unitPrice,
+        includesShirt: combo.includesShirt,
+        remainingQuantity: combo.remainingQuantity,
+        contents: parseComboItems(combo.items),
+      }));
+    return targets.length > 0 ? { upgradable, targets } : null;
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-12">
@@ -132,11 +191,54 @@ export default async function MyTicketsPage() {
                       {event.venue} · {formatDateTime(event.startAt)}
                     </p>
                   )}
-                  {order.items.map((item) => (
+                  <Link
+                    href={`/orders/${order.id}`}
+                    className="mt-1 inline-block font-mono text-xs text-muted-foreground hover:text-accent hover:underline"
+                  >
+                    Mã đơn #{order.orderCode}
+                  </Link>
+                  {order.upgradeFromOrder && (
+                    <p className="mt-2 rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-foreground">
+                      Combo nâng cấp từ đơn{" "}
+                      <Link
+                        href={`/orders/${order.upgradeFromOrder.id}`}
+                        className="font-mono font-semibold text-accent underline-offset-2 hover:underline"
+                      >
+                        #{order.upgradeFromOrder.orderCode}
+                      </Link>{" "}
+                      — chỉ thanh toán phần chênh lệch.
+                    </p>
+                  )}
+                  {order.items.map((item) => {
+                    const upgrade = upgradeOptions(order, item);
+                    const fullyUpgraded = item.upgradedQuantity >= item.quantity;
+                    return (
                     <div key={item.id} className="mt-2">
-                      <p className="text-sm font-medium text-foreground">
-                        {item.comboType.name} × {item.quantity}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p
+                          className={cn(
+                            "text-sm font-medium text-foreground",
+                            fullyUpgraded && "text-muted-foreground line-through",
+                          )}
+                        >
+                          {item.comboType.name} × {item.quantity}
+                        </p>
+                        {item.upgradedQuantity > 0 && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            {fullyUpgraded
+                              ? "Đã nâng cấp"
+                              : `${item.upgradedQuantity} đã nâng cấp`}
+                          </Badge>
+                        )}
+                        {upgrade && (
+                          <UpgradeComboButton
+                            orderItemId={item.id}
+                            comboName={item.comboType.name}
+                            upgradableQuantity={upgrade.upgradable}
+                            targets={upgrade.targets}
+                          />
+                        )}
+                      </div>
                       {formatShirtSizes(item.shirtSizes) && (
                         <p className="text-sm text-foreground">
                           Size áo: {formatShirtSizes(item.shirtSizes)}
@@ -148,7 +250,25 @@ export default async function MyTicketsPage() {
                         ))}
                       </ul>
                     </div>
-                  ))}
+                    );
+                  })}
+                  {order.upgrades
+                    .filter((u) => u.paymentStatus === "paid" || u.paymentStatus === "pending")
+                    .map((u) => (
+                      <p key={u.id} className="mt-2 text-xs text-muted-foreground">
+                        {u.paymentStatus === "paid"
+                          ? "Đã nâng cấp"
+                          : "Đang nâng cấp (chờ thanh toán)"}{" "}
+                        sang {u.items.map((i) => `${i.comboType.name} × ${i.quantity}`).join(", ")}{" "}
+                        — đơn{" "}
+                        <Link
+                          href={`/orders/${u.id}`}
+                          className="font-mono font-semibold text-accent underline-offset-2 hover:underline"
+                        >
+                          #{u.orderCode}
+                        </Link>
+                      </p>
+                    ))}
                 </div>
                 <div className="flex justify-center">
                   {order.paymentStatus === "paid" && (

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "ComboType" ADD COLUMN "sortOrder" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "wideCard" BOOLEAN NOT NULL DEFAULT false;

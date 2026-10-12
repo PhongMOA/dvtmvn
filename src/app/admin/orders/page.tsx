@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { parseComboItems } from "@/lib/combo";
 import { formatShirtSizes } from "@/lib/shirt-sizes";
+import { UpgradeLinks } from "@/components/upgrade-links";
 import { orderAmountDue, orderItemsQuantity } from "@/lib/order-items";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -254,6 +255,11 @@ export default async function AdminAllOrdersPage({
     include: {
       user: true,
       items: { include: { comboType: { include: { event: true } } } },
+      upgradeFromOrder: { select: { id: true, orderCode: true } },
+      upgrades: {
+        where: { paymentStatus: "paid" },
+        select: { id: true, orderCode: true },
+      },
     },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * PAGE_SIZE,
@@ -328,7 +334,13 @@ export default async function AdminAllOrdersPage({
             {orders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="font-mono text-xs">
-                  {order.orderCode}
+                  <Link
+                    href={`/orders/${order.id}`}
+                    className="hover:text-accent hover:underline"
+                  >
+                    {order.orderCode}
+                  </Link>
+                  <UpgradeLinks order={order} />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
@@ -362,6 +374,9 @@ export default async function AdminAllOrdersPage({
                       <span key={item.id} className="text-xs text-muted-foreground">
                         {[
                           `${item.comboType.name} × ${item.quantity}`,
+                          ...(item.upgradedQuantity > 0
+                            ? [`${item.upgradedQuantity} đã nâng cấp (huỷ)`]
+                            : []),
                           ...(formatShirtSizes(item.shirtSizes)
                             ? [`Size áo: ${formatShirtSizes(item.shirtSizes)}`]
                             : []),

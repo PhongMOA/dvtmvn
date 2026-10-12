@@ -173,6 +173,8 @@ model ComboType {
   includesTicket    Boolean  @default(true)
   isRecommended     Boolean  @default(false) // "Đề xuất": trang chủ highlight viền + gắn nhãn
   includesShirt     Boolean  @default(false) // combo có áo -> khách phải chọn size cho từng combo
+  wideCard          Boolean  @default(false) // trang chủ: thẻ chiếm 2 ô (cân lưới khi số combo lẻ)
+  sortOrder         Int      @default(0) // thứ tự hiển thị (nhỏ trước), đổi bằng nút ▲▼ ở admin
   items             String // JSON string[] mô tả các item kèm theo, vd ["1 Dây đeo","1 Bộ Sticker A6"]
   totalQuantity     Int
   remainingQuantity Int
@@ -204,6 +206,15 @@ model Order {
   createdAt     DateTime  @default(now())
   user          User      @relation(fields: [userId], references: [id])
   items         OrderItem[]
+
+  // Đơn nâng cấp combo (xem app/actions/upgrade.ts): khách đổi combo không vé
+  // của đơn cũ sang combo có vé, chỉ trả phần chênh lệch (OrderItem.unitPrice
+  // của đơn nâng cấp = giá mới − giá đã trả). Khi đơn nâng cấp được thanh toán,
+  // phần combo cũ coi như huỷ (OrderItem.upgradedQuantity) + hoàn kho combo cũ.
+  upgradeFromOrderId String?
+  upgradeFromItemId  String?
+  upgradeFromOrder   Order?   @relation("OrderUpgrade", fields: [upgradeFromOrderId], references: [id])
+  upgrades           Order[]  @relation("OrderUpgrade")
 
   // Snapshot thông tin nhận hàng + phí ship GHTK đã chốt ở bước tóm tắt trước
   // thanh toán (user có thể sửa profile sau — đơn phải giữ nguyên giá trị lúc
@@ -242,6 +253,9 @@ model OrderItem {
   comboTypeId String
   quantity    Int
   unitPrice   Int // VND
+  // Số combo của dòng này đã được nâng cấp sang đơn khác (đơn nâng cấp đã TT) —
+  // coi như huỷ; quantity giữ nguyên để không lệch số tiền đơn cũ đã thu.
+  upgradedQuantity Int @default(0)
   shirtSizes  Json? // combo có áo: {"M": 2, "L": 1}, tổng = quantity (xem lib/shirt-sizes.ts)
   order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   comboType   ComboType @relation(fields: [comboTypeId], references: [id])

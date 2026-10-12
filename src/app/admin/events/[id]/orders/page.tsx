@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -7,6 +8,7 @@ import { ghtkStatusColorClass } from "@/lib/ghtk";
 import { cn } from "@/lib/utils";
 import { parseComboItems } from "@/lib/combo";
 import { formatShirtSizes } from "@/lib/shirt-sizes";
+import { UpgradeLinks } from "@/components/upgrade-links";
 import { orderItemsQuantity } from "@/lib/order-items";
 import { AdminSearchForm } from "@/components/admin-search-form";
 import { AdminPagination } from "@/components/admin-pagination";
@@ -74,7 +76,15 @@ export default async function EventOrdersPage({
 
   const orders = await prisma.order.findMany({
     where,
-    include: { user: true, items: { include: { comboType: true } } },
+    include: {
+      user: true,
+      items: { include: { comboType: true } },
+      upgradeFromOrder: { select: { id: true, orderCode: true } },
+      upgrades: {
+        where: { paymentStatus: "paid" },
+        select: { id: true, orderCode: true },
+      },
+    },
     orderBy: { createdAt: "asc" },
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
@@ -116,12 +126,24 @@ export default async function EventOrdersPage({
               <TableRow key={order.id}>
                 <TableCell className="font-medium">
                   {order.user.name ?? order.user.email}
+                  <Link
+                    href={`/orders/${order.id}`}
+                    className="block font-mono text-xs font-normal text-muted-foreground hover:text-accent hover:underline"
+                  >
+                    #{order.orderCode}
+                  </Link>
+                  <UpgradeLinks order={order} />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
                     {order.items.map((item) => (
                       <span key={item.id} className="whitespace-nowrap">
                         {item.comboType.name} × {item.quantity}
+                        {item.upgradedQuantity > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {" "}({item.upgradedQuantity} đã nâng cấp)
+                          </span>
+                        )}
                       </span>
                     ))}
                   </div>

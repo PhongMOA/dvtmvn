@@ -14,6 +14,7 @@ type ComboDefaults = {
   includesTicket: boolean;
   includesShirt: boolean;
   isRecommended: boolean;
+  wideCard: boolean;
   items: string; // mỗi dòng 1 item, đã join từ mảng để hiển thị trong textarea
   totalQuantity: number;
 };
@@ -101,6 +102,18 @@ export function ComboForm({
         />
         <Label htmlFor="isRecommended" className="font-normal">
           Đề xuất (làm nổi bật viền + gắn nhãn &quot;Đề xuất&quot; ở trang chủ)
+        </Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          id="wideCard"
+          name="wideCard"
+          type="checkbox"
+          defaultChecked={defaults?.wideCard ?? false}
+          className="h-4 w-4 rounded border-border"
+        />
+        <Label htmlFor="wideCard" className="font-normal">
+          Hiển thị rộng 2 ô ở trang chủ (dùng để cân giao diện khi số combo lẻ)
         </Label>
       </div>
       <div className="flex flex-col gap-1.5">

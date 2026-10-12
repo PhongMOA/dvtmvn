@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { deleteCombo } from "@/app/actions/admin-combos";
+import { deleteCombo, moveCombo } from "@/app/actions/admin-combos";
 import { parseComboItems } from "@/lib/combo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,7 @@ export default async function EventCombosPage({
 
   const combos = await prisma.comboType.findMany({
     where: { eventId: id },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
   return (
@@ -49,6 +49,7 @@ export default async function EventCombosPage({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-20">Thứ tự</TableHead>
               <TableHead>Combo</TableHead>
               <TableHead>Giá</TableHead>
               <TableHead>Kèm vé</TableHead>
@@ -59,12 +60,43 @@ export default async function EventCombosPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {combos.map((combo) => (
+            {combos.map((combo, index) => (
               <TableRow key={combo.id}>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <form action={moveCombo.bind(null, id, combo.id, "up")}>
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        size="sm"
+                        disabled={index === 0}
+                        aria-label="Đưa lên"
+                      >
+                        ▲
+                      </Button>
+                    </form>
+                    <form action={moveCombo.bind(null, id, combo.id, "down")}>
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        size="sm"
+                        disabled={index === combos.length - 1}
+                        aria-label="Đưa xuống"
+                      >
+                        ▼
+                      </Button>
+                    </form>
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">
                   {combo.name}
                   {combo.isRecommended && (
                     <Badge className="ml-2 bg-accent text-accent-foreground">Đề xuất</Badge>
+                  )}
+                  {combo.wideCard && (
+                    <Badge variant="outline" className="ml-2">
+                      Rộng 2 ô
+                    </Badge>
                   )}
                 </TableCell>
                 <TableCell>

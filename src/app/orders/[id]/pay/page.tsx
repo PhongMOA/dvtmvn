@@ -38,7 +38,11 @@ export default async function OrderPaymentPage({
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { items: { include: { comboType: true } }, user: true },
+    include: {
+      items: { include: { comboType: true } },
+      user: true,
+      upgradeFromOrder: { select: { id: true, orderCode: true } },
+    },
   });
   // items rỗng: đơn tạo từ bản cũ chưa được backfill OrderItem — không hiện QR
   // (tổng tiền sẽ sai).
@@ -114,6 +118,18 @@ export default async function OrderPaymentPage({
         {itemsLabel} — giữ nguyên nội dung chuyển
         khoản để hệ thống tự động xác nhận.
       </p>
+      {order.upgradeFromOrder && (
+        <p className="mt-3 rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-foreground">
+          Combo nâng cấp từ đơn{" "}
+          <Link
+            href={`/orders/${order.upgradeFromOrder.id}`}
+            className="font-mono font-semibold text-accent underline-offset-2 hover:underline"
+          >
+            #{order.upgradeFromOrder.orderCode}
+          </Link>{" "}
+          — chỉ thanh toán phần chênh lệch. Combo cũ sẽ được thay sau khi thanh toán.
+        </p>
+      )}
 
       {/* eslint-disable-next-line @next/next/no-img-element -- ảnh QR từ vietqr.app, dựng URL động theo đơn */}
       <img
@@ -124,7 +140,9 @@ export default async function OrderPaymentPage({
 
       <dl className="mt-6 flex flex-col gap-2 rounded-lg border border-border bg-card p-4 text-left text-sm">
         <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Tiền combo</dt>
+          <dt className="text-muted-foreground">
+            {order.upgradeFromOrder ? "Chênh lệch nâng cấp" : "Tiền combo"}
+          </dt>
           <dd className="font-medium text-foreground">{formatVnd(comboTotal)}</dd>
         </div>
         {order.discountAmount > 0 && (
@@ -137,12 +155,14 @@ export default async function OrderPaymentPage({
             </dd>
           </div>
         )}
-        <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Phí ship (GHTK)</dt>
-          <dd className="font-medium text-foreground">
-            {formatVnd(order.shipFee)}
-          </dd>
-        </div>
+        {!order.upgradeFromOrder && (
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Phí ship (GHTK)</dt>
+            <dd className="font-medium text-foreground">
+              {formatVnd(order.shipFee)}
+            </dd>
+          </div>
+        )}
         <div className="flex items-center justify-between border-t border-border pt-2">
           <dt className="font-semibold text-foreground">Số tiền chuyển khoản</dt>
           <dd className="font-semibold text-accent">{formatVnd(amount)}</dd>

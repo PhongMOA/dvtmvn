@@ -34,7 +34,7 @@ export default async function Home() {
   const [event, session] = await Promise.all([
     prisma.event.findFirst({
       where: { status: "open" },
-      include: { comboTypes: { orderBy: { createdAt: "asc" } } },
+      include: { comboTypes: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } },
     }),
     auth(),
   ]);
@@ -63,7 +63,7 @@ export default async function Home() {
   await expireStaleOrdersForCombos(event.comboTypes.map((combo) => combo.id));
   event.comboTypes = await prisma.comboType.findMany({
     where: { eventId: event.id },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
   const now = new Date();
@@ -199,6 +199,7 @@ export default async function Home() {
                   key={combo.id}
                   className={cn(
                     "relative flex flex-col gap-4 rounded-lg border bg-card p-6",
+                    combo.wideCard && "sm:col-span-2",
                     combo.isRecommended
                       ? "border-2 border-accent shadow-[0_0_28px_-6px] shadow-accent/60"
                       : "border-border",
@@ -231,7 +232,12 @@ export default async function Home() {
                     </div>
                   </div>
 
-                  <ul className="flex flex-1 flex-col gap-1 text-sm text-muted-foreground">
+                  <ul
+                    className={cn(
+                      "flex flex-1 flex-col gap-1 text-sm text-muted-foreground",
+                      combo.wideCard && "sm:grid sm:grid-cols-2 sm:content-start sm:gap-x-6",
+                    )}
+                  >
                     {items.map((item) => (
                       <li key={item}>• {item}</li>
                     ))}

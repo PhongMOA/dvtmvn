@@ -15,6 +15,7 @@ type ComboInput = {
   includesTicket: boolean;
   includesShirt: boolean;
   isRecommended: boolean;
+  wideCard: boolean;
   items: string; // JSON string, đã convert từ textarea
   totalQuantity: number;
 };
@@ -28,6 +29,7 @@ function parseComboForm(formData: FormData): ComboInput {
     includesTicket: formData.get("includesTicket") === "on",
     includesShirt: formData.get("includesShirt") === "on",
     isRecommended: formData.get("isRecommended") === "on",
+    wideCard: formData.get("wideCard") === "on",
     items: stringifyComboItems(String(formData.get("items") ?? "")),
     totalQuantity: Number(formData.get("totalQuantity") ?? 0),
   };
@@ -57,8 +59,14 @@ export async function createCombo(
   if (error) return { error };
 
   try {
+    // Combo mới nằm cuối danh sách.
+    const { _max } = await prisma.comboType.aggregate({
+      where: { eventId },
+      _max: { sortOrder: true },
+    });
     await prisma.comboType.create({
       data: {
+        sortOrder: (_max.sortOrder ?? -1) + 1,
         eventId,
         name: input.name,
         price: input.price,
@@ -66,6 +74,7 @@ export async function createCombo(
         includesTicket: input.includesTicket,
         includesShirt: input.includesShirt,
         isRecommended: input.isRecommended,
+        wideCard: input.wideCard,
         items: input.items,
         totalQuantity: input.totalQuantity,
         remainingQuantity: input.totalQuantity,
@@ -108,6 +117,7 @@ export async function updateCombo(
           includesTicket: input.includesTicket,
           includesShirt: input.includesShirt,
           isRecommended: input.isRecommended,
+          wideCard: input.wideCard,
           items: input.items,
           totalQuantity: input.totalQuantity,
           // Delta atomic — cộng/trừ chênh lệch vào remainingQuantity hiện tại thay
@@ -132,6 +142,27 @@ export async function updateCombo(
 export async function deleteCombo(eventId: string, comboId: string) {
   await requireAdmin();
   await prisma.comboType.delete({ where: { id: comboId } });
+  revalidatePath(`/admin/events/${eventId}/combos`);
+  revalidatePath("/");
+}
+
+/** Đổi thứ tự hiển thị: đổi chỗ với combo liền trên/dưới, đánh lại sortOrder 0..n-1. */
+export async function moveCombo(eventId: string, comboId: string, direction: "up" | "down") {
+  await requireAdmin();
+  const combos = await prisma.comboType.findMany({
+    where: { eventId },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  const index = combos.findIndex((c) => c.id === comboId);
+  const swapWith = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || swapWith < 0 || swapWith >= combos.length) return;
+  [combos[index], combos[swapWith]] = [combos[swapWith], combos[index]];
+  await prisma.$transaction(
+    combos.map((c, i) =>
+      prisma.comboType.update({ where: { id: c.id }, data: { sortOrder: i } }),
+    ),
+  );
   revalidatePath(`/admin/events/${eventId}/combos`);
   revalidatePath("/");
 }

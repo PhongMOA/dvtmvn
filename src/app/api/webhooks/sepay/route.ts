@@ -5,6 +5,7 @@ import { orderAmountDue } from "@/lib/order-items";
 import { extractOrderCodeFromContent } from "@/lib/sepay";
 import { fulfillPaidOrder } from "@/lib/order-fulfillment";
 import { syncSeatAllowanceForOrder } from "@/lib/seat-allowance";
+import { finalizePaidUpgrade } from "@/lib/order-upgrade";
 
 // Payload SePay POST tới webhook khi có giao dịch ngân hàng mới — xem
 // https://docs.sepay.vn/tich-hop-webhooks.html. Chỉ khai các field mình dùng.
@@ -143,6 +144,8 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error("fulfillPaidOrder lỗi (không ảnh hưởng webhook):", err);
     }
+    // Đơn nâng cấp: huỷ phần combo cũ + hoàn kho — best-effort, không throw.
+    await finalizePaidUpgrade(order.id);
     // Nối user vào danh sách chọn ghế nếu event đã chốt — best-effort, không throw.
     await syncSeatAllowanceForOrder(order.id);
   }

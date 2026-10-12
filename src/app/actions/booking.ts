@@ -318,16 +318,19 @@ export async function prepareCheckout(
     }
   }
 
-  const estimate = await estimateShippingFee({
-    pickProvince: shop.pickProvince,
-    pickDistrict: shop.pickDistrict,
-    pickWard: shop.pickWard,
-    toProvince: province,
-    toDistrict: district,
-    toWard: ward,
-    toAddress: address,
-    weightGram: COMBO_WEIGHT_GRAM * orderItemsQuantity(order.items),
-  });
+  // Đơn nâng cấp combo: giao chung địa chỉ đơn cũ, không thu thêm phí ship.
+  const estimate = order.upgradeFromOrderId
+    ? ({ status: "ok", fee: 0 } as const)
+    : await estimateShippingFee({
+        pickProvince: shop.pickProvince,
+        pickDistrict: shop.pickDistrict,
+        pickWard: shop.pickWard,
+        toProvince: province,
+        toDistrict: district,
+        toWard: ward,
+        toAddress: address,
+        weightGram: COMBO_WEIGHT_GRAM * orderItemsQuantity(order.items),
+      });
 
   if (estimate.status === "rejected") {
     return {
