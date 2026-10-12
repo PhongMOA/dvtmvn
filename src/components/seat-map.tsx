@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { SEAT_LAYOUT, type Seat } from "@/lib/seats/layout";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ export type SeatMapProps = {
   highlight?: string | null; // ghế bị luật báo lỗi
   suggested?: Set<string>; // ghế gợi ý ngồi liền không để ghế lẻ (viền xanh đứt)
   occupants?: Record<string, string>; // admin: mã ghế -> tên người ngồi
+  occupantGroups?: Record<string, string>; // admin: mã ghế -> người mua (hover tô cả nhóm)
   onSeatClick?: (seat: Seat) => void;
 };
 
@@ -42,8 +44,17 @@ export function SeatMap({
   highlight,
   suggested,
   occupants,
+  occupantGroups,
   onSeatClick,
 }: SeatMapProps) {
+  // Admin hover ghế đã có người: tô mọi ghế cùng người mua + tooltip tên.
+  // Tooltip position:fixed theo toạ độ ghế để không bị khung overflow cắt.
+  const [hover, setHover] = useState<{ code: string; x: number; y: number } | null>(null);
+  const hoverGroup = hover ? occupantGroups?.[hover.code] : undefined;
+  const groupSeats = hoverGroup
+    ? Object.keys(occupantGroups!).filter((code) => occupantGroups![code] === hoverGroup)
+    : [];
+
   function renderSeat(seat: Seat) {
     const isMine = mine?.has(seat.code) ?? false;
     const isPicked = picked?.has(seat.code) ?? false;
@@ -51,6 +62,7 @@ export function SeatMap({
     const isBlocked = seat.type === "blocked";
     const clickable = !!onSeatClick && !isBlocked && !isTaken && !isMine;
     const occupant = occupants?.[seat.code];
+    const inHoverGroup = !!hoverGroup && occupantGroups?.[seat.code] === hoverGroup;
 
     return (
       <button
@@ -58,7 +70,16 @@ export function SeatMap({
         type="button"
         disabled={!clickable}
         onClick={clickable ? () => onSeatClick?.(seat) : undefined}
-        title={occupant ? `${seat.code} — ${occupant}` : seat.code}
+        title={occupant && !occupantGroups ? `${seat.code} — ${occupant}` : seat.code}
+        onMouseEnter={
+          occupant && occupantGroups
+            ? (e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHover({ code: seat.code, x: rect.left + rect.width / 2, y: rect.top });
+              }
+            : undefined
+        }
+        onMouseLeave={occupantGroups ? () => setHover(null) : undefined}
         aria-pressed={isPicked}
         className={cn(
           "flex size-7 shrink-0 items-center justify-center rounded-sm border text-[9px] font-medium leading-none transition-colors",
@@ -74,6 +95,8 @@ export function SeatMap({
           highlight === seat.code && "ring-2 ring-destructive ring-offset-1 ring-offset-background",
           clickable && !isPicked && "hover:bg-primary/20",
           occupants && isTaken && "cursor-help",
+          inHoverGroup &&
+            "scale-110 border-accent bg-accent text-accent-foreground ring-2 ring-accent/50",
         )}
       >
         {seat.code}
@@ -82,7 +105,19 @@ export function SeatMap({
   }
 
   return (
-    <div className="overflow-x-auto pb-2">
+    <div className="overflow-x-auto pb-2" onScroll={() => setHover(null)}>
+      {hover && occupants?.[hover.code] && (
+        <div
+          role="tooltip"
+          style={{ left: hover.x, top: hover.y - 8 }}
+          className="pointer-events-none fixed z-50 max-w-xs -translate-x-1/2 -translate-y-full rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg"
+        >
+          <p className="font-semibold">{occupants[hover.code]}</p>
+          <p className="mt-0.5 text-muted-foreground">
+            {groupSeats.length} ghế: {groupSeats.join(", ")}
+          </p>
+        </div>
+      )}
       <div className="mx-auto flex w-max flex-col gap-0.5 px-1">
         <div className="mb-4 rounded-b-[50%] border-t-4 border-muted-foreground/40 pt-1 text-center text-xs tracking-[0.3em] text-muted-foreground">
           MÀN HÌNH

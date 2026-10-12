@@ -55,9 +55,11 @@ export default async function EventSeatsPage({ params }: PageProps<"/admin/event
   ]);
 
   const occupants: Record<string, string> = {};
+  const occupantGroups: Record<string, string> = {};
   const seatsByUser = new Map<string, string[]>();
   for (const booking of bookings) {
     occupants[booking.seatCode] = booking.user.name ?? booking.user.email;
+    occupantGroups[booking.seatCode] = booking.userId;
     seatsByUser.set(booking.userId, [...(seatsByUser.get(booking.userId) ?? []), booking.seatCode]);
   }
   const totalTickets = allowances.reduce((sum, a) => sum + a.ticketCount, 0);
@@ -128,9 +130,13 @@ export default async function EventSeatsPage({ params }: PageProps<"/admin/event
 
       <section className="mt-12">
         <h2 className="font-heading text-lg tracking-wide text-accent">Sơ đồ</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Rê chuột vào ghế để xem người ngồi.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Rê chuột vào ghế đã có người để xem người mua và tô sáng mọi ghế của họ.</p>
         <div className="mt-4 flex flex-col gap-3">
-          <SeatMap taken={new Set(Object.keys(occupants))} occupants={occupants} />
+          <SeatMap
+            taken={new Set(Object.keys(occupants))}
+            occupants={occupants}
+            occupantGroups={occupantGroups}
+          />
           <SeatLegend withPicked={false} />
         </div>
       </section>
