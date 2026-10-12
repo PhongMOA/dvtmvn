@@ -4,7 +4,7 @@
  * OrderItem.shirtSizes. Tổng số áo phải bằng số combo của dòng đó.
  * Đổi danh sách size chỉ cần sửa SHIRT_SIZES.
  */
-export const SHIRT_SIZES = ["S", "M", "L", "XL", "XXL"] as const;
+export const SHIRT_SIZES = ["S", "M", "L", "XL", "XXL", "3XL"] as const;
 
 export type ShirtSize = (typeof SHIRT_SIZES)[number];
 export type ShirtSizes = Partial<Record<ShirtSize, number>>;

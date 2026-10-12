@@ -189,10 +189,8 @@ export function BookingForm({
           <DialogHeader>
             <DialogTitle>LƯU Ý TRƯỚC KHI MUA</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
-              Combo này <strong className="text-foreground">không bao gồm vé offline xem phim</strong>.
-              Nếu bạn muốn nâng cấp lên gói Doomsday để có vé xem phim, có thể vào
-              phần &quot;Vé của tôi&quot;, nhưng thời điểm chọn ghế sẽ phụ thuộc vào thời
-              điểm bạn mua vé — do đó hãy cân nhắc kỹ trước khi mua combo này.
+              Combo này <strong className="text-foreground">không bao gồm vé offline xem phim</strong>{" "}
+              - Cân nhắc kỹ trước khi mua combo này.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-6 flex gap-2">
