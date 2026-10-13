@@ -191,7 +191,7 @@ export function SeatLegend({
     ...(withPicked ? ([["border-primary bg-primary", "Đang chọn"]] as [string, string][]) : []),
     ["border-border bg-muted opacity-50", "Không thể chọn"],
     ...(withSuggested
-      ? ([["outline-2 outline-offset-1 outline-dashed outline-emerald-500", "Gợi ý ngồi liền"]] as [
+      ? ([["outline-2 outline-offset-1 outline-dashed outline-emerald-500", "Ghế gợi ý"]] as [
           string,
           string,
         ][])

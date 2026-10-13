@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
+import { adviseSelection, type SeatAdvice } from "@/lib/seat-advisor";
 import { lockEventSeats } from "@/lib/seat-allowance";
 import { SEAT_LAYOUT } from "@/lib/seats/layout";
 import { validateSelection } from "@/lib/seats/rules";
@@ -37,6 +38,29 @@ export async function getSeatState(eventId: string): Promise<SeatState> {
     ticketsLeft: Math.max(0, ticketCount - mine.length),
     unlockAt: allowance?.unlockAt.toISOString() ?? null,
   };
+}
+
+/**
+ * AI tư vấn lựa chọn ghế (gọi khi user vừa chọn đủ ghế, trước khi xác nhận).
+ * Chỉ để tham khảo — không giữ chỗ; confirmSeats vẫn là nơi quyết định.
+ */
+export async function adviseSeats(
+  eventId: string,
+  picked: string[],
+): Promise<SeatAdvice | null> {
+  const state = await getSeatState(eventId);
+  if (
+    !state.unlockAt ||
+    Date.now() < new Date(state.unlockAt).getTime() ||
+    !Array.isArray(picked) ||
+    picked.length === 0 ||
+    picked.length !== state.ticketsLeft ||
+    picked.some((code) => typeof code !== "string")
+  ) {
+    return null;
+  }
+  const user = await requireUser();
+  return adviseSelection(user.id!, eventId, new Set(state.taken), picked);
 }
 
 export type ConfirmSeatsResult =

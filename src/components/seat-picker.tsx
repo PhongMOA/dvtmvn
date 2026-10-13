@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { confirmSeats, getSeatState, type SeatState } from "@/app/actions/seats";
+import { adviseSeats, confirmSeats, getSeatState, type SeatState } from "@/app/actions/seats";
+import type { SeatAdvice } from "@/lib/seat-advisor";
 import { SeatLegend, SeatMap } from "@/components/seat-map";
 import { SEAT_LAYOUT, sweetboxPartner, type Seat } from "@/lib/seats/layout";
 import {
   findContiguousPlacement,
   formatSeats,
   newOrphanSeats,
+  recommendSeats,
   validateSelection,
 } from "@/lib/seats/rules";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { VN_TIME_ZONE } from "@/lib/datetime";
+import { cn } from "@/lib/utils";
+import { Sparkles } from "lucide-react";
 
 const POLL_MS = 5000;
 
@@ -97,7 +101,46 @@ export function SeatPicker({ eventId, initial }: { eventId: string; initial: Sea
       : pendingOrphans.length > 0
         ? findContiguousPlacement(SEAT_LAYOUT, taken, state.ticketsLeft, picked)
         : null;
-  const suggestedSet = new Set(suggestion ?? []);
+  // Chưa chọn ghế nào -> gợi ý khối ghế tốt nhất (gần giữa rạp, quanh hàng G).
+  const recommended = useMemo(
+    () =>
+      unlocked && state.ticketsLeft > 0
+        ? recommendSeats(SEAT_LAYOUT, taken, state.ticketsLeft)
+        : null,
+    [unlocked, state.ticketsLeft, taken],
+  );
+  const showRecommended = picked.length === 0 && !!recommended;
+
+  // Chọn đủ ghế -> hỏi AI tư vấn (debounce; bỏ kết quả nếu lựa chọn đã đổi).
+  const pickedKey =
+    picked.length > 0 && picked.length === state.ticketsLeft ? [...picked].sort().join(",") : "";
+  const [advice, setAdvice] = useState<{ key: string; data: SeatAdvice | null } | null>(null);
+  useEffect(() => {
+    if (!pickedKey) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      let data: SeatAdvice | null = null;
+      try {
+        data = await adviseSeats(eventId, pickedKey.split(","));
+      } catch {
+        // Tư vấn chỉ để tham khảo — lỗi thì thôi, không chặn chọn ghế.
+      }
+      if (!cancelled) setAdvice({ key: pickedKey, data });
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [eventId, pickedKey]);
+  const currentAdvice = pickedKey && advice?.key === pickedKey ? advice.data : null;
+  const adviceLoading = !!pickedKey && advice?.key !== pickedKey;
+  const aiSuggestion = currentAdvice?.suggestion ?? null;
+
+  // Đã có tư vấn cho lựa chọn đủ ghế -> ô tư vấn thay ô gợi ý ghế lẻ.
+  const showRuleSuggestion = !!suggestion && !currentAdvice;
+  const suggestedSet = new Set(
+    (showRuleSuggestion ? suggestion : aiSuggestion) ?? (showRecommended ? recommended : []),
+  );
 
   function handleSeatClick(seat: Seat) {
     if (!unlocked || state.ticketsLeft === 0) return;
@@ -188,7 +231,71 @@ export function SeatPicker({ eventId, initial }: { eventId: string; initial: Sea
               chỗ, nếu không sẽ không xác nhận được khi chọn đủ ghế.
             </p>
           )}
-          {suggestion && (
+          {showRecommended && (
+            <div className="flex flex-col gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm">
+              <p className="text-foreground">
+                Gợi ý vị trí đẹp nhất:{" "}
+                <span className="font-medium text-emerald-500">{formatSeats(recommended)}</span>{" "}
+                (viền xanh) — {state.ticketsLeft} ghế ngồi liền, gần trung tâm rạp nhất. Bạn có thể
+                chọn nhanh hoặc tự chọn ghế khác trên sơ đồ.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                onClick={() => {
+                  setHighlight(null);
+                  setPicked(recommended);
+                }}
+              >
+                Chọn {formatSeats(recommended)}
+              </Button>
+            </div>
+          )}
+          {adviceLoading && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="size-4 animate-pulse text-primary" />
+              AI đang xem vị trí bạn chọn...
+            </p>
+          )}
+          {currentAdvice && (
+            <div
+              className={cn(
+                "flex flex-col gap-2 rounded-lg border p-3 text-sm",
+                currentAdvice.verdict === "good" && "border-emerald-500/50 bg-emerald-500/10",
+                currentAdvice.verdict === "ok" && "border-amber-500/50 bg-amber-500/10",
+                currentAdvice.verdict === "bad" && "border-destructive/50 bg-destructive/10",
+              )}
+            >
+              <p className="flex items-center gap-1.5 font-medium text-foreground">
+                <Sparkles className="size-4 text-primary" />
+                {currentAdvice.source === "ai" ? "AI tư vấn" : "Tư vấn chọn ghế"}
+                <span className="font-normal text-muted-foreground">
+                  ·{" "}
+                  {currentAdvice.verdict === "good"
+                    ? "Vị trí tốt"
+                    : currentAdvice.verdict === "ok"
+                      ? "Có thể tốt hơn"
+                      : "Nên đổi chỗ"}
+                </span>
+              </p>
+              <p className="whitespace-pre-line text-foreground">{currentAdvice.message}</p>
+              {aiSuggestion && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-fit"
+                  onClick={() => {
+                    setHighlight(null);
+                    setPicked(aiSuggestion);
+                  }}
+                >
+                  Đổi sang {formatSeats(aiSuggestion)}
+                </Button>
+              )}
+            </div>
+          )}
+          {showRuleSuggestion && suggestion && (
             <div className="flex flex-col gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm">
               <p className="text-foreground">
                 Gợi ý: <span className="font-medium text-emerald-500">{formatSeats(suggestion)}</span>{" "}
