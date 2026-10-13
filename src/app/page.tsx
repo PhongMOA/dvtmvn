@@ -242,7 +242,7 @@ export default async function Home() {
                       <li key={item}>• {item}</li>
                     ))}
                     {!combo.includesTicket && (
-                      <li className="animate-pulse font-bold uppercase text-primary motion-reduce:animate-none sm:col-span-2">
+                      <li className="animate-pulse font-bold uppercase text-primary [text-shadow:0_0_4px_var(--primary),0_0_10px_var(--primary),0_0_20px_var(--primary)] motion-reduce:animate-none sm:col-span-2">
                         • COMBO NÀY KHÔNG BAO GỒM VÉ XEM PHIM
                       </li>
                     )}
