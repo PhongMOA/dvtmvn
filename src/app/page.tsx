@@ -241,6 +241,11 @@ export default async function Home() {
                     {items.map((item) => (
                       <li key={item}>• {item}</li>
                     ))}
+                    {!combo.includesTicket && (
+                      <li className="animate-pulse font-bold uppercase text-primary motion-reduce:animate-none sm:col-span-2">
+                        • COMBO NÀY KHÔNG BAO GỒM VÉ XEM PHIM
+                      </li>
+                    )}
                   </ul>
 
                   {/* Không công khai số lượng tồn — chỉ báo khi đã hết hàng. */}
