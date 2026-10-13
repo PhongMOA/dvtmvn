@@ -287,15 +287,22 @@ export function placementScore(
 /**
  * Gợi ý khối `count` ghế liền nhau tốt nhất khi vừa vào chọn ghế (placementScore
  * thấp nhất): gần trục giữa rạp, quanh hàng CENTER_ROW, ưu tiên ngồi sát ghế đã
- * có người/lấp khe thay vì xé lẻ dãy trống; không làm tăng số ghế lẻ. Nếu không
- * còn khối nào như vậy thì nới luật ghế lẻ (validateSelection cũng sẽ relaxed).
- * null nếu không còn dãy trống nào đủ dài.
+ * có người/lấp khe thay vì xé lẻ dãy trống; không làm tăng số ghế lẻ.
+ *
+ * Sweetbox chỉ gợi ý khi ghế thường/VIP hết khối liền: gapCost bỏ qua Sweetbox
+ * (ghép cặp cố định) nên nếu chấm chung, nhóm đông chọn dãy 17 ghế bị phạt khe 3
+ * ghế còn Sweetbox thì không — Sweetbox ở cuối rạp sẽ thắng cả hàng sát hàng tâm.
+ * Thứ tự: thường/VIP → Sweetbox → thường/VIP nới luật ghế lẻ (validateSelection
+ * cũng sẽ relaxed). null nếu không còn dãy trống nào đủ dài.
  */
 export function recommendSeats(
   layout: SeatLayout,
   taken: Set<string>,
   count: number
 ): string[] | null {
+  const index = seatIndex(layout);
+  const isSweetbox = (seats: string[]) =>
+    index.get(seats[0])?.zone === "sweetbox";
   const pickBest = (blocks: string[][]) => {
     let best: { seats: string[]; score: number } | null = null;
     for (const seats of blocks) {
@@ -304,8 +311,10 @@ export function recommendSeats(
     }
     return best ? (best as { seats: string[] }).seats : null;
   };
+  const strict = listPlacements(layout, taken, count);
   return (
-    pickBest(listPlacements(layout, taken, count)) ??
+    pickBest(strict.filter((seats) => !isSweetbox(seats))) ??
+    pickBest(strict.filter(isSweetbox)) ??
     pickBest(listPlacements(layout, taken, count, true))
   );
 }

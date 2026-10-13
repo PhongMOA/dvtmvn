@@ -85,15 +85,26 @@ function analyze(layout: SeatLayout, taken: Set<string>, picked: string[]) {
   const makesAwkward = (i: { awkwardGaps: string[][]; gapCost: number }) =>
     i.awkwardGaps.length > 0 && i.gapCost > 0;
 
-  // Các khối thay thế hợp lệ không làm sơ đồ khó lấp hơn, kèm ảnh hưởng của chúng.
-  const options = listPlacements(layout, taken, picked.length)
+  const isSweetbox = (seats: string[]) =>
+    index.get(seats[0])?.zone === "sweetbox";
+
+  // Các khối thay thế hợp lệ, kèm ảnh hưởng của chúng. Giống recommendSeats:
+  // Sweetbox chỉ tính khi ghế thường/VIP hết khối liền.
+  const all = listPlacements(layout, taken, picked.length)
     .filter((seats) => !samePicked(seats))
     .map((seats) => ({
       seats,
       impact: selectionImpact(layout, taken, seats),
       d: distance(seats),
-    }))
-    .filter((o) => !makesAwkward(o.impact));
+    }));
+  const regular = all.filter((o) => !isSweetbox(o.seats));
+  const base = regular.length > 0 ? regular : all;
+  // Khối không làm sơ đồ khó lấp hơn. Không còn khối nào như vậy (vd nhóm 14
+  // người, dãy nào cũng 17 ghế -> luôn thừa 3) thì khe đó là bất khả kháng,
+  // không bắt lỗi khách.
+  const clean = base.filter((o) => !makesAwkward(o.impact));
+  const awkwardAvoidable = clean.length > 0;
+  const options = awkwardAvoidable ? clean : base;
   // Gần chỗ user nhất, ưu tiên khối gọn (sát ghế có người/lấp khe).
   const nearby = [...options]
     .sort(
@@ -120,10 +131,15 @@ function analyze(layout: SeatLayout, taken: Set<string>, picked: string[]) {
 
   const issues = {
     orphans: impact.newOrphans.length > 0,
-    awkward: makesAwkward(impact),
+    awkward: makesAwkward(impact) && awkwardAvoidable,
     apart: !impact.contiguous,
     split: impact.splitRuns > 0 && !impact.touchesTaken && !!hug,
-    far: pickedScore - bestScore > SCORE_SLACK,
+    // Nhóm (> 1 cặp) ngồi Sweetbox cuối rạp trong khi ghế thường còn khối liền:
+    // điểm Sweetbox không bị phạt khe trống nên so điểm không bắt được. Cặp đôi
+    // chọn Sweetbox là sở thích, không khuyên đổi.
+    far:
+      (picked.length > 2 && isSweetbox(picked) && !!best && !isSweetbox(best)) ||
+      pickedScore - bestScore > SCORE_SLACK,
   };
   const verdict: SeatAdvice["verdict"] = !check.ok
     ? "bad"
@@ -192,7 +208,7 @@ type Analysis = ReturnType<typeof analyze>;
 
 const describeGap = (gap: string[]) =>
   `${formatSeats(gap)} (${gap.length} ghế${
-    gap.length === 3 ? " — nhóm 2 người không chen vào được" : ""
+    gap.length === 3 ? ", nhóm 2 người khó ngồi cạnh nhau" : ""
   })`;
 
 function ruleMessage(picked: string[], a: Analysis): string {
@@ -200,86 +216,92 @@ function ruleMessage(picked: string[], a: Analysis): string {
   if (!a.check.ok) parts.push(a.check.reason);
   else if (a.issues.orphans) {
     parts.push(
-      `Cách chọn này để trống ghế lẻ ${a.impact.newOrphans.join(
+      `Cách chọn này bỏ lại ghế lẻ ${a.impact.newOrphans.join(
         ", "
-      )} nhưng khu này không còn chỗ ngồi liền tốt hơn nên vẫn xác nhận được.`
+      )}, nhưng khu này không còn chỗ ngồi liền nào tốt hơn nên bạn vẫn xác nhận được nhé.`
     );
   }
   if (a.issues.awkward) {
     parts.push(
-      `Cách chọn này để lại khe trống ${a.impact.awkwardGaps
+      `Cách chọn này bỏ lại chỗ trống ${a.impact.awkwardGaps
         .map(describeGap)
-        .join(", ")} — rất khó có người chọn sau lấp vừa.`
+        .join(", ")}, các bạn đặt vé sau sẽ khó tìm được chỗ ngồi cạnh nhau ở đó.`
     );
   }
-  if (a.issues.apart) parts.push("Các ghế bạn chọn không ngồi liền nhau.");
+  if (a.issues.apart) parts.push("Các ghế bạn chọn đang không ngồi liền nhau.");
   if (a.issues.split && a.hug) {
     parts.push(
-      `Bạn đang chọn lọt giữa dãy ghế trống trong khi ngay gần đó còn chỗ sát ghế đã có người (${formatSeats(
+      `Bạn đang chọn giữa một dãy ghế trống, trong khi ngay gần đó còn chỗ sát ghế đã có người (${formatSeats(
         a.hug
-      )}). Ngồi sát giúp dãy trống còn lại liền mạch cho nhóm chọn sau.`
+      )}). Ngồi sát sẽ giữ phần ghế trống còn lại liền nhau cho các bạn đặt sau.`
     );
   }
   if (a.verdict === "good") {
     parts.push(
-      `Vị trí ${formatSeats(
-        picked
-      )} rất tốt: ${
+      `Vị trí ${formatSeats(picked)} rất ổn: ${
         a.impact.gapCost < 0
-          ? "bạn lấp kín khe trống nhỏ giữa các ghế đã có người, giúp dãy ghế còn lại liền mạch cho người chọn sau."
-          : "gần trung tâm rạp và không để lại khoảng trống bất lợi cho người chọn sau."
+          ? "bạn đã lấp kín chỗ trống giữa các ghế có người, giúp các bạn đặt sau dễ chọn chỗ hơn."
+          : "gần giữa rạp và không bỏ lại ghế lẻ cho các bạn đặt sau."
       }`
     );
   } else if (a.issues.far && parts.length === 0) {
     parts.push(
       `Vị trí ${formatSeats(
         picked
-      )} không gây khoảng trống bất lợi nhưng còn khá xa trung tâm rạp (khối giữa, quanh hàng ${CENTER_ROW}).`
+      )} không bỏ lại ghế lẻ nào, nhưng hiện vẫn còn chỗ gần giữa rạp hơn (quanh hàng ${CENTER_ROW}).`
     );
   }
   if (a.verdict !== "good" && a.ruleSuggestion && a.check.ok) {
-    parts.push(`Gợi ý: ${formatSeats(a.ruleSuggestion)} (viền xanh).`);
+    parts.push(
+      `Bạn có thể cân nhắc đổi sang ${formatSeats(
+        a.ruleSuggestion
+      )} (viền xanh) để có chỗ ngồi đẹp hơn.`
+    );
   }
   return parts.join(" ");
 }
 
 function buildPrompt(picked: string[], a: Analysis) {
+  // Tên trường là ngôn ngữ đời thường: model hay chép nguyên tên trường/giá trị
+  // kỹ thuật (vd "đánh giá hệ thống là good") vào câu trả lời cho khách.
   const facts = {
-    ghe_khach_chon: formatSeats(picked),
-    so_ghe: picked.length,
+    ghe_ban_chon: formatSeats(picked),
     hang: a.impact.rows,
     khu: a.impact.zones.map((z) => ZONE_LABEL[z]),
     ngoi_lien_nhau: a.impact.contiguous,
-    sat_ghe_da_co_nguoi: a.impact.touchesTaken,
-    lap_kin_hoac_thu_hep_khe_trong_nho: a.impact.gapCost < 0,
-    ghe_le_moi_tao_ra: a.impact.newOrphans,
-    khe_trong_nho_moi_tao_ra: a.issues.awkward
+    ngoi_sat_ghe_da_co_nguoi: a.impact.touchesTaken,
+    lap_kin_cho_trong_nho: a.impact.gapCost < 0,
+    ghe_le_bi_bo_lai: a.impact.newOrphans,
+    cho_trong_nho_kho_ngoi_bi_bo_lai: a.issues.awkward
       ? a.impact.awkwardGaps.map(describeGap)
       : [],
     // Tách 2 trường: gộp chung khiến AI tưởng ghế gợi ý là dãy bị xé.
-    chon_lot_giua_day_ghe_trong: a.issues.split,
-    cho_sat_ghe_co_nguoi_gan_nhat:
+    ngoi_lot_giua_day_ghe_trong: a.issues.split,
+    cho_sat_ghe_co_nguoi_gan_do:
       a.issues.split && a.hug ? formatSeats(a.hug) : null,
-    con_vi_tri_tot_hon_ro_ret: a.issues.far,
-    hop_le: a.check.ok ? true : a.check.reason,
-    danh_gia_he_thong: a.verdict,
-    phuong_an_thay_the: a.candidates.map((c) => ({ id: c.id, ghe: c.label })),
-    phuong_an_he_thong_de_xuat: a.suggestedId,
+    con_cho_gan_trung_tam_hon: a.issues.far,
+    loi_khong_chon_duoc: a.check.ok ? null : a.check.reason,
+    nen_doi_cho: a.verdict !== "good",
+    cho_khac_co_the_chon: a.candidates.map((c) => ({ id: c.id, ghe: c.label })),
+    cho_nen_goi_y: a.suggestedId,
   };
   const system = [
-    "Bạn là trợ lý tư vấn chọn ghế rạp chiếu phim, trả lời bằng tiếng Việt, thân thiện, ngắn gọn.",
-    `Tiêu chí 1 — vị trí: càng gần trung tâm rạp (khối giữa, quanh hàng ${CENTER_ROW}) càng đẹp.`,
-    "Tiêu chí 2 — không làm khó người chọn sau (quan trọng ngang tiêu chí 1): luôn khuyên ngồi SÁT ghế đã có người (hoặc sát lối đi) nếu có thể, hoặc lấp kín khe trống nhỏ. Tránh chọn lọt giữa dãy trống, tránh để lại ghế lẻ (1 ghế) và khe 2–3 ghế: khe 3 ghế thì nhóm 2 người (phổ biến nhất) không chen vào được vì sẽ thừa 1 ghế lẻ.",
-    "Mọi số liệu đã được hệ thống tính sẵn và chính xác; KHÔNG tự tính lại, KHÔNG nhắc tới ghế nào ngoài dữ liệu.",
-    "Chỉ được gợi ý đổi sang 1 phương án trong phuong_an_thay_the (theo id) — nên theo phuong_an_he_thong_de_xuat trừ khi có lý do rõ ràng; null nếu danh_gia_he_thong là good.",
-    "Viết đúng 3 câu, xưng 'bạn' với khách:",
-    "1) Nhận xét CHỖ KHÁCH ĐÃ CHỌN (ghe_khach_chon): đẹp hay chưa; nếu có ghế lẻ/khe trống nhỏ/xé đôi dãy trống thì nêu đúng tên ghế.",
-    "2) Ảnh hưởng của lựa chọn đó tới người chọn sau (nếu lap_kin_hoac_thu_hep_khe_trong_nho là true thì khen việc lấp khe giúp sơ đồ gọn hơn).",
-    "3) Gợi ý: giữ nguyên, hoặc đổi sang phương án đã chọn kèm lý do ngắn — gọi phương án bằng tên ghế, KHÔNG nhắc 'id' hay 'phương án số'.",
-    'Chỉ trả về JSON, không thêm chữ nào khác: {"message": "<3 câu>", "pick": <id hoặc null>}',
+    "Bạn là Doom Bot, trợ lý chọn ghế của rạp phim. Trả lời bằng tiếng Việt có dấu, lịch sự, thân thiện, dễ hiểu như nhân viên rạp nói chuyện với khách.",
+    "Khách KHÔNG cần biết cách tính toán: TUYỆT ĐỐI không nhắc tới hệ thống, thuật toán, điểm số, đánh giá, tiêu chí, dữ liệu, id, tên trường JSON hay các từ tiếng Anh (good, ok, bad...).",
+    `Chỗ đẹp là chỗ gần giữa rạp (quanh hàng ${CENTER_ROW}). Chỗ chọn tốt cũng là chỗ không bỏ lại ghế lẻ hay khoảng trống 2–3 ghế khó ngồi, vì các bạn đặt vé sau (thường đi theo cặp) sẽ khó tìm được chỗ ngồi cạnh nhau.`,
+    "Chỉ dùng thông tin được đưa, không tự suy ra ghế nào khác.",
+    "Nếu nen_doi_cho là true: gợi ý đúng 1 chỗ trong cho_khac_co_the_chon (ưu tiên cho_nen_goi_y). Nếu false: pick là null.",
+    "Viết 2–3 câu ngắn, xưng 'bạn':",
+    "- Nếu nen_doi_cho là false: khen chỗ khách chọn và nói ngắn gọn lý do (gần giữa rạp, không bỏ lại ghế lẻ/lấp kín chỗ trống...).",
+    "- Nếu nen_doi_cho là true: nói nhẹ nhàng vì sao chỗ hiện tại chưa ổn (nêu đúng tên ghế lẻ/chỗ trống bị bỏ lại nếu có, hoặc vì còn chỗ gần giữa rạp hơn), rồi mời khách cân nhắc đổi sang chỗ gợi ý, gọi bằng tên ghế, kèm lợi ích ngắn.",
+    'Chỉ trả về JSON, không thêm chữ nào khác: {"message": "<2–3 câu>", "pick": <id hoặc null>}',
   ].join("\n");
   return { system, user: JSON.stringify(facts) };
 }
+
+// Câu trả lời lộ từ kỹ thuật/tiếng Anh dù prompt đã cấm -> dùng câu soạn sẵn.
+const TECHNICAL_WORDS =
+  /\b(good|ok|bad|id|json|score|verdict|wybor)\b|hệ thống|thuật toán|điểm số|đánh giá|tiêu chí|dữ liệu|phương án số|nen_doi|cho_khac|ghe_ban/i;
 
 async function askAI(picked: string[], a: Analysis) {
   const key = process.env.OPENROUTER_API_KEY;
@@ -338,12 +360,16 @@ async function askAI(picked: string[], a: Analysis) {
     };
     if (typeof parsed.message !== "string" || !parsed.message.trim())
       return null;
+    // Model hay chen "(phương án 1)"/"id 2" dù prompt đã cấm.
+    const message = parsed.message
+      .replace(/\s*\((?:phương án|id)\s*(?:số\s*)?\d+\)/gi, "")
+      .trim();
+    if (TECHNICAL_WORDS.test(message)) {
+      console.error("seat-advisor: AI dùng từ kỹ thuật", message.slice(0, 200));
+      return null;
+    }
     return {
-      // Model hay chen "(phương án 1)"/"id 2" dù prompt đã cấm.
-      message: parsed.message
-        .replace(/\s*\((?:phương án|id)\s*(?:số\s*)?\d+\)/gi, "")
-        .trim()
-        .slice(0, 600),
+      message: message.slice(0, 600),
       pick: typeof parsed.pick === "number" ? parsed.pick : null,
     };
   } catch (err) {

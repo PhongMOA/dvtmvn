@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { SEAT_LAYOUT, type SeatLayout, type SeatType } from "./layout";
-import { findContiguousPlacement, newOrphanSeats, validateSelection } from "./rules";
+import { findContiguousPlacement, newOrphanSeats, recommendSeats, validateSelection } from "./rules";
 
 // Layout nhỏ cho test: hàng X 1 segment 6 ghế (X1..X6), hàng Y 2 segment
 // (Y1..Y3 | Y4 blocked, Y5), hàng S Sweetbox S1..S4 (cặp S1+S2, S3+S4).
@@ -167,4 +167,18 @@ test("sơ đồ thật: mã ghế không trùng, A1-A4 blocked, Sweetbox M1-M26"
     ok: true,
     relaxed: false,
   });
+});
+
+test("recommendSeats: nhóm đông ưu tiên hàng sát hàng tâm thay vì Sweetbox cuối rạp", () => {
+  const taken = new Set(
+    "E25 E24 E19 E15 E11 E7 F25 F24 G21 G18 G17 G16 G12 G8 G7 H15 H14 H13 H12 H11 J17 J4 K24 K23 K22 K21 K15".split(" ")
+  );
+  const seats = recommendSeats(SEAT_LAYOUT, taken, 14);
+  assert.ok(seats && seats.every((code) => code.startsWith("F")), `gợi ý ${seats}`);
+});
+
+test("recommendSeats: chỉ gợi ý Sweetbox khi ghế thường hết khối liền", () => {
+  const taken = new Set(["X1", "X2", "X3", "X4", "X5", "X6", "Y1", "Y2", "Y3", "Y5"]);
+  assert.deepEqual(recommendSeats(LAYOUT, taken, 2), ["S1", "S2"]);
+  assert.equal(recommendSeats(LAYOUT, new Set(), 2)?.[0].startsWith("S"), false);
 });

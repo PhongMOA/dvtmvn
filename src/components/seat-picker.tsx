@@ -255,7 +255,7 @@ export function SeatPicker({ eventId, initial }: { eventId: string; initial: Sea
           {adviceLoading && (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="size-4 animate-pulse text-primary" />
-              AI đang xem vị trí bạn chọn...
+              Doom Bot đang xem vị trí bạn chọn...
             </p>
           )}
           {currentAdvice && (
@@ -269,7 +269,7 @@ export function SeatPicker({ eventId, initial }: { eventId: string; initial: Sea
             >
               <p className="flex items-center gap-1.5 font-medium text-foreground">
                 <Sparkles className="size-4 text-primary" />
-                {currentAdvice.source === "ai" ? "AI tư vấn" : "Tư vấn chọn ghế"}
+                Doom Bot tư vấn
                 <span className="font-normal text-muted-foreground">
                   ·{" "}
                   {currentAdvice.verdict === "good"
