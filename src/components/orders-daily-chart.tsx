@@ -30,7 +30,7 @@ const RANGES = [14, 30, 60] as const;
 type Range = (typeof RANGES)[number];
 
 /**
- * Biểu đồ cột doanh thu theo ngày cho trang /admin/orders. Chiều cao cột = số
+ * Biểu đồ cột doanh thu theo ngày cho trang quản lý đơn (tổng và theo sự kiện). Chiều cao cột = số
  * tiền nhận vào trong ngày (đơn chuyển sang "đã thanh toán" ngày đó); số nhỏ
  * phía trên mỗi cột = số đơn được tạo trong ngày; hover hiện tooltip chi tiết.
  *

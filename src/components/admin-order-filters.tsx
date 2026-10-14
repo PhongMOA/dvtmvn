@@ -10,7 +10,7 @@ const selectClass =
   "h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 [&>option]:bg-background [&>option]:text-foreground";
 
 /**
- * Bộ lọc cho bảng "Tất cả đơn hàng" (/admin/orders): ô tìm kiếm + 3 dropdown
+ * Bộ lọc cho bảng đơn hàng (/admin/orders và /admin/events/[id]/orders): ô tìm kiếm + 3 dropdown
  * (trạng thái thanh toán / vận chuyển / check-in). Là <form method="get"> thuần
  * — thay đổi dropdown tự submit, submit sẽ nạp lại trang với query mới và bỏ
  * ?page (mỗi lần lọc quay về trang 1).
@@ -20,11 +20,13 @@ export function AdminOrderFilters({
   payment,
   ship,
   checkin,
+  placeholder = "Tìm theo tên, email, SĐT, mã đơn, combo, sự kiện",
 }: {
   q: string;
   payment: string;
   ship: string;
   checkin: string;
+  placeholder?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,7 +56,7 @@ export function AdminOrderFilters({
       <Input
         name="q"
         defaultValue={q}
-        placeholder="Tìm theo tên, email, SĐT, mã đơn, combo, sự kiện"
+        placeholder={placeholder}
         className="max-w-xs"
       />
       <select
