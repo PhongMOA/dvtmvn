@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/auth-helpers";
 import { buildOrdersWhere } from "@/lib/admin-orders-data";
 import { formatShirtSizes } from "@/lib/shirt-sizes";
-import { orderItemsQuantity } from "@/lib/order-items";
+import { orderAmountDue, orderItemsQuantity } from "@/lib/order-items";
 import { VN_TIME_ZONE } from "@/lib/datetime";
 
 // Xuất danh sách đơn ra CSV cho Google Sheets. 2 cách truy cập:
@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
       items: {
         select: {
           quantity: true,
+          unitPrice: true,
           shirtSizes: true,
           comboType: {
             select: { name: true, event: { select: { id: true, title: true } } },
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
     "Sự kiện",
     "Combo",
     "SL",
+    "Giá trị đơn (VNĐ)",
     "Thời gian đặt",
     "Thanh toán",
     "Vận chuyển",
@@ -125,6 +127,8 @@ export async function GET(request: NextRequest) {
       events.join("; "),
       combos.join("; "),
       orderItemsQuantity(order.items),
+      // Số thô (không dấu chấm/₫) để Sheets nhận là số, cộng/lọc được.
+      orderAmountDue(order),
       formatDateTime(order.createdAt),
       PAYMENT_LABEL[order.paymentStatus] ?? order.paymentStatus,
       ship,
