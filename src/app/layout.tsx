@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Cal_Sans, Anton } from "next/font/google";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/auth-helpers";
@@ -46,6 +47,8 @@ const marvelWordmark = localFont({
   display: "swap",
 });
 
+const GA_ID = "G-0F1G6D17RJ";
+
 export const metadata: Metadata = {
   title: "Đa vũ trụ Marvel VN - Đặt vé offline Avengers: Doomsday",
   description:
@@ -68,6 +71,19 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ProfileModal />
         <PushRegistrar />
         <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} />
+        {/* Google Analytics 4 — cùng mã với trang tĩnh public/dong-thoi-gian-mcu.html.
+            Chuyển trang phía client (App Router) được GA4 tự ghi nhận qua
+            "Enhanced measurement > Page changes based on browser history". */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_ID}');`}
+        </Script>
       </body>
     </html>
   );
