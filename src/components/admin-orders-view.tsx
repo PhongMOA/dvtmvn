@@ -33,10 +33,9 @@ import {
 
 const PAGE_SIZE = 20;
 
-/** Cột dính mép khi bảng cuộn ngang; nền đặc để che nội dung chạy bên dưới. */
-const stickyBase = "sticky bg-background group-hover:bg-muted";
-const stickyLeft = cn(stickyBase, "left-0 shadow-[inset_-1px_0_0_var(--border)]");
-const stickyRight = cn(stickyBase, "right-0 shadow-[inset_1px_0_0_var(--border)]");
+/** Cột dính mép trái khi bảng cuộn ngang; nền đặc để che nội dung chạy bên dưới. */
+const stickyLeft =
+  "sticky left-0 bg-background shadow-[inset_-1px_0_0_var(--border)] group-hover:bg-muted";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
@@ -191,9 +190,6 @@ export async function AdminOrdersView({
         }
       />
 
-      {/* Bảng tự cuộn trong khung cao ~1 màn hình: thanh cuộn ngang luôn nằm
-          trong tầm nhìn, header dính trên cùng, cột "Hành động" dính mép phải
-          nên không cần kéo hết bảng mới bấm được nút. */}
       <AdminSheetExport
         sheetUrl={
           exportToken ? `${origin}/api/admin/orders/export?${sheetQuery}` : null
@@ -201,6 +197,8 @@ export async function AdminOrdersView({
         downloadUrl={`/api/admin/orders/export?${downloadQuery}`}
       />
 
+      {/* Bảng tự cuộn trong khung cao ~1 màn hình: thanh cuộn ngang luôn nằm
+          trong tầm nhìn, header và cột "Mã đơn" dính khi cuộn. */}
       <div className="mt-6 overflow-hidden rounded-lg border border-border">
         <Table containerClassName="max-h-[calc(100dvh-8rem)] overflow-auto">
           <TableHeader className="sticky top-0 z-20 bg-background shadow-[0_1px_0_var(--border)]">
@@ -213,7 +211,7 @@ export async function AdminOrdersView({
               <TableHead>Thanh toán</TableHead>
               <TableHead>Vận chuyển</TableHead>
               <TableHead>Check-in</TableHead>
-              <TableHead className={cn(stickyRight, "z-30 text-right")}>
+              <TableHead className="text-right">
                 Hành động
               </TableHead>
             </TableRow>
@@ -367,7 +365,7 @@ export async function AdminOrdersView({
                         : "Chưa check-in"}
                     </Badge>
                   </TableCell>
-                  <TableCell className={cn(stickyRight, "z-10 text-right")}>
+                  <TableCell className="text-right">
                     {order.paymentStatus === "paid" &&
                     order.status === "booked" ? (
                       <form action={checkInOrder.bind(null, order.id)}>
