@@ -196,7 +196,9 @@ export default async function Home() {
                     combo.wideCard && "sm:col-span-2",
                     combo.isRecommended
                       ? "border-2 border-accent shadow-[0_0_28px_-6px] shadow-accent/60"
-                      : "border-border",
+                      : !combo.includesTicket
+                        ? "border-2 border-amber-400 shadow-[0_0_24px_-8px] shadow-amber-400/60"
+                        : "border-border",
                   )}
                 >
                   {combo.isRecommended && (
