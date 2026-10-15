@@ -2,6 +2,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getShopSetting } from "@/lib/shop-setting";
 import { sendPushToTokens } from "@/lib/push";
+import { sendEmail } from "@/lib/email";
+import { buildOrderConfirmationEmail } from "@/lib/emails/order-confirmation";
 import { createGhtkOrder, GHTK_STATUS_TEXT } from "@/lib/ghtk";
 import {
   describeOrderItems,
@@ -10,8 +12,10 @@ import {
 } from "@/lib/order-items";
 
 /**
- * Side-effect sau khi 1 đơn chuyển sang "paid": gửi push "thanh toán thành công".
- * Gọi từ webhook SePay (route.ts) và từ skipPayment (admin).
+ * Side-effect sau khi 1 đơn chuyển sang "paid": gửi push + email xác nhận
+ * "thanh toán thành công". Gọi từ webhook SePay (route.ts) và từ skipPayment
+ * (admin) — cả 2 chỉ gọi khi updateMany pending->paid trả count 1, nên mỗi đơn
+ * chỉ gửi 1 lần.
  *
  * KHÔNG tự tạo đơn vận chuyển GHTK — admin tạo thủ công bằng nút "Tạo đơn ship"
  * ở /admin/orders (xem createGhtkShipmentForOrder bên dưới).
@@ -24,7 +28,10 @@ export async function fulfillPaidOrder(orderId: string): Promise<void> {
   try {
     order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: { include: { comboType: true } } },
+      include: {
+        items: { include: { comboType: { include: { event: true } } } },
+        user: { select: { name: true, email: true } },
+      },
     });
   } catch (err) {
     console.error("fulfillPaidOrder: không load được đơn", orderId, err);
@@ -48,6 +55,15 @@ export async function fulfillPaidOrder(orderId: string): Promise<void> {
     }
   } catch (err) {
     console.error("fulfillPaidOrder: push thất bại (bỏ qua)", orderId, err);
+  }
+
+  try {
+    const result = await sendEmail(buildOrderConfirmationEmail(order));
+    if (!result.ok) {
+      console.error("fulfillPaidOrder: gửi email thất bại (bỏ qua)", orderId, result.error);
+    }
+  } catch (err) {
+    console.error("fulfillPaidOrder: dựng/gửi email lỗi (bỏ qua)", orderId, err);
   }
 }
 

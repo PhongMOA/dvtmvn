@@ -63,3 +63,6 @@ next-env.d.ts
 .vercel
 .env*
 !.env.example
+
+# preview email (scripts/preview-order-email.ts)
+/tmp
