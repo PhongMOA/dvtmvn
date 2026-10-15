@@ -257,3 +257,13 @@ body.barcode-scanner-active .barcode-scanner-ui {
 .scan-stop-button:active {
   background: rgba(255, 255, 255, 0.28);
 }
+/* Nút Messenger: nhún nhẹ theo nhịp, nghỉ giữa các lần nhún. */
+@theme {
+  --animate-soft-bounce: soft-bounce 2.4s ease-in-out infinite;
+
+  @keyframes soft-bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    20% { transform: translateY(-6px); }
+    40% { transform: translateY(-2px); }
+  }
+}
