@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Cal_Sans, Anton } from "next/font/google";
 import localFont from "next/font/local";
+import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
 import { auth } from "@/auth";
@@ -10,6 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 import { ProfileModal } from "@/components/profile-modal";
 import { PushRegistrar } from "@/components/push-registrar";
 import { AppBottomNav } from "@/components/app-bottom-nav";
+import { AgeNoticeModal } from "@/components/age-notice-modal";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -67,8 +69,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
+        <footer className="border-t border-border/60 px-4 py-6 text-center text-xs text-muted-foreground">
+          © Đa Vũ Trụ Marvel VN ·{" "}
+          <Link href="/dieu-khoan" className="underline-offset-2 hover:text-primary hover:underline">
+            Điều khoản và điều kiện sử dụng
+          </Link>
+        </footer>
         <Toaster richColors theme="dark" />
         <ProfileModal />
+        <AgeNoticeModal />
         <PushRegistrar />
         <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} />
         {/* Google Analytics 4 — cùng mã với trang tĩnh public/dong-thoi-gian-mcu.html.

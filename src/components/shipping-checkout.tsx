@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -58,6 +59,7 @@ export function ShippingCheckout({
     profileComplete ? "profile" : "other",
   );
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleCouponChange(code: string | null) {
@@ -301,9 +303,32 @@ export function ShippingCheckout({
         </div>
       )}
 
+      <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
+        <input
+          type="checkbox"
+          name="agreeTerms"
+          checked={agreeTerms}
+          onChange={(e) => setAgreeTerms(e.target.checked)}
+          required
+          className="mt-0.5 size-4 shrink-0 accent-accent"
+        />
+        <span>
+          Tôi đã đọc và đồng ý với{" "}
+          <Link
+            href="/dieu-khoan"
+            target="_blank"
+            className="font-medium text-accent underline underline-offset-2"
+          >
+            Điều khoản và điều kiện sử dụng
+          </Link>
+          , bao gồm chính sách <strong className="text-foreground">không hủy, đổi, hoàn tiền</strong>{" "}
+          và quy định độ tuổi tham dự (từ đủ 16 tuổi).
+        </span>
+      </label>
+
       <Button
         type="submit"
-        disabled={isPending || (mode === "profile" && !profileComplete)}
+        disabled={isPending || !agreeTerms || (mode === "profile" && !profileComplete)}
         className="w-full"
       >
         {isPending ? "Đang tính phí ship..." : "Tiếp tục"}

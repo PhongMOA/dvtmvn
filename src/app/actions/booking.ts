@@ -302,6 +302,12 @@ export async function prepareCheckout(
   const ward = String(formData.get("ward") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
 
+  // Checkbox "Tôi đã đọc và đồng ý Điều khoản" ở ShippingCheckout — chặn cả ở
+  // server để không bỏ qua được bằng cách gọi action trực tiếp.
+  if (formData.get("agreeTerms") !== "on") {
+    return { ok: false, error: "Vui lòng đồng ý Điều khoản và điều kiện sử dụng trước khi mua hàng." };
+  }
+
   if (!phone) return { ok: false, error: "Thiếu số điện thoại." };
   if (!PHONE_RE.test(phone)) return { ok: false, error: "Số điện thoại không hợp lệ." };
   if (!province) return { ok: false, error: "Thiếu tỉnh/thành." };
