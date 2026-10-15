@@ -58,7 +58,7 @@ export async function fulfillPaidOrder(orderId: string): Promise<void> {
   }
 
   try {
-    const result = await sendEmail(buildOrderConfirmationEmail(order));
+    const result = await sendEmail(await buildOrderConfirmationEmail(order));
     if (!result.ok) {
       console.error("fulfillPaidOrder: gửi email thất bại (bỏ qua)", orderId, result.error);
     }

@@ -26,6 +26,7 @@ function argValue(name: string): string | undefined {
 const MOCK: OrderEmailData = {
   id: "mock",
   orderCode: "MVN8K2QX",
+  qrToken: "00000000-0000-4000-8000-000000000000",
   paidAt: new Date(),
   upgradeFromOrderId: null,
   shipName: "Nguyễn Văn A",
@@ -96,12 +97,19 @@ async function main() {
   }
 
   const data = orderCode ? await loadOrder(orderCode) : MOCK;
-  const email = buildOrderConfirmationEmail(data);
+  const email = await buildOrderConfirmationEmail(data);
 
   const outDir = join(process.cwd(), "tmp");
   mkdirSync(outDir, { recursive: true });
   const outFile = join(outDir, "order-email-preview.html");
-  writeFileSync(outFile, email.html, "utf-8");
+  // Trình duyệt không hiểu cid: -> thay ảnh nhúng bằng data URI cho file xem trước.
+  let previewHtml = email.html;
+  for (const a of email.attachments ?? []) {
+    if (!a.contentId) continue;
+    const dataUri = `data:${a.contentType ?? "image/png"};base64,${a.content.toString("base64")}`;
+    previewHtml = previewHtml.replaceAll(`cid:${a.contentId}`, dataUri);
+  }
+  writeFileSync(outFile, previewHtml, "utf-8");
   console.log(`Tiêu đề: ${email.subject}`);
   console.log(`Đã ghi HTML: ${outFile}`);
 

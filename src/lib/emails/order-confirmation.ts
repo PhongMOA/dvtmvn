@@ -1,3 +1,4 @@
+import QRCode from "qrcode";
 import type { EmailMessage } from "@/lib/email";
 import { escapeHtml, siteUrl } from "@/lib/email";
 import { formatEventStart, VN_TIME_ZONE } from "@/lib/datetime";
@@ -22,11 +23,19 @@ const C = {
 };
 
 const FONT = "'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+// Impact không có glyph tiếng Việt (Ũ, Ụ...) -> client lấy ký tự từ font khác,
+// chữ lệch nhau. Dòng có dấu dùng Arial/Helvetica (máy nào cũng có, đủ dấu);
+// Impact chỉ dùng cho "MARVEL VN" (không dấu).
+const LOGO_FONT_VI = "Arial,Helvetica,sans-serif";
 const LOGO_FONT = "Impact,'Arial Black','Helvetica Neue',Arial,sans-serif";
+
+// Ảnh QR gửi dạng inline attachment (cid:) — Gmail chặn ảnh data: URI trong email.
+const QR_CID = "ticket-qr";
 
 export type OrderEmailData = {
   id: string;
   orderCode: string;
+  qrToken: string;
   paidAt: Date | null;
   upgradeFromOrderId: string | null;
   shipName: string | null;
@@ -88,7 +97,7 @@ function shippingAddress(order: OrderEmailData): string | null {
 /** Logo "ĐA VŨ TRỤ / MARVEL VN" dựng bằng table (giống components/logo.tsx). */
 function logoHtml(): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="border-collapse:collapse;border:2px solid #ffffff;">
-  <tr><td align="center" bgcolor="${C.card}" style="background:${C.card};padding:5px 18px;border-bottom:2px solid #ffffff;font-family:${LOGO_FONT};font-size:15px;letter-spacing:3px;color:${C.fg};">ĐA VŨ TRỤ</td></tr>
+  <tr><td align="center" bgcolor="${C.card}" style="background:${C.card};padding:5px 18px;border-bottom:2px solid #ffffff;font-family:${LOGO_FONT_VI};font-size:15px;font-weight:700;letter-spacing:3px;color:${C.fg};">ĐA VŨ TRỤ</td></tr>
   <tr><td align="center" bgcolor="${C.primary}" style="background:${C.primary};padding:4px 18px 6px;font-family:${LOGO_FONT};font-size:30px;line-height:34px;letter-spacing:1px;color:${C.primaryFg};">MARVEL VN</td></tr>
 </table>`;
 }
@@ -103,7 +112,7 @@ function row(label: string, value: string, opts: { strong?: boolean; color?: str
 </tr>`;
 }
 
-export function buildOrderConfirmationEmail(order: OrderEmailData): EmailMessage {
+export async function buildOrderConfirmationEmail(order: OrderEmailData): Promise<EmailMessage> {
   const event = order.items[0]?.comboType.event;
   const customerName = order.shipName || order.user.name || "bạn";
   const subtotal = orderItemsTotal(order.items);
@@ -114,6 +123,14 @@ export function buildOrderConfirmationEmail(order: OrderEmailData): EmailMessage
   const ticketsUrl = `${siteUrl()}/my-tickets`;
   const isUpgrade = Boolean(order.upgradeFromOrderId);
   const eventStart = event ? formatEventStart(event, "full") : "";
+
+  // Cùng nội dung (qrToken) với TicketQr ở /my-tickets — admin quét được như nhau.
+  const qrPng = await QRCode.toBuffer(order.qrToken, {
+    type: "png",
+    margin: 1,
+    width: 400,
+    color: { dark: "#0a0a0f", light: "#ffffff" },
+  });
 
   const subject = isUpgrade
     ? `Nâng cấp combo thành công – Đơn ${order.orderCode}`
@@ -173,9 +190,7 @@ export function buildOrderConfirmationEmail(order: OrderEmailData): EmailMessage
     : "";
 
   const noteLines = [
-    hasTicket
-      ? "Vé QR check-in của bạn đã sẵn sàng trong mục <strong>Vé của tôi</strong>. Vui lòng xuất trình mã QR khi đến sự kiện."
-      : "",
+    "Mã QR cũng luôn có trong mục <strong>Vé của tôi</strong> trên web, phòng khi bạn không tìm thấy email này.",
     hasTicket
       ? "Khi ban tổ chức mở chọn ghế, bạn sẽ được chọn ghế theo lượt tại trang Vé của tôi."
       : "",
@@ -217,6 +232,15 @@ export function buildOrderConfirmationEmail(order: OrderEmailData): EmailMessage
             <td style="padding:8px 16px;border:1px dashed ${C.primary};border-radius:6px;font-family:${FONT};font-size:13px;color:${C.muted};">Mã đơn <strong style="font-family:Consolas,'Courier New',monospace;font-size:16px;letter-spacing:1px;color:${C.accent};">${escapeHtml(order.orderCode)}</strong>${order.paidAt ? ` · ${formatPaidAt(order.paidAt)}` : ""}</td>
           </tr></table>
         </td></tr>
+        <tr><td align="center" style="padding:0 28px 24px;font-family:${FONT};">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
+            <td align="center" bgcolor="#ffffff" style="background:#ffffff;padding:12px;border-radius:10px;border:3px solid ${C.primary};">
+              <img src="cid:${QR_CID}" width="200" height="200" alt="Mã QR check-in ${escapeHtml(order.orderCode)}" style="display:block;width:200px;height:200px;">
+            </td>
+          </tr></table>
+          <div style="font-size:11px;letter-spacing:2px;color:${C.accent};font-weight:700;padding-top:12px;">MÃ QR CHECK-IN</div>
+          <div style="font-size:13px;color:${C.muted};line-height:20px;padding-top:4px;">Xuất trình mã này khi check-in / nhận combo tại sự kiện.<br>Vui lòng không chia sẻ mã cho người khác.</div>
+        </td></tr>
         ${eventHtml}
         <tr><td style="padding:12px 28px 0;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${itemsHtml}</table>
@@ -252,6 +276,7 @@ export function buildOrderConfirmationEmail(order: OrderEmailData): EmailMessage
     "",
     `Cảm ơn ${customerName}! Đơn hàng của bạn đã được xác nhận.`,
     `Mã đơn: ${order.orderCode}${order.paidAt ? ` (${formatPaidAt(order.paidAt)})` : ""}`,
+    "Mã QR check-in: xem ảnh đính kèm hoặc mục Vé của tôi trên web.",
     "",
     ...(event
       ? [
@@ -282,5 +307,18 @@ export function buildOrderConfirmationEmail(order: OrderEmailData): EmailMessage
     ...(replyTo ? [`Cần hỗ trợ? Trả lời email này hoặc liên hệ ${replyTo}`] : []),
   ].join("\n");
 
-  return { to: order.user.email, subject, html, text };
+  return {
+    to: order.user.email,
+    subject,
+    html,
+    text,
+    attachments: [
+      {
+        filename: `ve-${order.orderCode}.png`,
+        content: qrPng,
+        contentType: "image/png",
+        contentId: QR_CID,
+      },
+    ],
+  };
 }

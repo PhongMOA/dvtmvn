@@ -32,11 +32,20 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+  /** Có contentId = ảnh nhúng, tham chiếu trong HTML bằng src="cid:<contentId>". */
+  contentId?: string;
+};
+
 export type EmailMessage = {
   to: string;
   subject: string;
   html: string;
   text: string;
+  attachments?: EmailAttachment[];
 };
 
 export type SendEmailResult =
@@ -59,6 +68,7 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
       subject: message.subject,
       html: message.html,
       text: message.text,
+      attachments: message.attachments,
     });
     if (error) return { ok: false, error: `${error.name}: ${error.message}` };
     return { ok: true, id: data?.id ?? "" };
