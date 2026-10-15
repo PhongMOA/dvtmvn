@@ -62,6 +62,10 @@ export default async function AdminUsersPage({
           { name: { contains: q, mode: "insensitive" } },
           { email: { contains: q, mode: "insensitive" } },
           { phone: { contains: q, mode: "insensitive" } },
+          { address: { contains: q, mode: "insensitive" } },
+          { ward: { contains: q, mode: "insensitive" } },
+          { district: { contains: q, mode: "insensitive" } },
+          { province: { contains: q, mode: "insensitive" } },
         ],
       }
     : {};
@@ -103,7 +107,7 @@ export default async function AdminUsersPage({
       <AdminSearchForm
         pathname="/admin/users"
         value={q}
-        placeholder="Tìm theo tên, email hoặc số điện thoại"
+        placeholder="Tìm theo tên, email, số điện thoại hoặc địa chỉ"
       />
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-border">
