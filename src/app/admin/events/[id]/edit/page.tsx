@@ -28,6 +28,7 @@ export default async function EditEventPage({
             posterUrl: event.posterUrl ?? "",
             venue: event.venue,
             startAt: toVnDatetimeLocal(event.startAt),
+            startAtTentative: event.startAtTentative,
           }}
         />
       </div>

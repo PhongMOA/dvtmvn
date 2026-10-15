@@ -111,6 +111,9 @@ model Event {
   posterUrl   String?
   venue       String
   startAt     DateTime
+  // true = ngày chiếu chỉ là dự kiến: trang ngoài ghi "Suất chiếu dự kiến" và
+  // chỉ hiện ngày, ẩn giờ (xem formatEventStart trong src/lib/datetime.ts).
+  startAtTentative Boolean @default(false)
   status      String      @default("draft") // draft | open | closed
   createdAt   DateTime    @default(now())
   comboTypes  ComboType[]

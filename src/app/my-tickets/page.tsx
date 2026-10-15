@@ -16,15 +16,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { parseComboItems } from "@/lib/combo";
 import { formatShirtSizes } from "@/lib/shirt-sizes";
 import { cn } from "@/lib/utils";
-import { VN_TIME_ZONE } from "@/lib/datetime";
-
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "long",
-    timeStyle: "short",
-    timeZone: VN_TIME_ZONE,
-  }).format(date);
-}
+import { formatEventStart } from "@/lib/datetime";
 
 export default async function MyTicketsPage() {
   const session = await auth();
@@ -188,7 +180,7 @@ export default async function MyTicketsPage() {
                   </div>
                   {event && (
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {event.venue} · {formatDateTime(event.startAt)}
+                      {event.venue} · {event.startAtTentative && "Dự kiến "}{formatEventStart(event, "long")}
                     </p>
                   )}
                   <Link

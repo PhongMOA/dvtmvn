@@ -13,6 +13,7 @@ type EventDefaults = {
   posterUrl: string;
   venue: string;
   startAt: string; // yyyy-MM-ddThh:mm, for <input type="datetime-local">
+  startAtTentative: boolean;
 };
 
 export function EventForm({
@@ -56,6 +57,18 @@ export function EventForm({
           defaultValue={defaults?.startAt}
           required
         />
+        <div className="mt-1 flex items-center gap-2">
+          <input
+            id="startAtTentative"
+            name="startAtTentative"
+            type="checkbox"
+            defaultChecked={defaults?.startAtTentative ?? false}
+            className="h-4 w-4 rounded border-border"
+          />
+          <Label htmlFor="startAtTentative" className="font-normal">
+            Dự kiến (trang ngoài ghi &quot;Suất chiếu dự kiến&quot; và chỉ hiện ngày, ẩn giờ)
+          </Label>
+        </div>
       </div>
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}

@@ -8,7 +8,7 @@ import { orderAmountDue, orderItemsTotal } from "@/lib/order-items";
 import { parseCoupon } from "@/lib/coupons";
 import { parseComboItems } from "@/lib/combo";
 import { formatShirtSizes } from "@/lib/shirt-sizes";
-import { VN_TIME_ZONE } from "@/lib/datetime";
+import { VN_TIME_ZONE, formatEventStart } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -134,7 +134,7 @@ export default async function OrderDetailPage({
         <p className="mt-6 font-medium text-foreground">
           {event.title}
           <span className="font-normal text-muted-foreground">
-            {" "}· {event.venue} · {formatDateTime(event.startAt)}
+            {" "}· {event.venue} · {event.startAtTentative && "Dự kiến "}{formatEventStart(event, "medium")}
           </span>
         </p>
       )}

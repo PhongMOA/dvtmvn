@@ -12,16 +12,8 @@ import { getSalesConfig } from "@/lib/sales";
 import { SalesCountdown } from "@/components/sales-countdown";
 import { FloatingParticles } from "@/components/floating-particles";
 import { cn } from "@/lib/utils";
-import { Star } from "lucide-react";
-import { VN_TIME_ZONE } from "@/lib/datetime";
-
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "full",
-    timeStyle: "short",
-    timeZone: VN_TIME_ZONE,
-  }).format(date);
-}
+import { Star, TriangleAlert } from "lucide-react";
+import { formatEventStart } from "@/lib/datetime";
 
 function formatVnd(amount: number) {
   return new Intl.NumberFormat("vi-VN", {
@@ -162,9 +154,11 @@ export default async function Home() {
             <p className="mt-1 font-medium text-foreground">{event.venue}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Suất chiếu</p>
+            <p className="text-muted-foreground">
+              {event.startAtTentative ? "Suất chiếu dự kiến" : "Suất chiếu"}
+            </p>
             <p className="mt-1 font-medium text-foreground">
-              {formatDateTime(event.startAt)}
+              {formatEventStart(event, "full")}
             </p>
           </div>
         </div>
@@ -209,6 +203,12 @@ export default async function Home() {
                     <Badge className="absolute -top-3 left-6 gap-1 bg-accent px-2.5 text-accent-foreground">
                       <Star className="size-3 fill-current" />
                       ĐỀ XUẤT
+                    </Badge>
+                  )}
+                  {!combo.includesTicket && (
+                    <Badge className="absolute -top-3 right-6 h-auto max-w-[calc(100%-3rem)] gap-1 whitespace-normal bg-amber-400 px-2.5 py-0.5 text-center font-bold text-black shadow-[0_0_16px_-2px] shadow-amber-400/70 ring-2 ring-red-600">
+                      <TriangleAlert className="size-3.5 shrink-0" />
+                      KHÔNG BAO GỒM VÉ THAM DỰ EVENT
                     </Badge>
                   )}
                   <div>

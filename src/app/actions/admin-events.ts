@@ -14,6 +14,7 @@ type EventInput = {
   posterUrl: string;
   venue: string;
   startAt: string; // datetime-local string
+  startAtTentative: boolean;
 };
 
 function parseEventForm(formData: FormData): EventInput {
@@ -23,6 +24,7 @@ function parseEventForm(formData: FormData): EventInput {
     posterUrl: String(formData.get("posterUrl") ?? "").trim(),
     venue: String(formData.get("venue") ?? "").trim(),
     startAt: String(formData.get("startAt") ?? ""),
+    startAtTentative: formData.get("startAtTentative") === "on",
   };
 }
 
@@ -52,6 +54,7 @@ export async function createEvent(
         posterUrl: input.posterUrl || null,
         venue: input.venue,
         startAt: fromVnDatetimeLocal(input.startAt),
+        startAtTentative: input.startAtTentative,
         status: "draft",
       },
     });
@@ -83,6 +86,7 @@ export async function updateEvent(
         posterUrl: input.posterUrl || null,
         venue: input.venue,
         startAt: fromVnDatetimeLocal(input.startAt),
+        startAtTentative: input.startAtTentative,
       },
     });
   } catch {

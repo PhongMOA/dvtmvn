@@ -64,7 +64,10 @@ export default async function AdminEventsPage() {
             {events.map((event) => (
               <TableRow key={event.id}>
                 <TableCell className="font-medium">{event.title}</TableCell>
-                <TableCell>{formatDateTime(event.startAt)}</TableCell>
+                <TableCell>
+                  {formatDateTime(event.startAt)}
+                  {event.startAtTentative && " (dự kiến)"}
+                </TableCell>
                 <TableCell>{event._count.comboTypes}</TableCell>
                 <TableCell>
                   <Badge variant={event.status === "open" ? "default" : "outline"}>

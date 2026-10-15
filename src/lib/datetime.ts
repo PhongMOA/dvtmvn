@@ -25,3 +25,18 @@ export function toVnDatetimeLocal(date: Date): string {
 export function fromVnDatetimeLocal(value: string): Date {
   return new Date(`${value}:00+07:00`);
 }
+
+/**
+ * Thời gian chiếu cho trang ngoài: nếu admin đánh dấu "Dự kiến" thì chỉ hiện
+ * ngày (giờ chưa chốt), ngược lại hiện cả ngày + giờ.
+ */
+export function formatEventStart(
+  event: { startAt: Date; startAtTentative: boolean },
+  dateStyle: "full" | "long" | "medium" | "short",
+): string {
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle,
+    timeStyle: event.startAtTentative ? undefined : "short",
+    timeZone: VN_TIME_ZONE,
+  }).format(event.startAt);
+}
