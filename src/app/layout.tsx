@@ -12,6 +12,7 @@ import { ProfileModal } from "@/components/profile-modal";
 import { PushRegistrar } from "@/components/push-registrar";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AgeNoticeModal } from "@/components/age-notice-modal";
+import { MessengerButton } from "@/components/messenger-button";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -80,6 +81,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <AgeNoticeModal />
         <PushRegistrar />
         <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} />
+        <MessengerButton isLoggedIn={!!session?.user} />
         {/* Google Analytics 4 — cùng mã với trang tĩnh public/dong-thoi-gian-mcu.html.
             Chuyển trang phía client (App Router) được GA4 tự ghi nhận qua
             "Enhanced measurement > Page changes based on browser history". */}
