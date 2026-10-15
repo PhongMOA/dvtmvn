@@ -45,6 +45,15 @@ export async function canPreviewSales(
   return record?.role === "admin" || record?.role === "tester";
 }
 
+/**
+ * Nút "Bỏ qua thanh toán (test)" chỉ bật khi env ALLOW_SKIP_PAYMENT === "true".
+ * Mặc định TẮT (kể cả admin/tester) để web public không có đường tạo đơn "paid"
+ * mà không chuyển khoản thật. Bật tạm trên máy dev/staging khi cần test.
+ */
+export function isSkipPaymentEnabled(): boolean {
+  return process.env.ALLOW_SKIP_PAYMENT === "true";
+}
+
 /** Bắt buộc đã đăng nhập — dùng trong Server Actions ghi dữ liệu. Throw nếu chưa login. */
 export async function requireUser() {
   const session = await auth();

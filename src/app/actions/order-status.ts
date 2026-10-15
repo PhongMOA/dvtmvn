@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { canPreviewSales, isAdmin, requireUser } from "@/lib/auth-helpers";
+import { canPreviewSales, isAdmin, isSkipPaymentEnabled, requireUser } from "@/lib/auth-helpers";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { fulfillPaidOrder } from "@/lib/order-fulfillment";
 import { syncSeatAllowanceForOrder } from "@/lib/seat-allowance";
@@ -41,8 +41,12 @@ export async function getOrderPaymentStatus(orderId: string): Promise<OrderStatu
  * được — bỏ qua bước chuyển khoản là hành vi nguy hiểm nếu lộ cho khách thật
  * (lấy combo miễn phí), nên chặn ở tầng server action chứ không chỉ ẩn nút ở UI.
  * Tester chỉ bỏ qua được đơn của chính mình; admin bỏ qua được mọi đơn.
+ * Ngoài ra phải bật env ALLOW_SKIP_PAYMENT=true (xem isSkipPaymentEnabled).
  */
 export async function skipPayment(orderId: string): Promise<OrderStatusResult> {
+  if (!isSkipPaymentEnabled()) {
+    return { ok: false, error: "FORBIDDEN" };
+  }
   let user;
   try {
     user = await requireUser();
