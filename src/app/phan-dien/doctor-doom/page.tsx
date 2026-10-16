@@ -141,10 +141,10 @@ export default function DoctorDoomPage() {
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[38%_0%] sm:object-[70%_30%]"
+          className="object-cover object-[38%_0%] sm:object-[70%_0%]"
         />
         <div className={`absolute inset-0 ${styles.heroShade}`} />
-        <div className="relative mx-auto flex max-w-5xl flex-col gap-3.5 px-4 pt-48 pb-9 sm:pt-28 sm:pb-14">
+        <div className="relative mx-auto flex max-w-5xl flex-col gap-3.5 px-4 pt-48 pb-9 sm:pt-28 sm:pb-14 lg:pt-40">
           <p className={eyebrow}>Hồ sơ phản diện · Avengers: Doomsday</p>
           <h1
             className={`font-logo text-[clamp(64px,12vw,140px)] leading-[0.88] uppercase ${styles.title}`}
