@@ -100,6 +100,61 @@ export async function cancelGhtkShipment(
   return { ok: true };
 }
 
+export type DeleteExpiredOrderResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Xoá đơn đã hết hạn (chỉ admin). Kho + lượt mã giảm giá đã hoàn lúc đơn chuyển
+ * sang "expired" (xem lib/order-expiry.ts) nên xoá không cần hoàn gì thêm;
+ * OrderItem xoá theo cascade. Chặn xoá khi có giao dịch SePay nhắc mã đơn (khách
+ * chuyển khoản trễ — cần giữ đơn để đối soát) hoặc có đơn nâng cấp trỏ tới đơn này.
+ */
+export async function deleteExpiredOrder(
+  orderId: string,
+): Promise<DeleteExpiredOrderResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { ok: false, error: "Không có quyền." };
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      items: { include: { comboType: true } },
+      _count: { select: { upgrades: true } },
+    },
+  });
+  if (!order) return { ok: false, error: "Không tìm thấy đơn." };
+  if (order.paymentStatus !== "expired") {
+    return { ok: false, error: "Chỉ xoá được đơn đã hết hạn." };
+  }
+  if (order._count.upgrades > 0) {
+    return { ok: false, error: "Đơn có đơn nâng cấp liên quan — không thể xoá." };
+  }
+  const lateTransfers = await prisma.sepayTransaction.count({
+    where: { content: { contains: order.orderCode, mode: "insensitive" } },
+  });
+  if (lateTransfers > 0) {
+    return {
+      ok: false,
+      error: "Đơn đã có giao dịch chuyển khoản — cần đối soát, không thể xoá.",
+    };
+  }
+
+  // deleteMany + where paymentStatus: phòng trạng thái đổi giữa lúc kiểm tra và xoá.
+  const { count } = await prisma.order.deleteMany({
+    where: { id: orderId, paymentStatus: "expired" },
+  });
+  if (count === 0) return { ok: false, error: "Đơn đã thay đổi, tải lại trang." };
+
+  revalidateEventOrderPages(order.items);
+  revalidatePath("/admin/orders");
+  revalidatePath("/my-tickets");
+  return { ok: true };
+}
+
 // Tra cứu đơn theo qrToken quét được từ camera — CHỈ đọc, không check-in.
 // Dùng cho bước hiện thẻ "Thông tin người mua" trước khi admin bấm Xác nhận
 // (xem src/app/admin/scan/page.tsx), tránh check-in nhầm chỉ vì camera lướt

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { checkInOrder, retryGhtkOrder } from "@/app/actions/admin-orders";
 import { AdminCancelShipment } from "@/components/admin-cancel-shipment";
+import { AdminDeleteOrderButton } from "@/components/admin-delete-order-button";
 import { AdminOrderFilters } from "@/components/admin-order-filters";
 import { AdminPagination } from "@/components/admin-pagination";
 import { AdminSheetExport } from "@/components/admin-sheet-export";
@@ -15,7 +16,6 @@ import {
   hasOrderFilter,
 } from "@/lib/admin-orders-data";
 import { ghtkStatusColorClass } from "@/lib/ghtk";
-import { parseComboItems } from "@/lib/combo";
 import { formatShirtSizes } from "@/lib/shirt-sizes";
 import { orderItemsQuantity } from "@/lib/order-items";
 import { cn } from "@/lib/utils";
@@ -275,21 +275,17 @@ export async function AdminOrdersView({
                         </span>
                       ))}
                       {order.items.map((item) => {
-                        const extras = parseComboItems(item.comboType.items);
+                        // Chỉ hiện tên combo × SL cho gọn (không liệt kê thành phần
+                        // combo); size áo là thông tin riêng của đơn nên vẫn giữ.
                         const sizes = formatShirtSizes(item.shirtSizes);
-                        if (!extras.length && !sizes) return null;
+                        if (!sizes) return null;
                         return (
                           <span
-                            key={`extra-${item.id}`}
-                            className="mt-0.5 text-xs text-muted-foreground"
+                            key={`size-${item.id}`}
+                            className="mt-0.5 text-xs font-medium"
                           >
                             {order.items.length > 1 && `${item.comboType.name}: `}
-                            {extras.join(", ")}
-                            {sizes && (
-                              <span className="font-medium text-foreground">
-                                {extras.length ? " · " : ""}Size áo: {sizes}
-                              </span>
-                            )}
+                            Size áo: {sizes}
                           </span>
                         );
                       })}
@@ -373,6 +369,11 @@ export async function AdminOrdersView({
                           Đánh dấu check-in
                         </Button>
                       </form>
+                    ) : order.paymentStatus === "expired" ? (
+                      <AdminDeleteOrderButton
+                        orderId={order.id}
+                        orderCode={order.orderCode}
+                      />
                     ) : (
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
