@@ -1,0 +1,33 @@
+/* Lớp phủ tối lên ảnh hero: desktop tối dần từ trái (chỗ đặt chữ), mobile tối từ dưới lên. */
+.heroShade {
+  background:
+    linear-gradient(90deg, var(--background) 0%, oklch(0.09 0.004 150 / 0.85) 30%, oklch(0.09 0.004 150 / 0) 65%),
+    linear-gradient(0deg, var(--background) 0%, oklch(0.09 0.004 150 / 0) 40%);
+}
+@media (max-width: 640px) {
+  .heroShade {
+    background: linear-gradient(0deg, var(--background) 8%, oklch(0.09 0.004 150 / 0.7) 50%, oklch(0.09 0.004 150 / 0.1) 100%);
+  }
+}
+
+.title {
+  text-shadow: 0 0 40px oklch(0.7 0.19 150 / 0.45);
+}
+
+/* Vòng chỉ số: --len = độ dài nét đang hiện, vẽ dần từ 0 khi tải trang. */
+.ringValue {
+  transform: rotate(-90deg);
+  transform-origin: 60px 60px;
+  filter: drop-shadow(0 0 6px oklch(0.7 0.19 150 / 0.6));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ringValue {
+    animation: draw 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--n) * 90ms);
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: var(--len);
+  }
+}
