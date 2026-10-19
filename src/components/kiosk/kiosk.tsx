@@ -8,7 +8,8 @@ import { kioskCheckinQr, type KioskView } from "@/app/actions/checkin";
 import { formatCheckinTime } from "@/components/scan/checkin-scan";
 import { useIsNativeApp } from "@/lib/is-native-app";
 import { cn } from "@/lib/utils";
-import { DoomMascot, type MascotMood } from "./mascot";
+import { DOOM_GLOW, DoomMascot, type MascotMood } from "./mascot";
+import { ScanBeams } from "./scan-beams";
 
 // Camera chỉ chạy ở client + kéo theo @zxing -> tách bundle, không SSR.
 const KioskCamera = dynamic(() => import("./kiosk-camera").then((m) => m.KioskCamera), {
@@ -48,6 +49,8 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
   const [look, setLook] = useState<{ x: number; y: number } | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const mascotRef = useRef<SVGSVGElement | null>(null);
   const busyRef = useRef(false);
   const lastRef = useRef<{ code: string; at: number } | null>(null);
 
@@ -126,6 +129,7 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
 
   return (
     <div
+      ref={rootRef}
       onPointerDown={onPointerDown}
       className={cn(
         "kiosk barcode-scanner-ui fixed inset-0 z-[70] flex touch-none select-none flex-col text-white",
@@ -149,6 +153,7 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
         <div className="flex min-h-0 items-center justify-center bg-[var(--kiosk-bg)] p-4 landscape:w-2/5">
           <DoomMascot
+            ref={mascotRef}
             mood={mood}
             glow={glow}
             look={look}
@@ -211,6 +216,8 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
           )}
         </div>
       </div>
+
+      {scanning && !cameraError && <ScanBeams rootRef={rootRef} mascotRef={mascotRef} color={DOOM_GLOW} />}
 
       {/* Máy đang dựng đứng (khoá xoay không được, vd. trình duyệt) -> nhắc xoay ngang */}
       <div className="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-4 bg-[var(--kiosk-bg)] p-8 text-center portrait:flex">

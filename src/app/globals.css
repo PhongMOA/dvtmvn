@@ -283,7 +283,6 @@ body.barcode-scanner-active .barcode-scanner-ui {
 }
 .doom-eyes { transform-origin: 130px 150px; transition: opacity 0.6s ease, transform 0.3s ease; }
 .doom-lid { transform-origin: 130px 127px; transform: scaleY(0); }
-.doom-beam,
 .doom-zzz { opacity: 0; }
 
 /* idle: mắt "thở", thỉnh thoảng chớp, đầu nhún nhẹ */
@@ -291,9 +290,8 @@ body.barcode-scanner-active .barcode-scanner-ui {
 .doom--idle .doom-eye-glow { animation: doom-breathe 2.4s ease-in-out infinite; }
 .doom--idle .doom-lid { animation: doom-blink 5.5s infinite; }
 
-/* scanning: mắt sáng mạnh, liếc sang khung camera, tia quét */
+/* scanning: mắt sáng mạnh, liếc sang khung camera (tia quét: .kiosk-beams) */
 .doom--scanning .doom-eye-glow { opacity: 1; animation: doom-breathe 0.9s ease-in-out infinite; }
-.doom--scanning .doom-beam { animation: doom-beam 1.4s ease-in-out infinite; }
 
 /* success: mắt cười ^ ^, đầu nảy */
 .doom--success .doom-head { animation: doom-bounce 0.7s ease-out 2; }
@@ -346,13 +344,19 @@ body.barcode-scanner-active .barcode-scanner-ui {
   outline: 3px solid color-mix(in oklab, var(--color-primary) 80%, transparent);
   animation: kiosk-hole-pulse 1.6s ease-in-out infinite;
 }
+/* Tia quét từ 2 mắt Doom tới ô camera (scan-beams.tsx) */
+.kiosk-beams-pulse {
+  mix-blend-mode: screen;
+  animation: doom-beam 1.4s ease-in-out infinite;
+}
 @keyframes kiosk-hole-pulse {
   50% {
     outline-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kiosk-camera-hole {
+  .kiosk-camera-hole,
+  .kiosk-beams-pulse {
     animation: none;
   }
 }

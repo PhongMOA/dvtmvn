@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type CSSProperties } from "react";
+import { useId, type CSSProperties, type Ref } from "react";
 import { cn } from "@/lib/utils";
 
 export type MascotMood = "idle" | "scanning" | "success" | "error" | "sleep";
@@ -13,6 +13,12 @@ const H = 417;
 // Tâm 2 hốc mắt trong ảnh + khung bao để phủ mí.
 const EYES = [85, 174] as const;
 const EYE_Y = 150;
+// Lúc quét QR con ngươi liếc sang phải (về phía ô camera) chừng này.
+const SCAN_LOOK_X = 6;
+export const DOOM_GLOW = "#ff8a1f";
+
+/** Hình học trong viewBox — kiosk dùng để bắn tia từ 2 mắt tới ô camera. */
+export const DOOM_GEOMETRY = { width: W, height: H, eyeY: EYE_Y, eyes: EYES.map((x) => x + SCAN_LOOK_X) };
 const HOLE = { top: 127, bottom: 173, rx: 30 };
 
 /**
@@ -23,27 +29,30 @@ const HOLE = { top: 127, bottom: 173, rx: 30 };
  *
  * Chỉ MẮT đổi biểu cảm + chuyển động cả người, điều khiển bằng class
  * `doom--<mood>` (keyframes trong globals.css, mục "Kiosk mascot"). `glow` đổi
- * màu mắt; `look` (-1..1) cho mắt liếc theo điểm chạm.
+ * màu mắt; `look` (-1..1) cho mắt liếc theo điểm chạm. Tia quét QR nằm ngoài
+ * SVG (scan-beams.tsx) vì phải vươn tới ô camera.
  */
 export function DoomMascot({
   mood = "idle",
-  glow = "#ff8a1f",
+  glow = DOOM_GLOW,
   look,
   className,
   src = DOOM_SRC,
+  ref,
 }: {
   mood?: MascotMood;
   glow?: string;
   look?: { x: number; y: number } | null;
   className?: string;
   src?: string;
+  ref?: Ref<SVGSVGElement>;
 }) {
   // id filter phải duy nhất nếu trang có nhiều linh vật.
   const uid = useId().replace(/:/g, "");
   const blurId = `blur-${uid}`;
 
   const eyeColor = mood === "error" ? "#ff3b30" : glow;
-  const lookX = mood === "scanning" ? 6 : (look?.x ?? 0) * 6;
+  const lookX = mood === "scanning" ? SCAN_LOOK_X : (look?.x ?? 0) * 6;
   const lookY = mood === "scanning" ? 0 : (look?.y ?? 0) * 3;
   const style = {
     "--doom-eye": eyeColor,
@@ -55,6 +64,7 @@ export function DoomMascot({
 
   return (
     <svg
+      ref={ref}
       viewBox={`0 0 ${W} ${H}`}
       role="img"
       aria-label="Doctor Doom"
@@ -118,13 +128,6 @@ export function DoomMascot({
 
         <image href={src} width={W} height={H} />
 
-        {/* Tia quét khi đang đọc QR */}
-        <path
-          className="doom-beam"
-          d={`M${EYES[1] + 8} ${EYE_Y - 4} ${W} ${EYE_Y - 34}v68L${EYES[1] + 8} ${EYE_Y + 6}Z`}
-          style={{ fill: "var(--doom-eye)" }}
-          opacity="0.35"
-        />
       </g>
 
       {/* "z z z" khi ngủ */}
