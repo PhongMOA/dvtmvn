@@ -46,6 +46,25 @@ export async function canPreviewSales(
 }
 
 /**
+ * Được check-in khách (kiosk /kiosk + quét QR): admin HOẶC staff
+ * (User.role == "staff", cấp ở /admin/users). Máy kiosk đặt nơi công cộng nên
+ * đăng nhập bằng tài khoản staff — KHÔNG vào được /admin. Đọc role từ DB như
+ * isAdmin để cấp/gỡ có hiệu lực ngay.
+ */
+export async function isStaff(
+  user?: { id?: string | null; email?: string | null } | null,
+): Promise<boolean> {
+  if (!user) return false;
+  if (isAdminEmail(user.email)) return true;
+  if (!user.id) return false;
+  const record = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  });
+  return record?.role === "admin" || record?.role === "staff";
+}
+
+/**
  * Nút "Bỏ qua thanh toán (test)" chỉ bật khi env ALLOW_SKIP_PAYMENT === "true".
  * Mặc định TẮT (kể cả admin/tester) để web public không có đường tạo đơn "paid"
  * mà không chuyển khoản thật. Bật tạm trên máy dev/staging khi cần test.
@@ -67,6 +86,15 @@ export async function requireUser() {
 export async function requireAdmin() {
   const user = await requireUser();
   if (!(await isAdmin(user))) {
+    throw new Error("FORBIDDEN");
+  }
+  return user;
+}
+
+/** Bắt buộc là admin hoặc staff — dùng cho server action check-in. Throw nếu không đủ quyền. */
+export async function requireStaff() {
+  const user = await requireUser();
+  if (!(await isStaff(user))) {
     throw new Error("FORBIDDEN");
   }
   return user;

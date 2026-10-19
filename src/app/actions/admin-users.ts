@@ -90,3 +90,31 @@ export async function setUserTester(
   revalidatePath("/admin/users");
   return { ok: true };
 }
+
+export type SetUserStaffResult = SetUserTesterResult;
+
+// Cấp/gỡ quyền staff (User.role == "staff"): check-in khách ở /kiosk + quét QR
+// (xem isStaff), KHÔNG vào được /admin. Dùng cho tài khoản máy kiosk / nhân
+// viên cửa rạp. Như tester: không đổi admin thành staff.
+export async function setUserStaff(
+  userId: string,
+  makeStaff: boolean,
+): Promise<SetUserStaffResult> {
+  await requireAdmin();
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, role: true },
+  });
+  if (!user) return { ok: false, error: "NOT_FOUND" };
+  if (user.role === "admin" || isAdminEmail(user.email)) {
+    return { ok: false, error: "IS_ADMIN" };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { role: makeStaff ? "staff" : "user" },
+  });
+  revalidatePath("/admin/users");
+  return { ok: true };
+}

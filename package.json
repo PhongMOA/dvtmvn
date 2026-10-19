@@ -14,7 +14,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test src/lib/seats/rules.test.ts",
+    "test": "tsx --test src/lib/seats/rules.test.ts src/lib/checkin-rules.test.ts",
     "postinstall": "prisma generate",
     "vercel-build": "prisma generate && next build"
   },
