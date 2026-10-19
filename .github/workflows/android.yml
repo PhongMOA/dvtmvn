@@ -99,7 +99,9 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           TAG="apk-$APP_ENV-$VERSION_CODE"
-          printf '%s\n' "${COMMIT_MSG:-Build tay từ ${GITHUB_REF_NAME}}" > "$RUNNER_TEMP/notes.md"
+          # Ghi chú hiện trong hộp thoại cập nhật — bỏ dòng trailer Co-Authored-By
+          printf '%s\n' "${COMMIT_MSG:-Build tay từ ${GITHUB_REF_NAME}}" \
+            | grep -v -i '^co-authored-by:' > "$RUNNER_TEMP/notes.md"
           gh release create "$TAG" "$RUNNER_TEMP/marvelvn-$APP_ENV-$VERSION_CODE.apk" \
             --target "$GITHUB_SHA" --title "MarvelVN $APP_ENV $VERSION_CODE" \
             --notes-file "$RUNNER_TEMP/notes.md" --prerelease
