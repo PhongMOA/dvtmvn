@@ -32,6 +32,8 @@ export type CheckinSummary = {
   alreadyCheckedIn: boolean;
   /** Giờ check-in gần nhất (null nếu chưa, hoặc check-in từ trước khi có cột này). */
   checkedInAt: Date | null;
+  /** Lần check-in gần nhất qua "kiosk" hay "staff" (null nếu không rõ). */
+  checkedInVia: string | null;
 };
 
 const fail = (error: CheckinError) => ({ ok: false as const, error });
@@ -83,6 +85,38 @@ export async function resolveByPhone(
   return { ok: true, value: { userId: rows[0].userId, eventId } };
 }
 
+export type CustomerMatch = { userId: string; name: string; phone: string | null };
+
+/**
+ * Nhân viên tìm khách có vé của event theo tên / email / SĐT (khách không mang
+ * QR, không nhớ SĐT đã đăng ký). Tối đa 10 kết quả. Tên so không phân biệt hoa
+ * thường nhưng CÓ phân biệt dấu (ILIKE).
+ */
+export async function searchCustomers(q: string, eventId: string): Promise<CustomerMatch[]> {
+  const term = q.trim();
+  if (term.length < 2) return [];
+  const digits = term.replace(/\D/g, "");
+  const users = await prisma.user.findMany({
+    where: {
+      orders: {
+        some: {
+          paymentStatus: "paid",
+          items: { some: { comboType: { eventId, includesTicket: true } } },
+        },
+      },
+      OR: [
+        { name: { contains: term, mode: "insensitive" } },
+        { email: { contains: term, mode: "insensitive" } },
+        ...(digits.length >= 4 ? [{ phone: { contains: digits } }] : []),
+      ],
+    },
+    select: { id: true, name: true, email: true, phone: true },
+    orderBy: { name: "asc" },
+    take: 10,
+  });
+  return users.map((u) => ({ userId: u.id, name: u.name ?? u.email, phone: u.phone }));
+}
+
 /** Các đơn paid của khách có ít nhất 1 dòng combo thuộc event. */
 function eventOrders({ userId, eventId }: CheckinTarget) {
   return prisma.order.findMany({
@@ -93,6 +127,7 @@ function eventOrders({ userId, eventId }: CheckinTarget) {
       orderCode: true,
       status: true,
       checkedInAt: true,
+      checkedInVia: true,
       items: {
         select: {
           quantity: true,
@@ -139,9 +174,9 @@ export async function getCheckinSummary(
   }
 
   const seats = sortSeats(bookings.map((b) => b.seatCode));
-  const checkedInTimes = orders
-    .map((o) => o.checkedInAt?.getTime())
-    .filter((t): t is number => t != null);
+  const latestCheckin = orders
+    .filter((o) => o.checkedInAt)
+    .sort((a, b) => b.checkedInAt!.getTime() - a.checkedInAt!.getTime())[0];
   const name = user.name?.trim() || "bạn";
 
   return {
@@ -156,7 +191,8 @@ export async function getCheckinSummary(
       shirts: formatShirtSizes(shirtSizes),
       orderCodes: orders.map((o) => o.orderCode),
       alreadyCheckedIn: orders.every((o) => o.status === "checked_in"),
-      checkedInAt: checkedInTimes.length ? new Date(Math.max(...checkedInTimes)) : null,
+      checkedInAt: latestCheckin?.checkedInAt ?? null,
+      checkedInVia: latestCheckin?.checkedInVia ?? null,
     },
   };
 }

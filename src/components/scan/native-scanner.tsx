@@ -20,9 +20,9 @@ import { ScanResultCard, useCheckinScan } from "./checkin-scan";
  * Nghiệp vụ tra cứu -> xác nhận -> check-in nằm trong hook useCheckinScan
  * (dùng chung với nhánh web). Component này chỉ lo phần camera native + UI.
  */
-export function NativeScanCheckin() {
+export function NativeScanCheckin({ eventId }: { eventId: string }) {
   const { result, confirmed, isConfirming, shouldIgnore, resolveToken, confirm, reset } =
-    useCheckinScan();
+    useCheckinScan(eventId);
   const [scanning, setScanning] = useState(false);
   // Chớp viền ô vuông sang accent ngay khi vừa nhận diện được QR, trước cả khi
   // tra cứu xong — phản hồi tức thời, không liên quan tới `result`.
@@ -96,13 +96,10 @@ export function NativeScanCheckin() {
     <div>
       {!scanning && (
         <>
-          <h1 className="font-heading text-2xl tracking-wide text-primary">
-            QUÉT QR CHECK-IN
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Bấm bắt đầu rồi hướng camera vào mã QR trên vé của khách.
           </p>
-          <Button className="mt-6" size="lg" onClick={startScan}>
+          <Button className="mt-4" size="lg" onClick={startScan}>
             Bắt đầu quét
           </Button>
         </>

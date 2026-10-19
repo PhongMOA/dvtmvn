@@ -169,7 +169,7 @@
    để lộ camera preview native phía dưới — cần ẩn hết UI web đi (visibility
    kế thừa xuống mọi phần tử con), chỉ chừa lại phần tử có class
    `barcode-scanner-ui` (nút Hủy) bằng cách ép `visibility: visible` đè lại.
-   Xem src/app/admin/scan/page.tsx. */
+   Xem src/app/scan/page.tsx. */
 body.barcode-scanner-active {
   visibility: hidden;
   background: transparent !important;
@@ -178,7 +178,7 @@ body.barcode-scanner-active .barcode-scanner-ui {
   visibility: visible !important;
 }
 
-/* Khung ngắm QR (viewfinder) cho trang admin/scan — chỉ 1 ô vuông ở giữa
+/* Khung ngắm QR (viewfinder) cho trang /scan — chỉ 1 ô vuông ở giữa
    "lộ rõ" camera, phần còn lại màn hình bị làm tối để tách biệt khỏi chữ
    hướng dẫn + nút bấm đè lên trên (giống UI quét QR phổ biến). Kỹ thuật
    box-shadow lan 9999px tạo lớp phủ tối phủ kín viewport trừ đúng ô vuông
@@ -239,7 +239,7 @@ body.barcode-scanner-active .barcode-scanner-ui {
   border-radius: 0 0 16px 0;
 }
 
-/* Nút "Dừng quét" trên trang admin/scan — theo yêu cầu user, làm to/rõ hơn
+/* Nút "Dừng quét" trên trang /scan — theo yêu cầu user, làm to/rõ hơn
    hẳn nút mặc định của shadcn Button, dạng viên thuốc bán trong suốt giống
    ảnh mẫu tham khảo (không dùng component Button vì cần nền/kích cỡ khác
    hẳn style chung của app). */

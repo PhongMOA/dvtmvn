@@ -7,6 +7,8 @@ import {
   performCheckin,
   resolveByPhone,
   resolveByQrToken,
+  searchCustomers,
+  type CustomerMatch,
   type CheckinError,
   type CheckinSummary,
   type CheckinTarget,
@@ -50,6 +52,7 @@ function toKioskView(s: StaffView, name: string): KioskView {
     shirts: s.shirts,
     alreadyCheckedIn: s.alreadyCheckedIn,
     checkedInAt: s.checkedInAt,
+    checkedInVia: s.checkedInVia,
     justCheckedIn: s.justCheckedIn,
   };
 }
@@ -108,15 +111,25 @@ export async function kioskConfirmPhone(
 
 // --- Nhân viên -------------------------------------------------------------
 
-export type StaffQuery = { qrToken: string } | { phone: string };
+/** userId: chọn từ kết quả staffSearch (nhân viên đã đăng nhập, tin được). */
+export type StaffQuery = { qrToken: string } | { phone: string } | { userId: string };
 
 async function resolveStaffQuery(
   query: StaffQuery,
   eventId: string,
 ): Promise<{ ok: true; value: CheckinTarget } | { ok: false; error: CheckinError }> {
-  return "qrToken" in query
-    ? resolveByQrToken(query.qrToken, eventId)
-    : resolveByPhone(query.phone, eventId);
+  if ("qrToken" in query) return resolveByQrToken(query.qrToken, eventId);
+  if ("phone" in query) return resolveByPhone(query.phone, eventId);
+  return { ok: true, value: { userId: query.userId, eventId } };
+}
+
+/** Tìm khách có vé theo tên / email / SĐT — nhân viên chọn 1 người rồi staffLookup({ userId }). */
+export async function staffSearch(
+  q: string,
+  eventId: string,
+): Promise<{ ok: true; value: CustomerMatch[] } | Fail> {
+  if (!(await staffId())) return forbidden;
+  return { ok: true, value: await searchCustomers(q, eventId) };
 }
 
 /** Nhân viên tra cứu (chưa check-in) — thấy đủ tên + mã đơn để đối chiếu. */

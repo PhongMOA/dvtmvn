@@ -9,7 +9,7 @@ const MESSENGER_URL = "https://m.me/DaVuTruMarvelVN";
 
 export function MessengerButton({ isLoggedIn }: { isLoggedIn: boolean }) {
   const pathname = usePathname();
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/scan")) return null;
 
   return (
     <a

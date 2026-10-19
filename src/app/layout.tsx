@@ -5,7 +5,7 @@ import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
 import { auth } from "@/auth";
-import { isAdmin } from "@/lib/auth-helpers";
+import { isAdmin, isStaff } from "@/lib/auth-helpers";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { ProfileModal } from "@/components/profile-modal";
@@ -68,6 +68,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
   const admin = await isAdmin(session?.user);
+  const staff = !admin && (await isStaff(session?.user));
 
   return (
     <html
@@ -96,7 +97,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <PushRegistrar />
         <UpdateWatcher />
         <NativeUpdateCheck />
-        <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} />
+        <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} isStaff={staff} />
         <MessengerButton isLoggedIn={!!session?.user} />
         {/* Google Analytics 4 — cùng mã với trang tĩnh public/dong-thoi-gian-mcu.html.
             Chuyển trang phía client (App Router) được GA4 tự ghi nhận qua
