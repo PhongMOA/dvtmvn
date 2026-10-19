@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { ProfileModal } from "@/components/profile-modal";
 import { PushRegistrar } from "@/components/push-registrar";
+import { UpdateWatcher } from "@/components/update-watcher";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AgeNoticeModal } from "@/components/age-notice-modal";
 import { MessengerButton } from "@/components/messenger-button";
@@ -85,11 +86,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <Link href="/dieu-khoan" className="underline-offset-2 hover:text-primary hover:underline">
             Điều khoản và điều kiện sử dụng
           </Link>
+          {/* Mã bản build — khi báo lỗi biết đang chạy bản nào */}
+          <span className="ml-2 opacity-50">· {process.env.NEXT_PUBLIC_BUILD_ID}</span>
         </footer>
         <Toaster richColors theme="dark" />
         <ProfileModal />
         <AgeNoticeModal />
         <PushRegistrar />
+        <UpdateWatcher />
         <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} />
         <MessengerButton isLoggedIn={!!session?.user} />
         {/* Google Analytics 4 — cùng mã với trang tĩnh public/dong-thoi-gian-mcu.html.
