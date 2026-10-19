@@ -10,6 +10,9 @@
         <!-- @capacitor-mlkit/barcode-scanning: bắt buộc theo doc plugin, tải
              sẵn model quét mã QR (không phải mọi loại mã) lúc cài app. -->
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
+        <!-- @capacitor/screen-orientation: targetSdk 36 + Android 16 bỏ qua
+             khoá xoay trên máy tính bảng nếu thiếu cờ này — kiosk cần khoá ngang. -->
+        <property android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY" android:value="true" />
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"

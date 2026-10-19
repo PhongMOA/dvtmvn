@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { ScreenOrientation } from "@capacitor/screen-orientation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { kioskCheckinQr, type KioskView } from "@/app/actions/checkin";
 import { formatCheckinTime } from "@/components/scan/checkin-scan";
@@ -49,6 +50,15 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
 
   const busyRef = useRef(false);
   const lastRef = useRef<{ code: string; at: number } | null>(null);
+
+  // Kiosk luôn đặt máy nằm ngang: khoá xoay khi vào, mở khoá khi rời.
+  // Trình duyệt thường từ chối (cần fullscreen) -> bỏ qua, đã có lớp nhắc xoay.
+  useEffect(() => {
+    ScreenOrientation.lock({ orientation: "landscape" }).catch(() => {});
+    return () => {
+      ScreenOrientation.unlock().catch(() => {});
+    };
+  }, []);
 
   const onCode = useCallback(
     async (code: string) => {
@@ -136,9 +146,14 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
         </Link>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <div className="flex items-center justify-center bg-[var(--kiosk-bg)] p-4 md:w-2/5">
-          <DoomMascot mood={mood} glow={glow} look={look} className="h-56 w-auto md:h-[26rem]" />
+      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
+        <div className="flex min-h-0 items-center justify-center bg-[var(--kiosk-bg)] p-4 landscape:w-2/5">
+          <DoomMascot
+            mood={mood}
+            glow={glow}
+            look={look}
+            className="h-56 max-h-full w-auto landscape:h-[min(72vh,30rem)]"
+          />
         </div>
 
         <div
@@ -195,6 +210,12 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
             </div>
           )}
         </div>
+      </div>
+
+      {/* Máy đang dựng đứng (khoá xoay không được, vd. trình duyệt) -> nhắc xoay ngang */}
+      <div className="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-4 bg-[var(--kiosk-bg)] p-8 text-center portrait:flex">
+        <span aria-hidden className="text-6xl">⟲</span>
+        <p className="text-2xl font-semibold">Xoay ngang màn hình để dùng kiosk</p>
       </div>
     </div>
   );
