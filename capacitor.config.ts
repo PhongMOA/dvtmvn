@@ -15,9 +15,17 @@ const config: CapacitorConfig = {
   appName: "MarvelVN",
   webDir: "public",
   server: {
-    url: "https://dvtmvn.vercel.app",
+    // Mặc định production (VPS). Build app staging: CAP_SERVER_URL=https://dvtmarvelvn.8ternal.com
+    // trước `npx cap sync android` (xem plans/261019-auto-update).
+    url: process.env.CAP_SERVER_URL ?? "https://dvtmarvelvn.com",
     androidScheme: "https",
     cleartext: false,
+  },
+  // Có sẵn trong capacitor.config.json đã sinh trước đây nhưng thiếu ở file
+  // này — đưa vào để `cap sync` không làm mất. Giúp phân biệt request từ app
+  // trong log server (code nhận diện app dùng Capacitor.isNativePlatform()).
+  android: {
+    appendUserAgent: "MarvelVNApp",
   },
   // Chỉ dùng đăng nhập Google — tắt Facebook/Apple/Twitter để plugin
   // @capgo/capacitor-social-login không kéo thêm SDK không cần vào APK
