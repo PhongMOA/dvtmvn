@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { useIsNativeApp } from "@/lib/is-native-app";
 import { CustomerSearch } from "./customer-search";
@@ -59,7 +60,15 @@ export function ScanCheckin({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="font-heading text-2xl tracking-wide text-primary">CHECK-IN</h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="font-heading text-2xl tracking-wide text-primary">CHECK-IN</h1>
+          <Link
+            href={`/kiosk/${eventId}`}
+            className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted/50"
+          >
+            Mở chế độ kiosk
+          </Link>
+        </div>
         <label className="mt-3 block text-xs uppercase tracking-wide text-muted-foreground">
           Suất chiếu
           <select

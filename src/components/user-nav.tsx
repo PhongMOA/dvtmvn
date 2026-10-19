@@ -70,6 +70,7 @@ export async function UserNav() {
         <DropdownMenuLinkItem href="/my-tickets">Vé của tôi</DropdownMenuLinkItem>
         <DropdownMenuLinkItem href="/profile">Thông tin tài khoản</DropdownMenuLinkItem>
         {staff && <DropdownMenuLinkItem href="/scan">Check-in</DropdownMenuLinkItem>}
+        {staff && <DropdownMenuLinkItem href="/kiosk">Kiosk check-in</DropdownMenuLinkItem>}
         {admin && (
           <DropdownMenuLinkItem href="/admin/events">Quản trị</DropdownMenuLinkItem>
         )}
