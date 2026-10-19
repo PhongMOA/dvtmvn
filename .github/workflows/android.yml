@@ -1,0 +1,113 @@
+# Build APK Android (Capacitor) và đăng lên GitHub Releases. App trên điện
+# thoại tự nhắc cập nhật qua /api/app-version (src/components/native-update-check.tsx).
+#
+#   nhánh staging → APK trỏ https://dvtmarvelvn.8ternal.com, tag apk-staging-<n>
+#   nhánh main    → APK trỏ https://dvtmarvelvn.com,        tag apk-production-<n>
+#
+# Cả 2 cùng package vn.marvelvn.app, versionCode = github.run_number (tăng dần
+# chung). Chỉ build khi đổi phần native; đổi web thì không cần APK mới (WebView
+# tải web từ server). Commit có "[force-update]" → app bắt buộc cập nhật.
+#
+# Secrets cần có: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+# ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD, GOOGLE_SERVICES_JSON_BASE64.
+name: Android APK
+
+on:
+  push:
+    branches: [staging, main]
+    paths:
+      - "android/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  KEEP_RELEASES: 5
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Chọn môi trường
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "APP_ENV=production" >> "$GITHUB_ENV"
+            echo "CAP_SERVER_URL=https://dvtmarvelvn.com" >> "$GITHUB_ENV"
+          else
+            echo "APP_ENV=staging" >> "$GITHUB_ENV"
+            echo "CAP_SERVER_URL=https://dvtmarvelvn.8ternal.com" >> "$GITHUB_ENV"
+          fi
+          echo "VERSION_CODE=${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      # --ignore-scripts: bỏ postinstall prisma generate, không cần cho APK
+      - run: npm ci --ignore-scripts
+
+      - name: Giải mã keystore + google-services.json
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          GSERVICES_B64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$GSERVICES_B64" ]; then
+            echo "::error::Thiếu secret ANDROID_KEYSTORE_BASE64 / GOOGLE_SERVICES_JSON_BASE64 (Settings → Secrets and variables → Actions)"
+            exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "$GSERVICES_B64" | base64 -d > android/app/google-services.json
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+
+      - run: npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon \
+            -PversionCode=$VERSION_CODE -PversionName="1.$VERSION_CODE"
+          cp app/build/outputs/apk/release/app-release.apk \
+            "$RUNNER_TEMP/marvelvn-$APP_ENV-$VERSION_CODE.apk"
+
+      - name: Đăng GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          TAG="apk-$APP_ENV-$VERSION_CODE"
+          printf '%s\n' "${COMMIT_MSG:-Build tay từ ${GITHUB_REF_NAME}}" > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" "$RUNNER_TEMP/marvelvn-$APP_ENV-$VERSION_CODE.apk" \
+            --target "$GITHUB_SHA" --title "MarvelVN $APP_ENV $VERSION_CODE" \
+            --notes-file "$RUNNER_TEMP/notes.md" --prerelease
+
+      - name: Xoá bản cũ (giữ ${{ env.KEEP_RELEASES }} bản gần nhất)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 100 --json tagName --jq '.[].tagName' \
+            | grep "^apk-$APP_ENV-" | sort -t- -k3 -n -r \
+            | tail -n +$((KEEP_RELEASES + 1)) \
+            | xargs -r -n1 gh release delete --yes --cleanup-tag

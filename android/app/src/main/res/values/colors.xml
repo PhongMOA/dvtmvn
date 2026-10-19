@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nền màn hình splash native Android 12+ (Theme.SplashScreen) — cùng màu
+         cardBg dùng trong scripts/gen-brand-icons.tsx (#080c09). Đổi màu theo
+         phim thì sửa cả 2 chỗ cho khớp. -->
+    <color name="splashBackground">#080C09</color>
+</resources>

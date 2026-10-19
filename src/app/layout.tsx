@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 import { ProfileModal } from "@/components/profile-modal";
 import { PushRegistrar } from "@/components/push-registrar";
 import { UpdateWatcher } from "@/components/update-watcher";
+import { NativeUpdateCheck } from "@/components/native-update-check";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AgeNoticeModal } from "@/components/age-notice-modal";
 import { MessengerButton } from "@/components/messenger-button";
@@ -94,6 +95,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <AgeNoticeModal />
         <PushRegistrar />
         <UpdateWatcher />
+        <NativeUpdateCheck />
         <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} />
         <MessengerButton isLoggedIn={!!session?.user} />
         {/* Google Analytics 4 — cùng mã với trang tĩnh public/dong-thoi-gian-mcu.html.
