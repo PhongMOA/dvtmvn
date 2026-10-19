@@ -87,7 +87,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             Điều khoản và điều kiện sử dụng
           </Link>
           {/* Mã bản build — khi báo lỗi biết đang chạy bản nào */}
-          <span className="ml-2 opacity-50">· {process.env.NEXT_PUBLIC_BUILD_ID}</span>
+          <span className="mt-1 block opacity-50">Bản {process.env.NEXT_PUBLIC_BUILD_ID}</span>
         </footer>
         <Toaster richColors theme="dark" />
         <ProfileModal />
