@@ -4,7 +4,7 @@
 #   nhánh staging → APK trỏ https://dvtmarvelvn.8ternal.com, tag apk-staging-<n>
 #   nhánh main    → APK trỏ https://dvtmarvelvn.com,        tag apk-production-<n>
 #
-# Cả 2 cùng package vn.marvelvn.app, versionCode = github.run_number (tăng dần
+# Cả 2 cùng package vn.marvelvn.app, versionCode = github.run_number + 100 (tăng dần
 # chung). Chỉ build khi đổi phần native; đổi web thì không cần APK mới (WebView
 # tải web từ server). Commit có "[force-update]" → app bắt buộc cập nhật.
 #
@@ -48,7 +48,8 @@ jobs:
             echo "APP_ENV=staging" >> "$GITHUB_ENV"
             echo "CAP_SERVER_URL=https://dvtmarvelvn.8ternal.com" >> "$GITHUB_ENV"
           fi
-          echo "VERSION_CODE=${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          # +100: luôn cao hơn APK build tay ở máy (versionCode 1-99)
+          echo "VERSION_CODE=$((GITHUB_RUN_NUMBER + 100))" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
         with:
