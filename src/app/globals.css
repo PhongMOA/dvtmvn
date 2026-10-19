@@ -276,13 +276,13 @@ body.barcode-scanner-active .barcode-scanner-ui {
 .doom-pupils,
 .doom-lid,
 .doom-eye-glow { transform-box: view-box; }
-.doom-head { transform-origin: 120px 200px; }
+.doom-head { transform-origin: 130px 417px; }
 .doom-pupils {
   transform: translate(var(--doom-look-x, 0), var(--doom-look-y, 0));
   transition: transform 0.35s ease;
 }
-.doom-eyes { transform-origin: 120px 129px; transition: opacity 0.6s ease, transform 0.3s ease; }
-.doom-lid { transform-origin: 120px 112px; transform: scaleY(0); }
+.doom-eyes { transform-origin: 130px 150px; transition: opacity 0.6s ease, transform 0.3s ease; }
+.doom-lid { transform-origin: 130px 127px; transform: scaleY(0); }
 .doom-beam,
 .doom-zzz { opacity: 0; }
 

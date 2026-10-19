@@ -138,7 +138,7 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <div className="flex items-center justify-center bg-[var(--kiosk-bg)] p-4 md:w-2/5">
-          <DoomMascot mood={mood} glow={glow} look={look} className="size-48 md:size-80" />
+          <DoomMascot mood={mood} glow={glow} look={look} className="h-56 w-auto md:h-[26rem]" />
         </div>
 
         <div
