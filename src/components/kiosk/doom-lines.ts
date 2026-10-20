@@ -56,8 +56,7 @@ export function doomLine(m: DoomMoment): DoomLine {
           tone: "warn",
         };
       }
-      const gift = view.shirts ? " Nhớ nhận áo — phần thưởng của Doom." : "";
-      return { text: `Được lắm, ${view.userName}. Doom chấp thuận — vào đi trước khi ta đổi ý!${gift}`, tone: "success" };
+      return { text: `Được lắm, ${view.userName}. Doom chấp thuận — vào đi trước khi ta đổi ý!`, tone: "success" };
     }
   }
 }

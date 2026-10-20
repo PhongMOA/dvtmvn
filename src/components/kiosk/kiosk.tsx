@@ -143,7 +143,6 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
             ? "success"
             : "idle"
           : "idle";
-  const glow = screen.name === "done" && screen.view.shirts ? "#ffd23f" : undefined;
   const line = doomLine(
     screen.name === "home"
       ? { kind: "home", tick: homeTick }
@@ -185,7 +184,6 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
           <DoomMascot
             ref={mascotRef}
             mood={mood}
-            glow={glow}
             look={look}
             className="h-48 min-h-0 w-auto shrink landscape:h-[min(56vh,26rem)]"
           />
@@ -289,11 +287,6 @@ function ResultPanel({ view, onDone }: { view: KioskView; onDone: () => void }) 
         </p>
       )}
       {view.combos.length > 0 && <p className="text-lg text-foreground/80">{view.combos.join(" · ")}</p>}
-      {view.shirts && (
-        <p className="rounded-xl border border-amber-300/60 px-4 py-2 text-lg text-amber-300">
-          Nhớ nhận áo tại quầy: {view.shirts}
-        </p>
-      )}
 
       <DoneButton onClick={onDone} />
     </div>
