@@ -333,7 +333,7 @@ body.barcode-scanner-active .barcode-scanner-ui {
    box-shadow khổng lồ tô màu nền kiosk cho phần còn lại của panel (panel có
    overflow-hidden). Trên web, video nằm bên trong ô. */
 .kiosk {
-  --kiosk-bg: #0b1630;
+  --kiosk-bg: var(--background);
   overscroll-behavior: none;
 }
 .kiosk-camera-hole {

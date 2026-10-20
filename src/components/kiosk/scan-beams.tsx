@@ -19,6 +19,7 @@ export function ScanBeams({
 }: {
   rootRef: RefObject<HTMLElement | null>;
   mascotRef: RefObject<SVGSVGElement | null>;
+  /** Màu CSS bất kỳ, kể cả var(--token). */
   color: string;
 }) {
   const gradId = `beam-${useId().replace(/:/g, "")}`;
@@ -78,8 +79,8 @@ export function ScanBeams({
     >
       <defs>
         <linearGradient id={gradId} x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0" stopColor={color} stopOpacity="0.85" />
-          <stop offset="1" stopColor={color} stopOpacity="0.2" />
+          <stop offset="0" style={{ stopColor: color }} stopOpacity="0.85" />
+          <stop offset="1" style={{ stopColor: color }} stopOpacity="0.2" />
         </linearGradient>
       </defs>
       <g className="kiosk-beams-pulse" fill={`url(#${gradId})`}>

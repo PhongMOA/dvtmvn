@@ -8,7 +8,7 @@ import { kioskCheckinQr, type KioskView } from "@/app/actions/checkin";
 import { formatCheckinTime } from "@/components/scan/checkin-scan";
 import { useIsNativeApp } from "@/lib/is-native-app";
 import { cn } from "@/lib/utils";
-import { DOOM_GLOW, DoomMascot, type MascotMood } from "./mascot";
+import { DoomMascot, type MascotMood } from "./mascot";
 import { ScanBeams } from "./scan-beams";
 
 // Camera chỉ chạy ở client + kéo theo @zxing -> tách bundle, không SSR.
@@ -132,20 +132,20 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
       ref={rootRef}
       onPointerDown={onPointerDown}
       className={cn(
-        "kiosk barcode-scanner-ui fixed inset-0 z-[70] flex touch-none select-none flex-col text-white",
+        "kiosk barcode-scanner-ui fixed inset-0 z-[70] flex touch-none select-none flex-col text-foreground",
         // Đang quét trên app: camera native nằm sau WebView -> nền phải trong suốt.
         scanning && isNative ? "bg-transparent" : "bg-[var(--kiosk-bg)]",
       )}
     >
-      <header className="flex items-center justify-between gap-4 bg-[var(--kiosk-bg)] px-6 py-4">
+      <header className="flex items-center justify-between gap-4 border-b border-border bg-[var(--kiosk-bg)] px-6 py-4">
         <div className="min-w-0">
           <p className="font-heading text-xl tracking-wide text-primary">MARVELVN · CHECK-IN</p>
-          <p className="truncate text-sm text-white/70">
+          <p className="truncate text-sm text-muted-foreground">
             {title} · {subtitle}
           </p>
         </div>
         {/* Phase 4 thay bằng thoát có PIN */}
-        <Link href="/kiosk" className="shrink-0 text-xs text-white/30">
+        <Link href="/kiosk" className="shrink-0 text-xs text-muted-foreground/60">
           Thoát
         </Link>
       </header>
@@ -177,7 +177,7 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
               >
                 Check-in bằng QR
               </button>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-muted-foreground">
                 Mở “Vé của tôi” trên điện thoại để lấy mã QR.
               </p>
             </div>
@@ -191,11 +191,11 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
                 <KioskCamera onCode={onCode} onError={setCameraError} />
               )}
               <div className="relative mt-auto flex w-full items-center justify-between gap-4">
-                <p className="rounded-xl bg-black/60 px-4 py-2 text-lg">Đưa mã QR vào camera</p>
+                <p className="rounded-xl border border-border bg-background/80 px-4 py-2 text-lg">Đưa mã QR vào camera</p>
                 <button
                   type="button"
                   onClick={goHome}
-                  className="rounded-xl bg-white/15 px-6 py-3 text-lg font-medium active:scale-95"
+                  className="rounded-xl bg-secondary text-secondary-foreground px-6 py-3 text-lg font-medium active:scale-95"
                 >
                   Quay lại
                 </button>
@@ -209,7 +209,7 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
 
           {screen.name === "error" && (
             <div className="flex w-full max-w-md flex-col items-center gap-4 text-center">
-              <p className="text-2xl font-semibold text-red-400">{screen.message}</p>
+              <p className="text-2xl font-semibold text-destructive">{screen.message}</p>
               <p className="text-xl">Vui lòng gặp nhân viên để được hỗ trợ.</p>
               <DoneButton onClick={goHome} />
             </div>
@@ -217,7 +217,7 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
         </div>
       </div>
 
-      {scanning && !cameraError && <ScanBeams rootRef={rootRef} mascotRef={mascotRef} color={DOOM_GLOW} />}
+      {scanning && !cameraError && <ScanBeams rootRef={rootRef} mascotRef={mascotRef} color="var(--primary)" />}
 
       {/* Máy đang dựng đứng (khoá xoay không được, vd. trình duyệt) -> nhắc xoay ngang */}
       <div className="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-4 bg-[var(--kiosk-bg)] p-8 text-center portrait:flex">
@@ -243,13 +243,13 @@ function ResultPanel({ view, onDone }: { view: KioskView; onDone: () => void }) 
       )}
 
       <div>
-        <p className="text-sm uppercase tracking-widest text-white/60">{view.tickets} vé · Ghế của bạn</p>
+        <p className="text-sm uppercase tracking-widest text-muted-foreground">{view.tickets} vé · Ghế của bạn</p>
         {view.seats.length > 0 ? (
           <p className="font-heading text-5xl tracking-wide text-primary md:text-6xl">
             {view.seats.join(" · ")}
           </p>
         ) : (
-          <p className="text-xl text-white/70">Chưa có ghế</p>
+          <p className="text-xl text-muted-foreground">Chưa có ghế</p>
         )}
       </div>
 
@@ -258,7 +258,7 @@ function ResultPanel({ view, onDone }: { view: KioskView; onDone: () => void }) 
           Bạn chưa chọn đủ ghế ({view.seats.length}/{view.tickets}) — vui lòng gặp nhân viên.
         </p>
       )}
-      {view.combos.length > 0 && <p className="text-lg text-white/80">{view.combos.join(" · ")}</p>}
+      {view.combos.length > 0 && <p className="text-lg text-foreground/80">{view.combos.join(" · ")}</p>}
       {view.shirts && (
         <p className="rounded-xl border border-amber-300/60 px-4 py-2 text-lg text-amber-300">
           Nhớ nhận áo tại quầy: {view.shirts}
@@ -275,7 +275,7 @@ function DoneButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="mt-2 rounded-xl bg-white/15 px-10 py-3 text-xl font-medium active:scale-95"
+      className="mt-2 rounded-xl bg-secondary text-secondary-foreground px-10 py-3 text-xl font-medium active:scale-95"
     >
       Xong
     </button>
