@@ -4,12 +4,20 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ScreenOrientation } from "@capacitor/screen-orientation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { kioskCheckinQr, type KioskView } from "@/app/actions/checkin";
+import {
+  kioskCheckinQr,
+  kioskConfirmPhone,
+  kioskLookupPhone,
+  type KioskPhonePreview,
+  type KioskView,
+} from "@/app/actions/checkin";
+import { Logo } from "@/components/logo";
 import { formatCheckinTime } from "@/components/scan/checkin-scan";
 import { useIsNativeApp } from "@/lib/is-native-app";
 import { cn } from "@/lib/utils";
 import { DoomMascot, type MascotMood } from "./mascot";
-import { doomLine } from "./doom-lines";
+import { doomLine, type DoomMoment } from "./doom-lines";
+import { PhoneKeypad } from "./phone-keypad";
 import { ScanBeams } from "./scan-beams";
 import { SpeechBubble } from "./speech-bubble";
 
@@ -25,11 +33,14 @@ const KIOSK_ERROR: Record<string, string> = {
   NOT_PAID: "Đơn hàng chưa được thanh toán.",
   WRONG_EVENT: "Vé này thuộc suất chiếu khác.",
   NO_TICKET: "Đơn hàng không có vé xem phim cho suất này.",
+  AMBIGUOUS: "Số điện thoại này khớp nhiều tài khoản.",
 };
 
 type Screen =
   | { name: "home" }
   | { name: "scanning" }
+  | { name: "phone" }
+  | { name: "phone-confirm"; phone: string; preview: KioskPhonePreview }
   | { name: "checking" }
   | { name: "done"; view: KioskView }
   | { name: "error"; code: string; message: string };
@@ -44,11 +55,12 @@ const RESCAN_COOLDOWN_MS = 4000;
 
 /**
  * Màn hình kiosk tự check-in (máy tính bảng đặt ở cửa rạp, đăng nhập tài
- * khoản staff). Khách chạm "Check-in bằng QR" -> giơ QR vé (/my-tickets) trước
- * camera TRƯỚC -> check-in luôn + hiện tên, ghế, combo. Phủ toàn màn hình đè
- * lên header/footer của layout gốc.
+ * khoản staff). Khách chọn:
+ * - "Quét mã QR" -> giơ QR vé (/my-tickets) trước camera TRƯỚC -> check-in luôn.
+ * - "Nhập số điện thoại" -> bàn phím số -> xác nhận tên đã che -> check-in.
+ * Xong hiện tên, ghế, combo. Phủ toàn màn hình đè lên header/footer gốc.
  */
-export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: string; subtitle: string }) {
+export function Kiosk({ eventId }: { eventId: string }) {
   const isNative = useIsNativeApp();
   const [screen, setScreen] = useState<Screen>({ name: "home" });
   const [look, setLook] = useState<{ x: number; y: number } | null>(null);
@@ -68,18 +80,19 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
     };
   }, []);
 
-  const onCode = useCallback(
-    async (code: string) => {
-      if (busyRef.current || isRecent(lastRef.current, code)) return;
+  // Gọi server, hiện "đang kiểm tra" trong lúc chờ; lỗi -> màn lỗi chung.
+  const run = useCallback(
+    async <T,>(
+      call: () => Promise<{ ok: true; value: T } | { ok: false; error: string }>,
+      onOk: (value: T) => void,
+    ) => {
+      if (busyRef.current) return;
       busyRef.current = true;
-      lastRef.current = { code, at: Date.now() };
       setScreen({ name: "checking" });
       try {
-        const res = await kioskCheckinQr(code, eventId);
-        if (res.ok) {
-          if (res.value.justCheckedIn) celebrate();
-          setScreen({ name: "done", view: res.value });
-        } else {
+        const res = await call();
+        if (res.ok) onOk(res.value);
+        else {
           setScreen({
             name: "error",
             code: res.error,
@@ -92,8 +105,30 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
         busyRef.current = false;
       }
     },
-    [eventId],
+    [],
   );
+
+  const showDone = useCallback((view: KioskView) => {
+    if (view.justCheckedIn) celebrate();
+    setScreen({ name: "done", view });
+  }, []);
+
+  const onCode = useCallback(
+    (code: string) => {
+      if (busyRef.current || isRecent(lastRef.current, code)) return;
+      lastRef.current = { code, at: Date.now() };
+      void run(() => kioskCheckinQr(code, eventId), showDone);
+    },
+    [eventId, run, showDone],
+  );
+
+  const onPhone = (phone: string) =>
+    void run(
+      () => kioskLookupPhone(phone, eventId),
+      (preview) => setScreen({ name: "phone-confirm", phone, preview }),
+    );
+
+  const onConfirmPhone = (phone: string) => void run(() => kioskConfirmPhone(phone, eventId), showDone);
 
   const goHome = useCallback(() => {
     setCameraError(null);
@@ -143,17 +178,7 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
             ? "success"
             : "idle"
           : "idle";
-  const line = doomLine(
-    screen.name === "home"
-      ? { kind: "home", tick: homeTick }
-      : scanning
-        ? { kind: cameraError ? "camera-error" : "scanning" }
-        : screen.name === "checking"
-          ? { kind: "checking" }
-          : screen.name === "done"
-            ? { kind: "done", view: screen.view }
-            : { kind: "error", code: screen.code },
-  );
+  const line = doomLine(doomMoment(screen, homeTick, cameraError));
 
   return (
     <div
@@ -165,21 +190,14 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
         scanning && isNative ? "bg-transparent" : "bg-[var(--kiosk-bg)]",
       )}
     >
-      <header className="flex items-center justify-between gap-4 border-b border-border bg-[var(--kiosk-bg)] px-6 py-4">
-        <div className="min-w-0">
-          <p className="font-heading text-xl tracking-wide text-primary">MARVELVN · CHECK-IN</p>
-          <p className="truncate text-sm text-muted-foreground">
-            {title} · {subtitle}
-          </p>
-        </div>
-        {/* Phase 4 thay bằng thoát có PIN */}
-        <Link href="/kiosk" className="shrink-0 text-xs text-muted-foreground/60">
-          Thoát
-        </Link>
-      </header>
+      {/* Logo góc trái, nút thoát mờ góc phải (Phase 4 thay bằng thoát có PIN) */}
+      <Logo className="pointer-events-none absolute left-5 top-4 z-20 h-11" />
+      <Link href="/kiosk" className="absolute right-5 top-4 z-20 text-xs text-muted-foreground/50">
+        Thoát
+      </Link>
 
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-        <div className="flex min-h-0 flex-col items-center justify-center gap-5 bg-[var(--kiosk-bg)] p-4 landscape:w-2/5">
+        <div className="flex min-h-0 flex-col items-center justify-center gap-1 bg-[var(--kiosk-bg)] px-4 pb-4 pt-16 landscape:w-2/5">
           <SpeechBubble line={line} />
           <DoomMascot
             ref={mascotRef}
@@ -196,18 +214,47 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
           )}
         >
           {screen.name === "home" && (
-            <div className="flex w-full max-w-md flex-col items-center gap-6 text-center">
-              <p className="text-2xl font-semibold">Xin chào! Mời bạn check-in</p>
+            <div className="flex w-full max-w-xs flex-col items-stretch gap-3 text-center">
+              <p className="mb-2 font-heading text-3xl tracking-wide">Mời bạn check-in</p>
               <button
                 type="button"
                 onClick={() => setScreen({ name: "scanning" })}
-                className="w-full rounded-2xl bg-primary px-8 py-6 text-2xl font-bold text-primary-foreground shadow-lg active:scale-95"
+                className="kiosk-btn kiosk-btn-primary"
               >
-                Check-in bằng QR
+                <QrIcon /> Quét mã QR
               </button>
-              <p className="text-sm text-muted-foreground">
-                Mở “Vé của tôi” trên điện thoại để lấy mã QR.
+              <button
+                type="button"
+                onClick={() => setScreen({ name: "phone" })}
+                className="kiosk-btn kiosk-btn-outline"
+              >
+                <PhoneIcon /> Nhập số điện thoại
+              </button>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Mã QR nằm trong mục “Vé của tôi” trên điện thoại.
               </p>
+            </div>
+          )}
+
+          {screen.name === "phone" && <PhoneKeypad onSubmit={onPhone} onCancel={goHome} />}
+
+          {screen.name === "phone-confirm" && (
+            <div className="flex w-full max-w-sm flex-col items-center gap-3 text-center">
+              <p className="text-sm uppercase tracking-widest text-muted-foreground">Có phải bạn là</p>
+              <p className="font-heading text-4xl tracking-wide text-primary">{screen.preview.maskedName}</p>
+              <p className="text-muted-foreground">{screen.preview.tickets} vé</p>
+              <div className="mt-3 flex w-full gap-2">
+                <button type="button" onClick={goHome} className="kiosk-btn kiosk-btn-ghost flex-1">
+                  Không phải
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onConfirmPhone(screen.phone)}
+                  className="kiosk-btn kiosk-btn-primary flex-[2]"
+                >
+                  Đúng, check-in
+                </button>
+              </div>
             </div>
           )}
 
@@ -219,26 +266,22 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
                 <KioskCamera onCode={onCode} onError={setCameraError} />
               )}
               <div className="relative mt-auto flex w-full items-center justify-between gap-4">
-                <p className="rounded-xl border border-border bg-background/80 px-4 py-2 text-lg">Đưa mã QR vào camera</p>
-                <button
-                  type="button"
-                  onClick={goHome}
-                  className="rounded-xl bg-secondary text-secondary-foreground px-6 py-3 text-lg font-medium active:scale-95"
-                >
+                <p className="rounded-xl border border-border bg-background/80 px-4 py-2">Đưa mã QR vào camera</p>
+                <button type="button" onClick={goHome} className="kiosk-btn kiosk-btn-ghost">
                   Quay lại
                 </button>
               </div>
             </>
           )}
 
-          {screen.name === "checking" && <p className="text-2xl">Đang kiểm tra vé...</p>}
+          {screen.name === "checking" && <p className="text-xl text-muted-foreground">Đang kiểm tra vé...</p>}
 
           {screen.name === "done" && <ResultPanel view={screen.view} onDone={goHome} />}
 
           {screen.name === "error" && (
             <div className="flex w-full max-w-md flex-col items-center gap-4 text-center">
               <p className="text-2xl font-semibold text-destructive">{screen.message}</p>
-              <p className="text-xl">Vui lòng gặp nhân viên để được hỗ trợ.</p>
+              <p className="text-lg text-muted-foreground">Vui lòng gặp nhân viên để được hỗ trợ.</p>
               <DoneButton onClick={goHome} />
             </div>
           )}
@@ -295,13 +338,49 @@ function ResultPanel({ view, onDone }: { view: KioskView; onDone: () => void }) 
 
 function DoneButton({ onClick }: { onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-2 rounded-xl bg-secondary text-secondary-foreground px-10 py-3 text-xl font-medium active:scale-95"
-    >
+    <button type="button" onClick={onClick} className="kiosk-btn kiosk-btn-ghost mt-2 min-w-36">
       Xong
     </button>
+  );
+}
+
+function doomMoment(screen: Screen, homeTick: number, cameraError: string | null): DoomMoment {
+  switch (screen.name) {
+    case "home":
+      return { kind: "home", tick: homeTick };
+    case "scanning":
+      return { kind: cameraError ? "camera-error" : "scanning" };
+    case "phone":
+      return { kind: "phone" };
+    case "phone-confirm":
+      return {
+        kind: "phone-confirm",
+        name: screen.preview.maskedName,
+        alreadyCheckedIn: screen.preview.alreadyCheckedIn,
+      };
+    case "checking":
+      return { kind: "checking" };
+    case "done":
+      return { kind: "done", view: screen.view };
+    case "error":
+      return { kind: "error", code: screen.code };
+  }
+}
+
+function QrIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2" />
+    </svg>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+      <path d="M10.5 18h3" />
+    </svg>
   );
 }
 
