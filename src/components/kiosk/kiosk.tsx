@@ -197,13 +197,13 @@ export function Kiosk({ eventId }: { eventId: string }) {
       </Link>
 
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-        <div className="flex min-h-0 flex-col items-center justify-center gap-1 bg-[var(--kiosk-bg)] px-4 pb-4 pt-16 landscape:w-2/5">
+        <div className="flex min-h-0 flex-col items-center justify-center gap-0 bg-[var(--kiosk-bg)] px-4 pb-4 pt-14 landscape:w-2/5">
           <SpeechBubble line={line} />
           <DoomMascot
             ref={mascotRef}
             mood={mood}
             look={look}
-            className="h-48 min-h-0 w-auto shrink landscape:h-[min(56vh,26rem)]"
+            className="h-48 min-h-0 w-full landscape:h-auto landscape:flex-1"
           />
         </div>
 

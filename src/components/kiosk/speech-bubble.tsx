@@ -13,7 +13,7 @@ import type { BubbleShape, DoomLine } from "./doom-lines";
  */
 export function SpeechBubble({ line }: { line: DoomLine }) {
   return (
-    <div aria-live="polite" className="w-full max-w-sm px-3 pb-9 pt-3">
+    <div aria-live="polite" className="w-full max-w-sm shrink-0 px-3 pb-9 pt-3">
       <Bubble key={line.text} line={line} />
     </div>
   );
