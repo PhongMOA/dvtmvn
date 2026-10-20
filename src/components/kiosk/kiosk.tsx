@@ -9,7 +9,9 @@ import { formatCheckinTime } from "@/components/scan/checkin-scan";
 import { useIsNativeApp } from "@/lib/is-native-app";
 import { cn } from "@/lib/utils";
 import { DoomMascot, type MascotMood } from "./mascot";
+import { doomLine } from "./doom-lines";
 import { ScanBeams } from "./scan-beams";
+import { SpeechBubble } from "./speech-bubble";
 
 // Camera chỉ chạy ở client + kéo theo @zxing -> tách bundle, không SSR.
 const KioskCamera = dynamic(() => import("./kiosk-camera").then((m) => m.KioskCamera), {
@@ -30,7 +32,10 @@ type Screen =
   | { name: "scanning" }
   | { name: "checking" }
   | { name: "done"; view: KioskView }
-  | { name: "error"; message: string };
+  | { name: "error"; code: string; message: string };
+
+// Màn chờ: Doom đổi câu thoại sau mỗi khoảng này.
+const HOME_LINE_MS = 7000;
 
 // Màn kết quả tự quay về màn chính sau khoảng này.
 const RESULT_TIMEOUT_MS = 8000;
@@ -75,10 +80,14 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
           if (res.value.justCheckedIn) celebrate();
           setScreen({ name: "done", view: res.value });
         } else {
-          setScreen({ name: "error", message: KIOSK_ERROR[res.error] ?? "Mã QR không hợp lệ." });
+          setScreen({
+            name: "error",
+            code: res.error,
+            message: KIOSK_ERROR[res.error] ?? "Mã QR không hợp lệ.",
+          });
         }
       } catch {
-        setScreen({ name: "error", message: "Mất kết nối máy chủ." });
+        setScreen({ name: "error", code: "NETWORK", message: "Mất kết nối máy chủ." });
       } finally {
         busyRef.current = false;
       }
@@ -98,6 +107,15 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
     const t = setTimeout(goHome, RESULT_TIMEOUT_MS);
     return () => clearTimeout(t);
   }, [showingResult, screen, goHome]);
+
+  // Màn chờ: xoay vòng câu thoại.
+  const [homeTick, setHomeTick] = useState(0);
+  const onHome = screen.name === "home";
+  useEffect(() => {
+    if (!onHome) return;
+    const t = setInterval(() => setHomeTick((n) => n + 1), HOME_LINE_MS);
+    return () => clearInterval(t);
+  }, [onHome]);
 
   // Mắt linh vật liếc theo điểm chạm rồi trở về giữa.
   useEffect(() => {
@@ -126,6 +144,17 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
             : "idle"
           : "idle";
   const glow = screen.name === "done" && screen.view.shirts ? "#ffd23f" : undefined;
+  const line = doomLine(
+    screen.name === "home"
+      ? { kind: "home", tick: homeTick }
+      : scanning
+        ? { kind: cameraError ? "camera-error" : "scanning" }
+        : screen.name === "checking"
+          ? { kind: "checking" }
+          : screen.name === "done"
+            ? { kind: "done", view: screen.view }
+            : { kind: "error", code: screen.code },
+  );
 
   return (
     <div
@@ -151,13 +180,14 @@ export function Kiosk({ eventId, title, subtitle }: { eventId: string; title: st
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-        <div className="flex min-h-0 items-center justify-center bg-[var(--kiosk-bg)] p-4 landscape:w-2/5">
+        <div className="flex min-h-0 flex-col items-center justify-center gap-5 bg-[var(--kiosk-bg)] p-4 landscape:w-2/5">
+          <SpeechBubble line={line} />
           <DoomMascot
             ref={mascotRef}
             mood={mood}
             glow={glow}
             look={look}
-            className="h-56 max-h-full w-auto landscape:h-[min(72vh,30rem)]"
+            className="h-48 min-h-0 w-auto shrink landscape:h-[min(56vh,26rem)]"
           />
         </div>
 

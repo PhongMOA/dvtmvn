@@ -344,6 +344,48 @@ body.barcode-scanner-active .barcode-scanner-ui {
   outline: 3px solid color-mix(in oklab, var(--color-primary) 80%, transparent);
   animation: kiosk-hole-pulse 1.6s ease-in-out infinite;
 }
+/* Ô thoại comic của Doom (speech-bubble.tsx): viền mực, đuôi chĩa xuống đầu
+   linh vật, bóng đổ màu theo data-tone. */
+.kiosk-bubble {
+  --bubble-ink: #111;
+  --bubble-shadow: var(--primary);
+  position: relative;
+  margin: 0;
+  padding: 0.85rem 1.1rem;
+  background: #fff;
+  color: var(--bubble-ink);
+  border: 3px solid var(--bubble-ink);
+  border-radius: 1.25rem;
+  box-shadow: 5px 5px 0 var(--bubble-shadow);
+  font-size: clamp(1rem, 2.4vmin, 1.35rem);
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+  transform-origin: 35% 100%;
+  animation: kiosk-bubble-pop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.kiosk-bubble[data-tone="success"] { --bubble-shadow: var(--primary); }
+.kiosk-bubble[data-tone="warn"] { --bubble-shadow: #f5b301; }
+.kiosk-bubble[data-tone="error"] { --bubble-shadow: var(--destructive); }
+.kiosk-bubble[data-tone="neutral"] { --bubble-shadow: color-mix(in oklab, var(--primary) 55%, transparent); }
+/* Đuôi: ô vuông xoay 45° chỉ lộ 2 cạnh viền phía dưới */
+.kiosk-bubble::after {
+  content: "";
+  position: absolute;
+  left: 32%;
+  bottom: -12px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-right: 3px solid var(--bubble-ink);
+  border-bottom: 3px solid var(--bubble-ink);
+  transform: rotate(45deg);
+}
+@keyframes kiosk-bubble-pop {
+  0% { opacity: 0; transform: scale(0.6) rotate(-3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
 /* Tia quét từ 2 mắt Doom tới ô camera (scan-beams.tsx) */
 .kiosk-beams-pulse {
   mix-blend-mode: screen;
@@ -356,7 +398,8 @@ body.barcode-scanner-active .barcode-scanner-ui {
 }
 @media (prefers-reduced-motion: reduce) {
   .kiosk-camera-hole,
-  .kiosk-beams-pulse {
+  .kiosk-beams-pulse,
+  .kiosk-bubble {
     animation: none;
   }
 }
