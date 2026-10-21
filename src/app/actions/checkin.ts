@@ -22,14 +22,20 @@ import {
 type Fail = { ok: false; error: CheckinError | "FORBIDDEN" };
 
 /** Thông tin kiosk hiện cho khách — bỏ mã đơn, tên đầy đủ chỉ khi quét QR. */
-export type KioskView = Omit<CheckinSummary, "orderCodes" | "maskedName"> & {
+export type KioskView = Omit<CheckinSummary, "orderCodes" | "maskedName" | "image"> & {
   justCheckedIn: boolean;
 };
 
 export type StaffView = CheckinSummary & { justCheckedIn: boolean };
 
-/** Xem trước khi xác nhận SĐT trên kiosk: chỉ tên che + số vé. */
-export type KioskPhonePreview = { maskedName: string; tickets: number; alreadyCheckedIn: boolean };
+/** Xem trước khi xác nhận SĐT trên kiosk: tên che + avatar + số vé + ghế để khách nhận ra mình. */
+export type KioskPhonePreview = {
+  maskedName: string;
+  image: string | null;
+  tickets: number;
+  seats: string[];
+  alreadyCheckedIn: boolean;
+};
 
 async function staffId(): Promise<string | null> {
   try {
@@ -89,8 +95,8 @@ export async function kioskLookupPhone(
   if (!target.ok) return target;
   const summary = await getCheckinSummary(target.value);
   if (!summary.ok) return summary;
-  const { maskedName, tickets, alreadyCheckedIn } = summary.value;
-  return { ok: true, value: { maskedName, tickets, alreadyCheckedIn } };
+  const { maskedName, image, tickets, seats, alreadyCheckedIn } = summary.value;
+  return { ok: true, value: { maskedName, image, tickets, seats, alreadyCheckedIn } };
 }
 
 /** Bước 2: khách bấm xác nhận — tra lại theo SĐT (không tin userId từ client). */

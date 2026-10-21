@@ -20,6 +20,8 @@ export type CheckinResult<T> = { ok: true; value: T } | { ok: false; error: Chec
 export type CheckinSummary = {
   userName: string;
   maskedName: string;
+  /** Ảnh đại diện tài khoản (Google...) — null nếu không có. */
+  image: string | null;
   tickets: number;
   seats: string[];
   /** Đã được mở chọn ghế (có SeatAllowance) nhưng chọn chưa đủ ghế cho số vé. */
@@ -147,7 +149,7 @@ export async function getCheckinSummary(
 ): Promise<CheckinResult<CheckinSummary>> {
   const { userId, eventId } = target;
   const [user, orders, bookings, allowance] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, image: true } }),
     eventOrders(target),
     prisma.seatBooking.findMany({ where: { eventId, userId }, select: { seatCode: true } }),
     prisma.seatAllowance.findUnique({
@@ -184,6 +186,7 @@ export async function getCheckinSummary(
     value: {
       userName: name,
       maskedName: maskName(name),
+      image: user.image,
       tickets,
       seats,
       seatsPending: allowance != null && seats.length < tickets,

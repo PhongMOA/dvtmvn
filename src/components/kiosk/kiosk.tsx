@@ -12,6 +12,7 @@ import {
   type KioskView,
 } from "@/app/actions/checkin";
 import { Logo } from "@/components/logo";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCheckinTime } from "@/components/scan/checkin-scan";
 import { useIsNativeApp } from "@/lib/is-native-app";
 import { cn } from "@/lib/utils";
@@ -241,8 +242,26 @@ export function Kiosk({ eventId }: { eventId: string }) {
           {screen.name === "phone-confirm" && (
             <div className="flex w-full max-w-sm flex-col items-center gap-3 text-center">
               <p className="text-sm uppercase tracking-widest text-muted-foreground">Có phải bạn là</p>
+              <Avatar className="size-24 ring-2 ring-primary/60">
+                {screen.preview.image && (
+                  <AvatarImage
+                    src={screen.preview.image}
+                    alt={screen.preview.maskedName}
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+                <AvatarFallback className="font-heading text-4xl text-primary">
+                  {screen.preview.maskedName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <p className="font-heading text-4xl tracking-wide text-primary">{screen.preview.maskedName}</p>
-              <p className="text-muted-foreground">{screen.preview.tickets} vé</p>
+              <p className="text-muted-foreground">
+                {screen.preview.tickets} vé
+                {screen.preview.seats.length > 0 ? " · Ghế" : " · Chưa chọn ghế"}
+              </p>
+              {screen.preview.seats.length > 0 && (
+                <p className="font-heading text-3xl tracking-wide">{screen.preview.seats.join(" · ")}</p>
+              )}
               <div className="mt-3 flex w-full gap-2">
                 <button type="button" onClick={goHome} className="kiosk-btn kiosk-btn-ghost flex-1">
                   Không phải
