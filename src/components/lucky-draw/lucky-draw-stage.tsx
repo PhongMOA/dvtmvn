@@ -326,7 +326,7 @@ export function LuckyDrawStage({
           <Confetti />
           <div className="relative w-full max-w-2xl rounded-2xl border-2 border-amber-300 bg-gradient-to-b from-amber-500/30 to-zinc-950 p-8 text-center shadow-[0_0_60px_rgba(251,191,36,0.4)]">
             <p className="font-heading text-xl tracking-[0.3em] text-amber-300">
-              🎉 LƯỢT {popup.round}/{totalRounds} — TRÚNG THƯỞNG
+              LƯỢT {popup.round}/{totalRounds} — TRÚNG THƯỞNG
             </p>
             <p className="mt-4 font-heading text-8xl leading-none text-white sm:text-[10rem]">
               {popup.seatCode}
