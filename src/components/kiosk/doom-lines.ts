@@ -14,7 +14,8 @@ export type DoomMoment =
   | { kind: "phone-confirm"; name: string; alreadyCheckedIn: boolean }
   | { kind: "checking" }
   | { kind: "done"; view: KioskView }
-  | { kind: "error"; code: string };
+  | { kind: "error"; code: string }
+  | { kind: "exit-pin" };
 
 // Màn chờ: xoay vòng để kiosk không nói mãi 1 câu.
 const HOME_LINES = [
@@ -55,6 +56,12 @@ export function doomLine(m: DoomMoment): DoomLine {
         : { text: `${m.name}… có phải ngươi không? Khai thật đi!`, tone: "neutral", shape: "think" };
     case "checking":
       return { text: "Doom đang thẩm định… im lặng!", tone: "neutral", shape: "think" };
+    case "exit-pin":
+      return {
+        text: "Muốn rời lãnh địa của Doom? Chỉ thuộc hạ biết mật mã mới được đi!",
+        tone: "warn",
+        shape: "speech",
+      };
     case "error":
       return {
         text: ERROR_LINES[m.code] ?? "Mã QR vô dụng! Doom không đọc nổi thứ này.",

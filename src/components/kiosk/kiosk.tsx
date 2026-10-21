@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { App } from "@capacitor/app";
 import { registerPlugin } from "@capacitor/core";
 import { ScreenOrientation } from "@capacitor/screen-orientation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,6 +10,7 @@ import {
   kioskCheckinQr,
   kioskConfirmPhone,
   kioskLookupPhone,
+  verifyKioskExitPin,
   type KioskPhonePreview,
   type KioskView,
 } from "@/app/actions/checkin";
@@ -19,7 +21,7 @@ import { useIsNativeApp } from "@/lib/is-native-app";
 import { cn } from "@/lib/utils";
 import { DoomMascot, type MascotMood } from "./mascot";
 import { doomLine, type DoomMoment } from "./doom-lines";
-import { PhoneKeypad } from "./phone-keypad";
+import { PhoneKeypad, PinKeypad } from "./phone-keypad";
 import { ScanBeams } from "./scan-beams";
 import { SpeechBubble } from "./speech-bubble";
 
@@ -48,7 +50,14 @@ type Screen =
   | { name: "phone-confirm"; phone: string; preview: KioskPhonePreview }
   | { name: "checking" }
   | { name: "done"; view: KioskView }
-  | { name: "error"; code: string; message: string };
+  | { name: "error"; code: string; message: string }
+  | { name: "exit-pin" };
+
+// Nhập sai PIN thoát quá số lần này -> khoá nút trong PIN_LOCK_MS.
+const PIN_MAX_TRIES = 5;
+const PIN_LOCK_MS = 30_000;
+// Màn nhập PIN bỏ dở (khách lỡ bấm Thoát) -> tự về màn chính.
+const PIN_IDLE_MS = 20_000;
 
 // Màn chờ: Doom đổi câu thoại sau mỗi khoảng này.
 const HOME_LINE_MS = 7000;
@@ -87,11 +96,15 @@ export function Kiosk({ eventId }: { eventId: string }) {
 
   // App: ẩn thanh trạng thái + thanh điều hướng/taskbar khi ở kiosk.
   // APK cũ chưa có plugin -> lời gọi bị từ chối, bỏ qua.
+  // Có listener backButton thì Capacitor bỏ hành vi mặc định (lùi trang) ->
+  // khách không dùng nút Back rời kiosk được, chỉ thoát bằng PIN.
   useEffect(() => {
     if (!isNative) return;
     Immersive.enter().catch(() => {});
+    const back = App.addListener("backButton", () => {});
     return () => {
       Immersive.exit().catch(() => {});
+      void back.then((l) => l.remove());
     };
   }, [isNative]);
 
@@ -229,11 +242,15 @@ export function Kiosk({ eventId }: { eventId: string }) {
         scanning && isNative ? "bg-transparent" : "bg-[var(--kiosk-bg)]",
       )}
     >
-      {/* Logo góc trái, nút thoát mờ góc phải (Phase 4 thay bằng thoát có PIN) */}
+      {/* Logo góc trái, nút thoát mờ góc phải (cần PIN nhân viên) */}
       <Logo className="pointer-events-none absolute left-5 top-4 z-20 h-11" />
-      <Link href="/kiosk" className="absolute right-5 top-4 z-20 text-xs text-muted-foreground/50">
+      <button
+        type="button"
+        onClick={() => !busyRef.current && setScreen({ name: "exit-pin" })}
+        className="absolute right-5 top-4 z-20 text-xs text-muted-foreground/50"
+      >
         Thoát
-      </Link>
+      </button>
 
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
         <div className="flex min-h-0 flex-col items-center justify-center gap-0 bg-[var(--kiosk-bg)] px-4 pb-4 pt-14 landscape:w-2/5">
@@ -276,6 +293,8 @@ export function Kiosk({ eventId }: { eventId: string }) {
           )}
 
           {screen.name === "phone" && <PhoneKeypad onSubmit={onPhone} onCancel={goHome} />}
+
+          {screen.name === "exit-pin" && <ExitPin onCancel={goHome} />}
 
           {screen.name === "phone-confirm" && (
             <div className="flex w-full max-w-sm flex-col items-center gap-3 text-center">
@@ -393,6 +412,52 @@ function ResultPanel({ view, onDone }: { view: KioskView; onDone: () => void }) 
   );
 }
 
+const PIN_ERROR: Record<string, string> = {
+  WRONG_PIN: "Sai PIN.",
+  NO_PIN: "Chưa cấu hình PIN thoát (KIOSK_EXIT_PIN).",
+  FORBIDDEN: "Máy kiosk chưa đăng nhập tài khoản nhân viên.",
+};
+
+/** Nhân viên nhập PIN để rời kiosk (gỡ ghim + hiện lại thanh hệ thống khi unmount). */
+function ExitPin({ onCancel }: { onCancel: () => void }) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const triesRef = useRef(0);
+
+  // Khách lỡ bấm Thoát rồi bỏ đi -> tự về màn chính. Mỗi lần nhập lại tính giờ.
+  useEffect(() => {
+    if (pending) return;
+    const t = setTimeout(onCancel, PIN_IDLE_MS);
+    return () => clearTimeout(t);
+  }, [pending, error, onCancel]);
+
+  async function submit(pin: string) {
+    setPending(true);
+    try {
+      const res = await verifyKioskExitPin(pin);
+      if (res.ok) {
+        router.push("/kiosk");
+        return;
+      }
+      setError(PIN_ERROR[res.error] ?? "Sai PIN.");
+      if (res.error === "WRONG_PIN" && ++triesRef.current >= PIN_MAX_TRIES) {
+        triesRef.current = 0;
+        setLocked(true);
+        setError(`Sai quá ${PIN_MAX_TRIES} lần, thử lại sau 30 giây.`);
+        setTimeout(() => setLocked(false), PIN_LOCK_MS);
+      }
+    } catch {
+      setError("Mất kết nối máy chủ.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return <PinKeypad error={error} disabled={pending || locked} onSubmit={submit} onCancel={onCancel} />;
+}
+
 function DoneButton({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className="kiosk-btn kiosk-btn-ghost mt-2 min-w-36">
@@ -421,6 +486,8 @@ function doomMoment(screen: Screen, homeTick: number, cameraError: string | null
       return { kind: "done", view: screen.view };
     case "error":
       return { kind: "error", code: screen.code };
+    case "exit-pin":
+      return { kind: "exit-pin" };
   }
 }
 

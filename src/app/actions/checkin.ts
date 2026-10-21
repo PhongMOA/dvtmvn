@@ -1,5 +1,6 @@
 "use server";
 
+import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/lib/auth-helpers";
 import {
@@ -113,6 +114,22 @@ export async function kioskConfirmPhone(
   if (res.value.justCheckedIn) revalidateEvent(eventId);
   // Tra bằng SĐT → chỉ hiện tên đã che.
   return { ok: true, value: toKioskView(res.value, res.value.maskedName) };
+}
+
+/**
+ * PIN thoát kiosk (env KIOSK_EXIT_PIN) — chỉ so ở server, không gửi PIN xuống
+ * client. Chưa cấu hình -> không cho thoát bằng PIN (nhân viên đóng app).
+ */
+export async function verifyKioskExitPin(
+  pin: string,
+): Promise<{ ok: true } | { ok: false; error: "FORBIDDEN" | "WRONG_PIN" | "NO_PIN" }> {
+  if (!(await staffId())) return { ok: false, error: "FORBIDDEN" };
+  const expected = process.env.KIOSK_EXIT_PIN?.trim();
+  if (!expected) return { ok: false, error: "NO_PIN" };
+  const a = Buffer.from(pin);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return { ok: false, error: "WRONG_PIN" };
+  return { ok: true };
 }
 
 // --- Nhân viên -------------------------------------------------------------

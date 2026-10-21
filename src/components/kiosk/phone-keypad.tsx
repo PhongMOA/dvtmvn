@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 // SĐT VN 10 số; server so 9 số cuối (phoneKey) nên chấp nhận từ 9 số.
 const MIN_DIGITS = 9;
@@ -10,23 +10,84 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"]
 
 /** Bàn phím số trên kiosk (không dùng bàn phím ảo của hệ điều hành). */
 export function PhoneKeypad({ onSubmit, onCancel }: { onSubmit: (phone: string) => void; onCancel: () => void }) {
+  return (
+    <NumberKeypad
+      title="Nhập số điện thoại đặt vé"
+      minDigits={MIN_DIGITS}
+      maxDigits={MAX_DIGITS}
+      render={(d) => formatPhone(d) || <span className="text-muted-foreground/50">0•••••••••</span>}
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+    />
+  );
+}
+
+/** Nhập PIN nhân viên để thoát kiosk — hiện chấm thay vì số. */
+export function PinKeypad({
+  error,
+  disabled,
+  onSubmit,
+  onCancel,
+}: {
+  error: string | null;
+  disabled: boolean;
+  onSubmit: (pin: string) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <NumberKeypad
+      title="Nhân viên nhập PIN để thoát"
+      minDigits={4}
+      maxDigits={8}
+      render={(d) => "•".repeat(d.length) || <span className="text-muted-foreground/50">PIN</span>}
+      error={error}
+      disabled={disabled}
+      submitLabel="Thoát kiosk"
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+    />
+  );
+}
+
+function NumberKeypad({
+  title,
+  minDigits,
+  maxDigits,
+  render,
+  error,
+  disabled = false,
+  submitLabel = "Tiếp tục",
+  onSubmit,
+  onCancel,
+}: {
+  title: string;
+  minDigits: number;
+  maxDigits: number;
+  render: (digits: string) => ReactNode;
+  error?: string | null;
+  disabled?: boolean;
+  submitLabel?: string;
+  onSubmit: (digits: string) => void;
+  onCancel: () => void;
+}) {
   const [digits, setDigits] = useState("");
 
   function press(key: (typeof KEYS)[number]) {
     if (key === "back") setDigits((d) => d.slice(0, -1));
     else if (key === "clear") setDigits("");
-    else setDigits((d) => (d.length < MAX_DIGITS ? d + key : d));
+    else setDigits((d) => (d.length < maxDigits ? d + key : d));
   }
 
   return (
     <div className="flex w-full max-w-xs flex-col items-center gap-4">
-      <p className="text-lg font-semibold">Nhập số điện thoại đặt vé</p>
+      <p className="text-lg font-semibold">{title}</p>
       <p
         aria-live="polite"
         className="h-14 w-full rounded-xl border border-border bg-background/60 px-4 text-center font-mono text-3xl leading-[3.5rem] tracking-[0.15em]"
       >
-        {formatPhone(digits) || <span className="text-muted-foreground/50">0•••••••••</span>}
+        {render(digits)}
       </p>
+      {error && <p className="-mt-2 text-sm text-destructive">{error}</p>}
       <div className="grid w-full grid-cols-3 gap-2">
         {KEYS.map((key) => (
           <button
@@ -50,11 +111,14 @@ export function PhoneKeypad({ onSubmit, onCancel }: { onSubmit: (phone: string) 
         </button>
         <button
           type="button"
-          disabled={digits.length < MIN_DIGITS}
-          onClick={() => onSubmit(digits)}
+          disabled={disabled || digits.length < minDigits}
+          onClick={() => {
+            onSubmit(digits);
+            setDigits("");
+          }}
           className="kiosk-btn kiosk-btn-primary flex-[2]"
         >
-          Tiếp tục
+          {submitLabel}
         </button>
       </div>
     </div>
