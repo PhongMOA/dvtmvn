@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { registerPlugin } from "@capacitor/core";
 import { ScreenOrientation } from "@capacitor/screen-orientation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -26,6 +27,9 @@ import { SpeechBubble } from "./speech-bubble";
 const KioskCamera = dynamic(() => import("./kiosk-camera").then((m) => m.KioskCamera), {
   ssr: false,
 });
+
+// Plugin native trong app (android/.../ImmersivePlugin.java).
+const Immersive = registerPlugin<{ enter(): Promise<void>; exit(): Promise<void> }>("Immersive");
 
 // Câu ngắn cho khách — mọi lỗi đều kèm "Vui lòng gặp nhân viên".
 const KIOSK_ERROR: Record<string, string> = {
@@ -80,6 +84,16 @@ export function Kiosk({ eventId }: { eventId: string }) {
       ScreenOrientation.unlock().catch(() => {});
     };
   }, []);
+
+  // App: ẩn thanh trạng thái + thanh điều hướng/taskbar khi ở kiosk.
+  // APK cũ chưa có plugin -> lời gọi bị từ chối, bỏ qua.
+  useEffect(() => {
+    if (!isNative) return;
+    Immersive.enter().catch(() => {});
+    return () => {
+      Immersive.exit().catch(() => {});
+    };
+  }, [isNative]);
 
   // Kiosk đứng cả buổi: giữ màn hình luôn sáng (Screen Wake Lock, chạy cả
   // trong WebView app). Hệ thống tự nhả khóa khi app/tab ẩn -> xin lại khi hiện.
