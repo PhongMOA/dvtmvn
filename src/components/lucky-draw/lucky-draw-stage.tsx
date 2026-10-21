@@ -25,18 +25,42 @@ type Phase = "idle" | "spinning" | "popup";
 
 const BLINK_MS = 1400;
 
+type DemoSeats = Record<string, { displayName: string; maskedPhone: string | null }>;
+
+/** Quay thử: chọn ghế ngay ở client, không lưu đâu cả. */
+function demoSpin(seats: DemoSeats, pool: string[], round: number, totalRounds: number): SpinResult {
+  const seatCode = pool[Math.floor(Math.random() * pool.length)];
+  return {
+    ok: true,
+    pool,
+    totalRounds,
+    winner: {
+      id: crypto.randomUUID(),
+      round,
+      seatCode,
+      displayName: seats[seatCode]?.displayName ?? seatCode,
+      maskedPhone: seats[seatCode]?.maskedPhone ?? null,
+      voided: false,
+      createdAt: new Date(),
+    },
+  };
+}
+
 export function LuckyDrawStage({
   eventId,
   eventTitle,
   totalRounds,
   initialWinners,
   initialEligible,
+  demo,
 }: {
   eventId: string;
   eventTitle: string;
   totalRounds: number;
   initialWinners: LuckyDrawWinnerView[];
   initialEligible: string[];
+  /** Quay thử: chọn ghế ngay ở client, KHÔNG gọi server, không lưu kết quả. */
+  demo?: DemoSeats;
 }) {
   const [winners, setWinners] = useState(initialWinners);
   const [eligible, setEligible] = useState(initialEligible);
@@ -118,7 +142,7 @@ export function LuckyDrawStage({
     setBigCode(null);
 
     const box: { result?: SpinResult } = {};
-    spinLuckyDraw(eventId).then(
+    (demo ? Promise.resolve(demoSpin(demo, eligible, round, totalRounds)) : spinLuckyDraw(eventId)).then(
       (r) => (box.result = r),
       () => (box.result = { ok: false, error: "Mất kết nối, vui lòng thử lại." }),
     );
@@ -181,7 +205,7 @@ export function LuckyDrawStage({
       return;
     }
     const target = popup;
-    const result = await voidLuckyDrawWinner(eventId, target.id);
+    const result = demo ? { ok: true as const } : await voidLuckyDrawWinner(eventId, target.id);
     if (!result.ok) {
       toast.error(result.error);
       return;
@@ -224,7 +248,10 @@ export function LuckyDrawStage({
     >
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="font-heading text-sm tracking-[0.3em] text-amber-300">QUAY SỐ MAY MẮN</p>
+          <p className="font-heading text-sm tracking-[0.3em] text-amber-300">
+            QUAY SỐ MAY MẮN
+            {demo && <span className="ml-3 text-white/50">· QUAY THỬ, KHÔNG LƯU KẾT QUẢ</span>}
+          </p>
           <h1 className="truncate font-heading text-2xl tracking-wide sm:text-3xl">{eventTitle}</h1>
         </div>
         <div className="flex shrink-0 items-center gap-4">
