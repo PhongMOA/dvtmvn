@@ -1428,7 +1428,7 @@ var LOGO = '<svg class="ulogo" viewBox="0 0 40 40" aria-hidden="true"><rect clas
 
 // Sự kiện mẫu cho cột trái
 var EV = { name: 'Đa vũ trụ MarvelVN', theme: 'Offline Avengers: Doomsday',
-  agenda: [['08:30', 'Đón khách, check-in'], ['09:30', 'Khai mạc'], ['10:15', 'Trải nghiệm kiosk Uni'], ['11:30', 'Giao lưu, chụp ảnh']] };
+  agenda: [['18:00', 'Check-in'], ['18:45', 'Vào rạp']] };
 
 // demo: bản xem thử một trang; control: trang điều khiển, gửi lệnh sang kiosk; kiosk: màn toàn màn hình, nhận lệnh
 var MODE = document.documentElement.dataset.mode || 'demo';
@@ -1455,7 +1455,7 @@ new ResizeObserver(fit).observe(screen); fit();
 function tile(cls, ic, t, s) { return '<div class="tile ' + cls + '"><span class="ic">' + ic + '</span><span><div class="t">' + t + '</div><div class="s">' + s + '</div></span></div>'; }
 function renderAside() {
   var a = $('#aside');
-  var items = EV.agenda.slice(1, 3).map(function (x, i) { return '<div class="it' + (i === 0 ? ' cur' : '') + '"><span class="t">' + x[0] + '</span><span class="x">' + esc(x[1]) + '</span></div>'; }).join('');
+  var items = EV.agenda.slice(0, 2).map(function (x, i) { return '<div class="it' + (i === 0 ? ' cur' : '') + '"><span class="t">' + x[0] + '</span><span class="x">' + esc(x[1]) + '</span></div>'; }).join('');
   a.innerHTML = '<div class="evn">' + esc(EV.name) + '</div><div class="ev">' + esc(EV.theme) + '</div><div class="now">' + items + '</div>';
 }
 function expr(e) { S.expr = e; face.setExpr(e); markExpr(); }
