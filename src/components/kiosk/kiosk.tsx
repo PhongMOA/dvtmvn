@@ -81,6 +81,30 @@ export function Kiosk({ eventId }: { eventId: string }) {
     };
   }, []);
 
+  // Kiosk đứng cả buổi: giữ màn hình luôn sáng (Screen Wake Lock, chạy cả
+  // trong WebView app). Hệ thống tự nhả khóa khi app/tab ẩn -> xin lại khi hiện.
+  useEffect(() => {
+    let lock: WakeLockSentinel | null = null;
+    let released = false;
+    const acquire = async () => {
+      if (document.visibilityState !== "visible" || !("wakeLock" in navigator)) return;
+      try {
+        const l = await navigator.wakeLock.request("screen");
+        if (released) void l.release();
+        else lock = l;
+      } catch {
+        /* máy từ chối (pin yếu...) thì thôi */
+      }
+    };
+    void acquire();
+    document.addEventListener("visibilitychange", acquire);
+    return () => {
+      released = true;
+      document.removeEventListener("visibilitychange", acquire);
+      void lock?.release();
+    };
+  }, []);
+
   // Gọi server, hiện "đang kiểm tra" trong lúc chờ; lỗi -> màn lỗi chung.
   const run = useCallback(
     async <T,>(
