@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { TicketQr } from "@/components/ticket-qr";
 
 /**
- * CHỈ STAGING (dữ liệu seed giả), chỉ admin — my-tickets kiểm tra cả 2: QR +
+ * CHỈ STAGING (dữ liệu seed giả), chỉ admin/staff — my-tickets kiểm tra cả 2: QR +
  * SĐT của 10 khách khác nhau có vé, chưa check-in, để thử quét QR / nhập SĐT
  * trên kiosk.
  */
