@@ -100,6 +100,12 @@ export default async function AdminEventsPage() {
                     >
                       Chọn ghế
                     </Link>
+                    <Link
+                      href={`/admin/events/${event.id}/lucky-draw`}
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    >
+                      Quay số
+                    </Link>
                     {event.status === "open" ? (
                       <form action={closeEvent.bind(null, event.id)}>
                         <Button type="submit" variant="secondary" size="sm">

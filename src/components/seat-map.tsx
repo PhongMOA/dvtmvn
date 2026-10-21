@@ -35,6 +35,16 @@ export type SeatMapProps = {
   occupants?: Record<string, string>; // admin: mã ghế -> tên người ngồi
   occupantGroups?: Record<string, string>; // admin: mã ghế -> người mua (hover tô cả nhóm)
   onSeatClick?: (seat: Seat) => void;
+  drawMode?: SeatDrawMode; // màn quay số may mắn: thay toàn bộ cách tô ghế
+};
+
+/** Trạng thái ghế trên màn quay số (xem components/lucky-draw/lucky-draw-stage.tsx). */
+export type SeatDrawMode = {
+  eligible: Set<string>; // còn được quay
+  winners: Set<string>; // đã trúng
+  voided: Set<string>; // trúng nhưng vắng mặt
+  active: string | null; // ô đang sáng
+  blink?: boolean; // ô active đang nhấp nháy (vừa dừng)
 };
 
 export function SeatMap({
@@ -46,6 +56,7 @@ export function SeatMap({
   occupants,
   occupantGroups,
   onSeatClick,
+  drawMode,
 }: SeatMapProps) {
   // Admin hover ghế đã có người: tô mọi ghế cùng người mua + tooltip tên.
   // Tooltip position:fixed theo toạ độ ghế để không bị khung overflow cắt.
@@ -55,7 +66,33 @@ export function SeatMap({
     ? Object.keys(occupantGroups!).filter((code) => occupantGroups![code] === hoverGroup)
     : [];
 
+  function renderDrawSeat(seat: Seat, mode: SeatDrawMode) {
+    const isActive = mode.active === seat.code;
+    return (
+      <div
+        key={seat.code}
+        className={cn(
+          // Không transition: ô nhảy 50ms/bước, có transition sẽ nhoè thành vệt.
+          "flex size-7 shrink-0 items-center justify-center rounded-sm border text-[9px] font-medium leading-none",
+          // Màu cố định cho nền tối của màn chiếu, không theo theme.
+          "border-white/10 text-white/25",
+          seat.type === "blocked" && "opacity-30",
+          mode.eligible.has(seat.code) && "border-sky-400/70 bg-sky-400/15 text-white",
+          mode.voided.has(seat.code) && "border-white/20 bg-white/5 text-white/40 line-through",
+          mode.winners.has(seat.code) &&
+            "border-amber-300 bg-amber-400 text-amber-950 shadow-[0_0_8px_rgba(251,191,36,0.6)]",
+          isActive &&
+            "z-10 scale-125 border-white bg-white text-black shadow-[0_0_16px_6px_rgba(255,255,255,0.75)] motion-reduce:scale-100 motion-reduce:shadow-none",
+          isActive && mode.blink && "animate-pulse",
+        )}
+      >
+        {seat.code}
+      </div>
+    );
+  }
+
   function renderSeat(seat: Seat) {
+    if (drawMode) return renderDrawSeat(seat, drawMode);
     const isMine = mine?.has(seat.code) ?? false;
     const isPicked = picked?.has(seat.code) ?? false;
     const isTaken = taken.has(seat.code) && !isMine;

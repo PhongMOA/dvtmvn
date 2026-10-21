@@ -126,6 +126,41 @@ model Event {
   seatBatchSize   Int       @default(1)
   seatAllowances  SeatAllowance[]
   seatBookings    SeatBooking[]
+  luckyDraw       LuckyDraw?
+}
+
+// Quay số may mắn trên sơ đồ ghế (xem src/lib/lucky-draw.ts). 1 event = 1
+// phiên (eventId unique); xoá phiên = quay lại từ đầu. Pool = mọi SeatBooking
+// của event trừ ghế đã có trong LuckyDrawWinner (kể cả lượt bị huỷ vì vắng).
+model LuckyDraw {
+  id          String            @id @default(uuid())
+  eventId     String            @unique
+  totalRounds Int
+  createdBy   String
+  createdAt   DateTime          @default(now())
+  event       Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  winners     LuckyDrawWinner[]
+}
+
+// 1 lượt trúng. Lượt bị huỷ (voided, người trúng vắng mặt) giữ lại để ghế đó
+// không bị quay trúng lần nữa; round được quay lại nên 1 round có thể có
+// nhiều bản ghi nhưng tối đa 1 bản ghi voided = false (partial unique index
+// viết tay trong migration SQL).
+model LuckyDrawWinner {
+  id          String    @id @default(uuid())
+  drawId      String
+  round       Int // 1-based
+  seatCode    String
+  userId      String
+  displayName String // snapshot tên lúc trúng
+  maskedPhone String?
+  voided      Boolean   @default(false)
+  drawnBy     String
+  createdAt   DateTime  @default(now())
+  draw        LuckyDraw @relation(fields: [drawId], references: [id], onDelete: Cascade)
+
+  @@unique([drawId, seatCode])
+  @@index([drawId, round])
 }
 
 // Quyền chọn ghế của 1 user cho 1 event. Snapshot lúc admin "Chốt danh sách";

@@ -20,6 +20,9 @@ const child = spawn("npx", ["next", "dev"], {
     ...process.env,
     DATABASE_URL: db,
     DIRECT_URL: db,
+    // `.env` đặt AUTH_URL = domain production → đăng nhập Google xong bị trả về
+    // production thay vì localhost.
+    AUTH_URL: "http://localhost:3000",
     GHTK_TOKEN: "",
     FIREBASE_SERVICE_ACCOUNT_JSON: "",
     RESEND_API_KEY: "",
