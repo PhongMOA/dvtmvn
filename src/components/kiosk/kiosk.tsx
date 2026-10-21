@@ -252,8 +252,8 @@ export function Kiosk({ eventId }: { eventId: string }) {
         Thoát
       </button>
 
-      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-        <div className="flex min-h-0 flex-col items-center justify-center gap-0 bg-[var(--kiosk-bg)] px-4 pb-4 pt-14 landscape:w-2/5">
+      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row landscape:justify-center">
+        <div className="flex min-h-0 flex-col items-center justify-center gap-0 bg-[var(--kiosk-bg)] px-4 pb-4 pt-14 landscape:w-[26rem] landscape:shrink-0">
           <SpeechBubble line={line} />
           <DoomMascot
             ref={mascotRef}
@@ -263,14 +263,15 @@ export function Kiosk({ eventId }: { eventId: string }) {
           />
         </div>
 
+        {/* Cột phải gọn, đứng sát linh vật; lúc quét QR nới hết phần còn lại cho ô camera. */}
         <div
           className={cn(
             "relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden p-6",
-            !scanning && "bg-[var(--kiosk-bg)]",
+            scanning ? "landscape:flex-1" : "bg-[var(--kiosk-bg)] landscape:w-[30rem] landscape:flex-none",
           )}
         >
           {screen.name === "home" && (
-            <div className="flex w-full max-w-xs flex-col items-stretch gap-3 text-center">
+            <div className="flex w-full max-w-sm flex-col items-stretch gap-3 text-center">
               <p className="mb-2 font-heading text-3xl tracking-wide">Mời bạn check-in</p>
               <button
                 type="button"

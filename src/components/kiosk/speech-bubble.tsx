@@ -10,10 +10,12 @@ import type { BubbleShape, DoomLine } from "./doom-lines";
  * nên viền không bị kéo méo, chấm halftone vẫn tròn. 3 lớp: bóng chấm lệch
  * xuống phải -> viền mực (stroke dày, nửa trong bị lớp trắng che) -> nền trắng.
  * Đổi câu -> `key` mới -> bật lại hiệu ứng "pop".
+ * Khung ngoài cao cố định (đủ ~4 dòng), bóng bám đáy và nở lên trên -> câu dài
+ * ngắn khác nhau không làm linh vật bên dưới co giãn.
  */
 export function SpeechBubble({ line }: { line: DoomLine }) {
   return (
-    <div aria-live="polite" className="w-full max-w-sm shrink-0 px-3 pb-9 pt-3">
+    <div aria-live="polite" className="flex h-52 w-full max-w-sm shrink-0 flex-col justify-end px-3 pb-9 pt-3">
       <Bubble key={line.text} line={line} />
     </div>
   );
