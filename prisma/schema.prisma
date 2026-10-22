@@ -342,3 +342,15 @@ model ShopSetting {
   countdownTitle String   @default("Doomsday is coming")
   updatedAt    DateTime @updatedAt
 }
+
+// Trạng thái kiosk linh vật Uni — singleton id = "default". Trang /admin/kiosk
+// ghi bộ mặt (look) và nối lệnh (đổi màn, biểu cảm, lời nhắn...) vào cmds;
+// máy kiosk /kiosk/[eventId] hỏi định kỳ, chạy các lệnh có seq mới hơn.
+// Chỉ giữ 30 lệnh cuối (xem src/app/actions/kiosk-uni.ts).
+model KioskState {
+  id        String   @id @default("default")
+  look      Json?
+  seq       Int      @default(0)
+  cmds      Json     @default("[]")
+  updatedAt DateTime @updatedAt
+}
