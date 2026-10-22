@@ -9,7 +9,7 @@ import type { UniEventConfig } from "./event-config";
 // "host" — các hàm gọi server, camera, thoát kiosk.
 
 /** Đổi số này mỗi khi sửa file trong public/kiosk-uni để máy kiosk không dùng bản cache cũ. */
-const VER = "6";
+const VER = "7";
 const SCRIPTS = ["decor.js", "hero-decor.js", "face.js", "uni.js"];
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
