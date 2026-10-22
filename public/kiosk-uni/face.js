@@ -884,7 +884,7 @@ Face.prototype.drawDecor = function (slot, T) {
       var pf = Math.asin(clamp((492 - T.ccx) / (T.cr * this.rimK(0)), -0.9, 0.9)) * R2D, rt = onRim(pf, pick2(m.inset, 70, 95));
       put(imgs[0], rt[0], rt[1], rt[2] * 0.35 + (m.lean || 0), pick2(m.h, 240, 180), 0.5, m.ay || 1);   // ngả nhẹ theo mặt trán, lean: chóp nghiêng thêm về phía trên bên phải (độ)
     }
-    else if (m.pos === 'center') { var rc = onRim(0, lerp(20, 30)); put(imgs[0], rc[0], rc[1], rc[2], pick2(m.h, 120, 140), 0.5, m.ay || 0.85); }
+    else if (m.pos === 'center') { var rc = onRim(0, lerp(20, 30)); put(imgs[0], rc[0], rc[1], rc[2], m.fit ? m.fit * T.cr / 700 : pick2(m.h, 120, 140), 0.5, m.ay || 0.85); }   // fit: cao theo đơn vị vòm (bán kính 700), co giãn cùng vòm mặt
     else { var a2 = lerp(26, 38), rh = onRim(a2, 6); put(imgs[0], rh[0], rh[1], rh[2], pick2(m.h, 140, 150), 0.5, m.ay || 0.5); }
   } else if (slot === 'eyes') {
     // kính theo đầu (nghiêng, nảy) chứ không theo hướng nhìn, hai tròng ôm hai mắt
@@ -976,7 +976,9 @@ Face.prototype.draw = function (o, T) {
   // điểm neo cho bong bóng lời nhắn: mặt to thì phía trên bên phải mắt phải, mặt nhỏ thì mép vòm phía phải (58°); đi theo mặt khi nảy, xê dịch
   var ba = 58 * D2R, bk = this.rimK(ba), bx = 492 + 330 + (T.ccx + T.cr * bk * Math.sin(ba) - 492 - 330) * T.sm, by = 262 - 140 + (T.ccy - T.cr * bk * Math.cos(ba) - 262 + 140) * T.sm;   // lệch hẳn sang phải mặt
   this.bubA = [T.px + (bx - 492 + T.fx) * T.L, T.py + (by - 262 + T.fy) * T.L]; this.fLight = luma(fc) > 0.6;
-  var dec = this.decor || {}, DD = window.UniDecor && window.UniDecor.DECOR, hairBack = dec.hair && DD && DD[dec.hair] && DD[dec.hair].m && DD[dec.hair].m.back;
+  var dec = this.decor || {}, DD = window.UniDecor && window.UniDecor.DECOR, hm = (dec.hair && DD && DD[dec.hair] && DD[dec.hair].m) || {}, hairBack = hm.back, hairOver = hm.over;
+  // mũ trùm (m.over): mặt nhỏ thì trùm lên vòm mặt, nằm dưới mặt nạ; mặt to (có phụ kiện đầu nên mắt sát đỉnh vòm) thì lui ra sau vòm để khỏi che mắt, hòa dần khi đổi cỡ
+  var ow = hairOver ? clamp(1 - (this.hk || 0) * (1 - T.sm), 0, 1) : 0, ga0 = g.globalAlpha;
   if (dec.ears) {   // tai mọc sau vòm mặt, cùng tông màu mặt nên tối dần theo mặt khi ngủ
     this.tintDecor('ears');
     if (T.dim > 0.02) g.filter = 'brightness(' + (1 - T.dim).toFixed(3) + ')';
@@ -984,6 +986,7 @@ Face.prototype.draw = function (o, T) {
   }
   var dimF = T.dim > 0.02 ? 'brightness(' + (1 - T.dim).toFixed(3) + ')' : 'none';   // mọi phụ kiện tối dần cùng mặt khi ngủ
   if (hairBack) { g.filter = dimF; this.drawDecor('hair', T); g.filter = 'none'; }   // sừng, mũ cắm sau vòm mặt
+  if (hairOver && ow < 0.99) { g.filter = dimF; g.globalAlpha = ga0 * (1 - ow); this.drawDecor('hair', T); g.globalAlpha = ga0; g.filter = 'none'; }
   g.fillStyle = fcOld; this.facePath(T); g.fill();
   g.save(); this.facePath(T); g.clip();
   if (spread < 1) {   // vòng màu mới lan từ góc dưới trái ra, mép hơi mềm
@@ -1001,8 +1004,9 @@ Face.prototype.draw = function (o, T) {
   if (px) px.pal = [fc, fcOld, eyeCol];
   this.drawEyes(o, T, paths, eyeCol);
   g.restore();
+  if (hairOver && ow > 0.01) { g.filter = dimF; g.globalAlpha = ga0 * ow; this.drawDecor('hair', T); g.globalAlpha = ga0; g.filter = 'none'; }
   if (dec.eyes) { g.filter = dimF; this.drawDecor('eyes', T); g.filter = 'none'; }   // kính vẽ sau khi bỏ khung cắt của mặt nên được lòi ra ngoài vòm mặt
-  if (dec.hair && !hairBack) {   // món nhuộm theo màu mặt (sừng Unikorn) cũng tối dần theo mặt khi ngủ
+  if (dec.hair && !hairBack && !hairOver) {   // món nhuộm theo màu mặt (sừng Unikorn) cũng tối dần theo mặt khi ngủ
     var ht = this.tintDecor('hair');
     g.filter = dimF;
     if (ht) this.drawTinted('hair', T); else this.drawDecor('hair', T); g.filter = 'none';
