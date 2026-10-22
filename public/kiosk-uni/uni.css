@@ -15,7 +15,7 @@
 .uni-root #stage .aside .ckw { display: none; }
 .uni-root #stage .aside.done .evi, .uni-root #stage .aside.done .now { display: none; }
 .uni-root #stage .aside.done .ckw { display: grid; width: max-content; margin: -20px 0 0 -26px; clip-path: polygon(0 0, 100% 0, calc(100% - 50px) 100%, 0 100%); }
-.uni-root #stage .aside .ckb { display: inline-flex; align-items: flex-start; gap: 10px; padding: 14px 54px 14px 18px; background: var(--ink); color: #000; font-size: 27px; font-weight: 700; line-height: 1.2; animation: uni-enter .24s cubic-bezier(.2,.8,.2,1) both; }
+.uni-root #stage .aside .ckb { display: inline-flex; align-items: flex-start; gap: 10px; padding: 14px 54px 14px 18px; background: var(--acc, var(--ink)); color: #000; font-size: 27px; font-weight: 700; line-height: 1.2; animation: uni-enter .24s cubic-bezier(.2,.8,.2,1) both; }
 .uni-root #stage .aside .ckb svg { width: 28px; height: 28px; stroke-width: 2.6; flex: none; margin-top: 2px; }
 .uni-root #stage .aside .ckb b { display: block; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
 .uni-root #stage .aside .ckb small { display: block; margin-top: 6px; font-size: 17px; font-weight: 600; color: #707070; font-variant-numeric: tabular-nums; }
@@ -28,13 +28,13 @@
 .uni-root #stage .aside .now .it { display: flex; gap: 10px; font-size: 15px; line-height: 1.35; white-space: nowrap; min-width: 0; color: var(--muted); }
 .uni-root #stage .aside .now .t { flex: none; width: 46px; font-variant-numeric: tabular-nums; }
 .uni-root #stage .aside .now .x { overflow: hidden; text-overflow: ellipsis; }
-.uni-root #stage .aside .now .it.cur { color: var(--ink); font-weight: 600; }
+.uni-root #stage .aside .now .it.cur { color: var(--acc, var(--ink)); font-weight: 600; }
 .uni-root #stage .content { position: absolute; left: 400px; right: 22px; top: 22px; bottom: 76px; }
 .uni-root #stage .content.full { bottom: 22px; }
 .uni-root #stage .stop { position: absolute; left: 24px; right: 24px; top: 20px; display: flex; align-items: center; gap: 12px; pointer-events: none; animation: uni-fade .24s ease-out both; font-size: 15px; font-weight: 600; line-height: 1.35; color: rgba(255,255,255,.45); }
 .uni-root #stage .slogo { width: 40px; height: 40px; flex: none; }
 .uni-root #stage .ulogo { width: 100%; height: 100%; display: block; }
-.uni-root #stage .ulogo .sq { fill: var(--ink); }
+.uni-root #stage .ulogo .sq { fill: var(--acc, var(--ink)); }
 .uni-root #stage .ulogo .mk { fill: #000; }
 .uni-root #stage .slogo .ulogo { opacity: .3; }
 .uni-root #stage .sname { flex: 1; min-width: 0; line-height: 1.25; }
@@ -68,7 +68,7 @@
 .uni-root #stage .tring .tk { stroke: rgba(0,0,0,.13); }
 .uni-root #stage .tring .tp { stroke: #000; stroke-dasharray: 100; stroke-linecap: round; }
 .uni-root #stage .btn:not(.primary) .tring .tk { stroke: rgba(255,255,255,.2); }
-.uni-root #stage .btn:not(.primary) .tring .tp { stroke: var(--ink); }
+.uni-root #stage .btn:not(.primary) .tring .tp { stroke: var(--acc, var(--ink)); }
 .uni-root #stage .tring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .uni-root #stage .p.lg { font-size: 22px; line-height: 1.45; margin-top: 14px; max-width: 30em; }
 .uni-root #stage .lbl { font-family: var(--f-mono); font-size: 11.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0; }
@@ -92,22 +92,22 @@
 .uni-root #stage .tags { display: flex; gap: 8px; margin-bottom: 10px; }
 .uni-root #stage .tag svg { width: 15px; height: 15px; }
 .uni-root #stage .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: var(--card2); }
-.uni-root #stage .tag.solid { background: var(--ink); color: #000; }
+.uni-root #stage .tag.solid { background: var(--acc, var(--ink)); color: #000; }
 .uni-root #stage .btns { position: absolute; left: 400px; right: 22px; bottom: 16px; display: flex; gap: 10px; pointer-events: none; }
 .uni-root #stage .btns > * { pointer-events: auto; }
 .uni-root #stage .btn { flex: none; white-space: nowrap; font-size: 17px; font-weight: 600; padding: 12px 22px; border-radius: 999px; background: var(--card2); border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
 .uni-root #stage .btn.back { padding-left: 14px; }
 .uni-root #stage .btn.back > svg { width: 18px; height: 18px; }
-.uni-root #stage .btn.primary { background: var(--ink); color: #000; }
+.uni-root #stage .btn.primary { background: var(--acc, var(--ink)); color: #000; }
 .uni-root #stage .btn, .uni-root #stage .tile, .uni-root #stage .res, .uni-root #stage .fq, .uni-root #stage .numpad button { transition: transform .12s ease-out, background-color .15s; }
 .uni-root #stage .btn:active, .uni-root #stage .tile:active, .uni-root #stage .res:active, .uni-root #stage .fq:active { transform: scale(.97); }
 .uni-root #stage .grid4 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; height: 100%; }
 .uni-root #stage .tile { background: var(--card); border-radius: 22px; padding: 16px 18px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; cursor: pointer; }
-.uni-root #stage .tile .ic { display: block; color: var(--ink); line-height: 0; }
+.uni-root #stage .tile .ic { display: block; color: var(--acc, var(--ink)); line-height: 0; }
 .uni-root #stage .tile .ic svg { width: 34px; height: 34px; }
 .uni-root #stage .tile .t { font-family: var(--f-display); font-weight: 700; font-size: 26px; line-height: 1.15; }
 .uni-root #stage .tile .s { font-size: 17px; color: var(--muted); margin-top: 3px; }
-.uni-root #stage .tile.main { background: var(--ink); color: #000; }
+.uni-root #stage .tile.main { background: var(--acc, var(--ink)); color: #000; }
 .uni-root #stage .tile.main .ic { color: #000; }
 .uni-root #stage .tile.main .s { color: #333; }
 .uni-root #stage .cam { position: absolute; left: 400px; top: 22px; width: 236px; height: 236px; border-radius: 22px; overflow: hidden; background: var(--card2); display: none; }
@@ -138,7 +138,7 @@
 .uni-root #stage .ag .ti { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .uni-root #stage .ag .tm { font-family: var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 .uni-root #stage .ag .st { justify-self: end; font-size: 13px; font-weight: 600; color: var(--muted); }
-.uni-root #stage .ag.now { background: var(--ink); color: #000; }
+.uni-root #stage .ag.now { background: var(--acc, var(--ink)); color: #000; }
 .uni-root #stage .ag.now .tm, .uni-root #stage .ag.now .st { color: #000; }
 .uni-root #stage .ag.done { color: var(--muted); }
 .uni-root #stage .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; height: 100%; }

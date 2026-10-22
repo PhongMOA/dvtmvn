@@ -59,7 +59,7 @@ var EXL = { neutral: 'Bình thường', listening: 'Lắng nghe', curious: 'Tò 
 var COLORS = [['#ef5350', 'Đỏ'], ['#ff8a3d', 'Cam'], ['#ffc53d', 'Vàng'], ['#4cc77f', 'Xanh lá'], ['#2ec4c4', 'Xanh ngọc'], ['#4c8dff', 'Xanh dương'], ['#9b6bff', 'Tím'], ['#ff6fa8', 'Hồng'], ['#fffdf7', 'Trắng']];
 var BASES = [['#000000', 'Đen'], ['#0b1222', 'Xanh đêm'], ['#160f24', 'Tím đêm'], ['#0d1a14', 'Rêu đêm'], ['#1c1010', 'Nâu đêm']];
 var PCOLS = [['#ffffff', 'Trắng'], ['#ffd666', 'Vàng'], ['#ff8fc8', 'Hồng'], ['#7cc7ff', 'Xanh'], ['#b79cff', 'Tím'], ['#86e0a8', 'Xanh lá']];
-var SHAPES = [['round', 'Tròn'], ['squircle', 'Bo vuông'], ['wide', 'Bầu dục'], ['cloud', 'Mây'], ['jelly', 'Thạch']];
+var SHAPES = [['round', 'Tròn'], ['squircle', 'Bo vuông'], ['wide', 'Bầu dục'], ['cloud', 'Mây'], ['jelly', 'Thạch'], ['bot', 'Doombot']];
 var EYES = [['soft', 'Tròn'], ['rect', 'Vuông bo'], ['anime', 'Anime'], ['devil', 'Quỷ']];
 var SLOTS = [['ears', 'Tai, sừng'], ['hair', 'Trên đầu'], ['eyes', 'Mắt']];
 var LOOKS = [
@@ -71,6 +71,7 @@ var LOOKS = [
   ['Black Panther', { color: '#6c4ee0', shape: 'squircle', eyeStyle: 'anime', pixel: false, decor: { ears: 'cat' }, bg: { base: '#160f24', p: 'hexagons', c: '#b79cff' } }],
   ['Doctor Strange', { color: '#ff8a3d', shape: 'round', eyeStyle: 'soft', pixel: false, decor: { hair: 'agamotto' }, bg: { base: '#1c1010', p: 'overlappingCircles', c: '#ffd666' } }],
   ['Deadpool', { color: '#a61c1c', shape: 'round', eyeStyle: 'soft', pixel: false, decor: { eyes: 'dpmask' }, bg: { base: '#1c1010', p: 'polkaDots', c: '#ff6b6b' } }],
+  ['Doombot', { color: '#12b552', theme: '#12b552', shape: 'bot', eyeStyle: 'soft', pixel: false, decor: {}, bg: { base: '#160f24', p: 'topography', c: '#7cc7ff', img: '/kiosk-uni/bg/doom-green.jpg', dim: 0.25 } }],
   ['Doctor Doom', { color: '#9aa4ae', shape: 'squircle', eyeStyle: 'devil', pixel: false, decor: { eyes: 'doomplate', hair: 'doomhood' }, bg: { base: '#0d1a14', p: 'hexagons', c: '#86e0a8' } }]
 ];
 var SCREENS = [['sleep', 'Ngủ (chờ khách)'], ['hello', 'Thấy khách'], ['home', 'Màn chính'], ['scan', 'Quét vé'], ['lookup', 'Nhập số điện thoại'], ['agenda', 'Lịch trình'], ['info', 'Sơ đồ'], ['chat', 'Hỏi đáp']];
@@ -93,7 +94,7 @@ var ERR = { NOT_FOUND: 'notfound', NOT_PAID: 'unpaid', WRONG_EVENT: 'event', NO_
 var DEMO_GUEST = { userName: 'Khách thử', tickets: 2, seats: ['F7', 'F8'], seatsPending: false, combos: ['Combo bắp nước × 1'], shirts: '', alreadyCheckedIn: false, checkedInAt: null, justCheckedIn: true };
 var TICKET_COL = { fg: '#1a1200', bg: '#ffc53d' };
 var IDLE_MOODS = ['happy', 'confused', 'curious'];
-var DEFAULT_LOOK = LOOKS[8][1];
+var DEFAULT_LOOK = LOOKS[9][1];
 
 function uri(s) { return 'data:image/svg+xml,' + encodeURIComponent(s); }
 function mix(a, b, k) { var x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16); return '#' + [16, 8, 0].map(function (s) { return ('0' + Math.round((x >> s & 255) * (1 - k) + (y >> s & 255) * k).toString(16)).slice(-2); }).join(''); }
@@ -609,6 +610,8 @@ function mount(root, host) {
     face.setEyeStyle(L.eyeStyle, !!L.pixel || !!L.facePix);
     face.setDecor(L.decor); face.setBg(L.bg);
     stage.style.background = L.bg.base; screen.style.background = L.bg.base; root.style.setProperty('--bg', L.bg.base);
+    // màu chủ đạo (theme): ô Check-in, nút chính, vòng đếm ngược; không có thì giữ trắng
+    if (/^#[0-9a-f]{6}$/i.test(L.theme || '')) root.style.setProperty('--acc', L.theme); else root.style.removeProperty('--acc');
     if (MODE === 'control') { render(); if (fromUser && host.send) host.send({ t: 'look', v: clone(L) }); }
   }
   function set(patch, fromUser) { Object.keys(patch).forEach(function (k) { L[k] = patch[k]; }); apply(fromUser); }
@@ -643,11 +646,13 @@ function mount(root, host) {
   }
   function send(m) { if (MODE === 'control' && host.send) host.send(m); }
 
-  var RIM = { round: null, squircle: function (a) { return Math.pow(Math.pow(Math.abs(Math.sin(a)), 3.4) + Math.pow(Math.abs(Math.cos(a)), 3.4), -1 / 3.4); }, wide: function (a) { return 1 / Math.hypot(Math.sin(a) / 1.1, Math.cos(a) / .92); }, cloud: function (a) { return .985 + .03 * Math.pow(Math.abs(Math.cos(7 * a)), .7); }, jelly: function (a) { return 1 + .02 * Math.sin(3 * a) + .012 * Math.sin(5 * a + 1.3); } };
+  var RIM = { round: null, bot: function (a) { return RIM.squircle(a); }, squircle: function (a) { return Math.pow(Math.pow(Math.abs(Math.sin(a)), 3.4) + Math.pow(Math.abs(Math.cos(a)), 3.4), -1 / 3.4); }, wide: function (a) { return 1 / Math.hypot(Math.sin(a) / 1.1, Math.cos(a) / .92); }, cloud: function (a) { return .985 + .03 * Math.pow(Math.abs(Math.cos(7 * a)), .7); }, jelly: function (a) { return 1 + .02 * Math.sin(3 * a) + .012 * Math.sin(5 * a + 1.3); } };
   var pid = 0;
   /* hình mặt nhỏ trong ô chọn: vòm mặt theo dáng, hai mắt theo kiểu mắt, phụ kiện, trên nền đã chọn */
   function mini(lk, bg) {
     var f = RIM[lk.shape || 'round'], d = '', c = lk.color, e = mix(c, '#000000', .5), es = lk.eyeStyle || 'soft', id = 'mp' + (pid++);
+    var bot = lk.shape === 'bot', fcol = bot ? '#9aa4ae' : c;   // người máy: mặt nạ xám, mắt khe đen, mũ trùm theo màu chọn
+    if (bot) { e = '#14171a'; es = 'rect'; }
     for (var i = 0; i <= 120; i++) { var a = (-120 + 2 * i) * Math.PI / 180, r = 74 * (f ? f(a) : 1); d += (i ? 'L' : 'M') + (60 + r * Math.sin(a)).toFixed(1) + ' ' + (118 - r * Math.cos(a)).toFixed(1); }
     var eye = function (x, y) {
       if (es === 'devil') { var s = x < 60 ? 1 : -1; return '<path d="M' + (x - 10) + ' ' + (y - 2.5 - 2.5 * s) + 'L' + (x + 10) + ' ' + (y - 2.5 + 2.5 * s) + 'A10 9.5 0 0 1 ' + (x - 10) + ' ' + (y - 2.5 - 2.5 * s) + 'Z" fill="' + e + '"/>'; }
@@ -658,6 +663,7 @@ function mount(root, host) {
     var b = bg || { base: '#000000' }, p = b.p && PAT[b.p];
     var pat = p ? '<defs><pattern id="' + id + '" width="40" height="40" patternUnits="userSpaceOnUse"><image href="' + uri(p.svg.split('#C0FFEE').join(b.c === 'face' ? c : (b.c || '#ffffff'))) + '" width="40" height="40"/></pattern></defs><rect width="120" height="80" fill="url(#' + id + ')" opacity=".21"/>' : '';
     var dec = lk.decor || {}, back = '', front = '';
+    if (bot && !dec.ears && !dec.hair) dec = { hair: 'bothood', eyes: dec.eyes };
     var rim = function (deg, inset) { var a = deg * Math.PI / 180, r = 74 * (f ? f(a) : 1) - inset; return [60 + r * Math.sin(a), 118 - r * Math.cos(a)]; };
     var img = function (s, x, y, h, ax, ay, rot, wx) { var vb = /viewBox="([^"]+)"/.exec(s)[1].split(' ').map(Number), w = h * vb[2] / vb[3] * (wx || 1); return '<image href="' + uri(s) + '" x="' + (-w * ax).toFixed(1) + '" y="' + (-h * ay).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h + '" transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')"/>'; };
     var it = dec.ears && D[dec.ears];
@@ -666,7 +672,7 @@ function mount(root, host) {
     if (it) { var fh = it.m.pos === 'forehead', ct = it.m.pos === 'center' || fh, ha = ct ? 0 : 36, hp = rim(ha, fh ? 9 : ct ? 4 : 1); var hs = img(tint(it, it.parts[0], c), hp[0], hp[1], it.m.mh || (fh ? 30 : ct ? 24 : 22), .5, it.m.ay || (ct ? .85 : .5), ha, it.m.wx); if (it.m.back) back += hs; else front += hs; }
     it = dec.eyes && D[dec.eyes];
     if (it) front += img(it.parts[0], 60, 66, it.m.mh || 22, .5, .5, 0);
-    return '<svg class="mini" viewBox="0 0 120 80" aria-hidden="true"><rect width="120" height="80" fill="' + (b.base || '#000000') + '"/>' + pat + back + '<path d="' + d + 'Z" fill="' + c + '"/>' + eye(42, 66) + eye(78, 66) + front + '</svg>';
+    return '<svg class="mini" viewBox="0 0 120 80" aria-hidden="true"><rect width="120" height="80" fill="' + (b.base || '#000000') + '"/>' + pat + back + '<path d="' + d + 'Z" fill="' + fcol + '"/>' + eye(42, 66) + eye(78, 66) + front + '</svg>';
   }
   function tileBtn(isOn, inner, name, fn) { var b = document.createElement('button'); b.type = 'button'; b.className = 'tile2' + (isOn ? ' on' : ''); b.innerHTML = inner + '<span class="tn">' + esc(name) + '</span>'; b.title = name; b.onclick = fn; return b; }
   function swBtn(col, name, isOn, fn, cls) { var b = document.createElement('button'); b.type = 'button'; b.className = 'sw' + (cls ? ' ' + cls : ''); b.style.background = col; b.title = name; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', isOn ? 'true' : 'false'); b.onclick = fn; return b; }
@@ -674,7 +680,7 @@ function mount(root, host) {
   function render() {
     fillEl('#looks', LOOKS.map(function (x) {
       var lk = x[1], isOn = lk.color === L.color && lk.shape === L.shape && lk.eyeStyle === L.eyeStyle && lk.pixel === !!L.pixel && !L.facePix && same(lk.decor, L.decor) && (lk.bg.p || null) === (L.bg.p || null) && lk.bg.base === L.bg.base;
-      return tileBtn(isOn, mini(lk, lk.bg), x[0], function () { pick({ color: lk.color, shape: lk.shape, eyeStyle: lk.eyeStyle, pixel: lk.pixel, facePix: false, decor: Object.assign({}, lk.decor), bg: Object.assign({ c: '#ffffff' }, lk.bg) }); });
+      return tileBtn(isOn, mini(lk, lk.bg), x[0], function () { pick({ color: lk.color, theme: lk.theme || null, shape: lk.shape, eyeStyle: lk.eyeStyle, pixel: lk.pixel, facePix: false, decor: Object.assign({}, lk.decor), bg: Object.assign({ c: '#ffffff' }, lk.bg) }); });
     }));
     var cs = COLORS.map(function (c) { return swBtn(c[0], 'Màu ' + c[1], L.color === c[0], function () { pick({ color: c[0] }); }); });
     var cu = document.createElement('label'); cu.className = 'sw custom'; cu.title = 'Chọn màu khác';
