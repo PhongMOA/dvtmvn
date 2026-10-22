@@ -5,8 +5,9 @@ import { requireAdmin, requireStaff } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 
 // Đồng bộ trang điều khiển /admin/kiosk -> máy kiosk linh vật Uni qua bảng
-// KioskState (singleton). Admin gửi lệnh, kiosk (tài khoản staff) hỏi định kỳ
-// và chạy các lệnh có seq mới hơn lần hỏi trước.
+// KioskState (singleton). Admin gửi lệnh, kiosk hỏi định kỳ và chạy các lệnh
+// có seq mới hơn lần hỏi trước. Đọc: staff (staging thì ai cũng được, vì trang
+// kiosk mở công khai để test; look/lệnh chỉ là giao diện linh vật). Gửi: admin.
 
 /** Lệnh engine Uni hiểu — xem public/kiosk-uni/uni.js (onCommand). */
 export type KioskCommand = {
@@ -20,6 +21,7 @@ const KINDS = new Set(["look", "go", "expr", "say", "conf", "auto", "scn"]);
 // Chỉ giữ ngần này lệnh cuối — kiosk hỏi mỗi ~1,5 giây nên không bao giờ hụt.
 const KEEP = 30;
 const ID = "default";
+const PUBLIC_READ = process.env.NEXT_PUBLIC_APP_ENV === "staging";
 
 async function can(check: () => Promise<unknown>): Promise<boolean> {
   try {
@@ -35,7 +37,7 @@ export async function getKioskState(since: number): Promise<
   | { ok: true; value: { seq: number; look: unknown; cmds: KioskCommandEntry[]; now: number } }
   | { ok: false; error: "FORBIDDEN" }
 > {
-  if (!(await can(requireStaff))) return { ok: false, error: "FORBIDDEN" };
+  if (!PUBLIC_READ && !(await can(requireStaff))) return { ok: false, error: "FORBIDDEN" };
   const row = await prisma.kioskState.findUnique({ where: { id: ID } });
   const all = (row?.cmds ?? []) as KioskCommandEntry[];
   return {
@@ -51,7 +53,7 @@ export async function getKioskState(since: number): Promise<
 
 /** Bộ mặt đang lưu — trang điều khiển mở lại thấy đúng bộ kiosk đang dùng. */
 export async function getKioskLook(): Promise<unknown> {
-  if (!(await can(requireStaff))) return null;
+  if (!PUBLIC_READ && !(await can(requireStaff))) return null;
   const row = await prisma.kioskState.findUnique({ where: { id: ID }, select: { look: true } });
   return row?.look ?? null;
 }

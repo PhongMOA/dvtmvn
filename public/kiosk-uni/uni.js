@@ -86,9 +86,10 @@ var PROB = {
   unpaid: ['wallet', '#ffd666', 'Đơn chưa thanh toán', 'Bạn hoàn tất thanh toán rồi check-in lại nhé.'],
   noticket: ['ticket', '#ff8f8f', 'Đơn không có vé xem phim', 'Đơn của bạn chỉ có combo hoặc áo.'],
   ambiguous: ['users', '#93bcff', 'Cần nhân viên hỗ trợ', 'Số điện thoại này gắn với nhiều tài khoản.'],
-  offline: ['wifi-off', '#93bcff', 'Chưa kết nối được', 'Kiosk đang mất kết nối, bạn thử lại sau ít phút.']
+  offline: ['wifi-off', '#93bcff', 'Chưa kết nối được', 'Kiosk đang mất kết nối, bạn thử lại sau ít phút.'],
+  forbidden: ['users', '#93bcff', 'Đang ở chế độ xem thử', 'Check-in chỉ chạy trên máy kiosk của nhân viên tại rạp.']
 };
-var ERR = { NOT_FOUND: 'notfound', NOT_PAID: 'unpaid', WRONG_EVENT: 'event', NO_TICKET: 'noticket', AMBIGUOUS: 'ambiguous' };
+var ERR = { NOT_FOUND: 'notfound', NOT_PAID: 'unpaid', WRONG_EVENT: 'event', NO_TICKET: 'noticket', AMBIGUOUS: 'ambiguous', FORBIDDEN: 'forbidden' };
 var DEMO_GUEST = { userName: 'Khách thử', tickets: 2, seats: ['F7', 'F8'], seatsPending: false, combos: ['Combo bắp nước × 1'], shirts: '', alreadyCheckedIn: false, checkedInAt: null, justCheckedIn: true };
 var TICKET_COL = { fg: '#1a1200', bg: '#ffc53d' };
 var IDLE_MOODS = ['happy', 'confused', 'curious'];
