@@ -38,7 +38,7 @@ function backRow(row: string): SeatRow {
 export const SEAT_LAYOUT: SeatLayout = [
   {
     label: "A",
-    segments: [seats("A", 24, 22, "normal"), seats("A", 21, 5, "normal"), seats("A", 4, 1, "blocked")],
+    segments: [seats("A", 24, 22, "normal"), seats("A", 21, 5, "normal"), seats("A", 4, 1, "normal")],
   },
   standardRow("B", "normal"),
   standardRow("C", "normal"),

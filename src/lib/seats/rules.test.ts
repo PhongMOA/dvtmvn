@@ -156,11 +156,11 @@ test("findContiguousPlacement tính Sweetbox theo cặp", () => {
   assert.equal(findContiguousPlacement(LAYOUT, taken, 4), null);
 });
 
-test("sơ đồ thật: mã ghế không trùng, A1-A4 blocked, Sweetbox M1-M26", () => {
+test("sơ đồ thật: mã ghế không trùng, không ghế blocked, Sweetbox M1-M26", () => {
   const codes = SEAT_LAYOUT.flatMap((r) => r.segments.flat().map((s) => s.code));
   assert.equal(new Set(codes).size, codes.length);
   const blocked = SEAT_LAYOUT.flatMap((r) => r.segments.flat()).filter((s) => s.type === "blocked");
-  assert.deepEqual(blocked.map((s) => s.code).sort(), ["A1", "A2", "A3", "A4"]);
+  assert.equal(blocked.length, 0);
   const sweetbox = SEAT_LAYOUT.flatMap((r) => r.segments.flat()).filter((s) => s.type === "sweetbox");
   assert.equal(sweetbox.length, 26);
   assert.deepEqual(validateSelection(SEAT_LAYOUT, { taken: new Set(), picked: ["M1", "M2"], ticketsNeeded: 2 }), {
