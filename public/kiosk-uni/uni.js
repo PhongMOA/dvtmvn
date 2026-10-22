@@ -646,16 +646,17 @@ function mount(root, host) {
   }
   function send(m) { if (MODE === 'control' && host.send) host.send(m); }
 
-  var RIM = { round: null, bot: function (a) { return RIM.squircle(a); }, squircle: function (a) { return Math.pow(Math.pow(Math.abs(Math.sin(a)), 3.4) + Math.pow(Math.abs(Math.cos(a)), 3.4), -1 / 3.4); }, wide: function (a) { return 1 / Math.hypot(Math.sin(a) / 1.1, Math.cos(a) / .92); }, cloud: function (a) { return .985 + .03 * Math.pow(Math.abs(Math.cos(7 * a)), .7); }, jelly: function (a) { return 1 + .02 * Math.sin(3 * a) + .012 * Math.sin(5 * a + 1.3); } };
+  var RIM = { round: null, squircle: function (a) { return Math.pow(Math.pow(Math.abs(Math.sin(a)), 3.4) + Math.pow(Math.abs(Math.cos(a)), 3.4), -1 / 3.4); }, wide: function (a) { return 1 / Math.hypot(Math.sin(a) / 1.1, Math.cos(a) / .92); }, cloud: function (a) { return .985 + .03 * Math.pow(Math.abs(Math.cos(7 * a)), .7); }, jelly: function (a) { return 1 + .02 * Math.sin(3 * a) + .012 * Math.sin(5 * a + 1.3); } };
   var pid = 0;
   /* hình mặt nhỏ trong ô chọn: vòm mặt theo dáng, hai mắt theo kiểu mắt, phụ kiện, trên nền đã chọn */
   function mini(lk, bg) {
     var f = RIM[lk.shape || 'round'], d = '', c = lk.color, e = mix(c, '#000000', .5), es = lk.eyeStyle || 'soft', id = 'mp' + (pid++);
-    var bot = lk.shape === 'bot', fcol = bot ? '#9aa4ae' : c;   // người máy: mặt nạ xám, mắt khe đen, mũ trùm theo màu chọn
-    if (bot) { e = '#14171a'; es = 'rect'; }
+    var bot = lk.shape === 'bot', fcol = c;
+    if (bot) { e = '#1b1d1f'; es = 'bot'; }   // người máy: mắt khe đen xếch xuống phía trong
     for (var i = 0; i <= 120; i++) { var a = (-120 + 2 * i) * Math.PI / 180, r = 74 * (f ? f(a) : 1); d += (i ? 'L' : 'M') + (60 + r * Math.sin(a)).toFixed(1) + ' ' + (118 - r * Math.cos(a)).toFixed(1); }
     var eye = function (x, y) {
       if (es === 'devil') { var s = x < 60 ? 1 : -1; return '<path d="M' + (x - 10) + ' ' + (y - 2.5 - 2.5 * s) + 'L' + (x + 10) + ' ' + (y - 2.5 + 2.5 * s) + 'A10 9.5 0 0 1 ' + (x - 10) + ' ' + (y - 2.5 - 2.5 * s) + 'Z" fill="' + e + '"/>'; }
+      if (es === 'bot') { var sb = x < 60 ? 1 : -1, xi = x + 9 * sb, xo = x - 9 * sb; return '<path d="M' + xo + ' ' + (y - 4.6) + 'L' + xi + ' ' + (y - 1.8) + 'L' + xi + ' ' + (y + 4.4) + 'L' + xo + ' ' + (y + 4.4) + 'Z" fill="' + e + '"/>'; }
       if (es === 'rect') return '<rect x="' + (x - 8.5) + '" y="' + (y - 10) + '" width="17" height="20" rx="6.5" fill="' + e + '"/>';
       if (es === 'anime') return '<rect x="' + (x - 8.5) + '" y="' + (y - 10) + '" width="17" height="20" rx="6.5" fill="' + e + '"/><circle cx="' + (x - 2.6) + '" cy="' + (y - 3.3) + '" r="2.5" fill="' + c + '"/>';
       return '<circle cx="' + x + '" cy="' + y + '" r="9.5" fill="' + e + '"/>';
@@ -663,10 +664,12 @@ function mount(root, host) {
     var b = bg || { base: '#000000' }, p = b.p && PAT[b.p];
     var pat = p ? '<defs><pattern id="' + id + '" width="40" height="40" patternUnits="userSpaceOnUse"><image href="' + uri(p.svg.split('#C0FFEE').join(b.c === 'face' ? c : (b.c || '#ffffff'))) + '" width="40" height="40"/></pattern></defs><rect width="120" height="80" fill="url(#' + id + ')" opacity=".21"/>' : '';
     var dec = lk.decor || {}, back = '', front = '';
-    if (bot && !dec.ears && !dec.hair) {   // vẽ như trên kiosk: mũ trùm, lỗ mũ có bóng xám, mặt nạ bám theo hai mắt (tỉ lệ 36/384)
-      var se = function (e, fill, extra) { var q = ''; for (var j = 0; j <= 120; j++) { var aj = j / 120 * Math.PI * 2, cj = Math.cos(aj), sj = Math.sin(aj), kj = 2 / e[3]; q += (j ? 'L' : 'M') + (60 + e[1] * .09375 * Math.sign(sj) * Math.pow(Math.abs(sj), kj)).toFixed(1) + ' ' + (66 + (e[0] - 262 - e[2] * Math.sign(cj) * Math.pow(Math.abs(cj), kj)) * .09375).toFixed(1); } return '<path d="' + q + 'Z" fill="' + fill + '"' + (extra || '') + '/>'; };
-      back += se([604, 590, 778, 2.6], c) + se([604, 392, 646, 3], '#5d636b', ' stroke="' + mix(c, '#000000', .4) + '" stroke-width="1.7"');
-      d = ''; var mask = se([604, 373, 560, 3], fcol); f = null;
+    if (bot) {   // vẽ như trên kiosk (face.js BOT_HOOD, BOT_HOLE theo cỡ mắt R, gốc giữa hai mắt): vòm mặt là mũ trùm màu chọn, trong lỗ mũ là mặt thép, vạt mũ đổ bóng xuống
+      var UF = window.UniFace || {}, kR = 36 / 384 * 92, bp = function (def, dy) { return def ? def.map(function (s, j) { var n = j ? s.slice(1) : s; return (j ? s[0] : 'M') + n.map(function (v, k) { return (k % 2 ? 66 + v * kR + dy : 60 + v * kR).toFixed(1); }).join(' '); }).join('') + 'Z' : ''; };
+      var hd = bp(UF.BOT_HOOD, 0), hl = bp(UF.BOT_HOLE, 0), mx = 0.3 * 7 * kR, mt = 2.4 * kR / 2, my = 66 + 1.57 * kR, mb = 7 * kR;
+      var mouth = '<path d="M' + (60 - mt - mx) + ' ' + (my + mb) + 'L' + (60 - mt) + ' ' + my + 'L' + (60 + mt) + ' ' + my + 'L' + (60 + mt + mx) + ' ' + (my + mb) + 'Z" fill="' + e + '"/>';
+      if (hd) var mask = '<defs><clipPath id="' + id + 'h"><path d="' + hl + '"/></clipPath></defs><path d="' + hd + '" fill="' + c + '"/><path d="' + hl + '" fill="#7b8389" stroke="' + mix(c, '#000000', .38) + '" stroke-width="' + (kR * .5).toFixed(1) + '" stroke-linejoin="round"/><g clip-path="url(#' + id + 'h)">' + mouth + '<path d="' + hl + bp(UF.BOT_HOLE, kR * .75) + '" fill="' + mix('#7b8389', '#000000', .42) + '" fill-rule="evenodd"/></g>';
+      if (hd) d = '';
     }
     var rim = function (deg, inset) { var a = deg * Math.PI / 180, r = 74 * (f ? f(a) : 1) - inset; return [60 + r * Math.sin(a), 118 - r * Math.cos(a)]; };
     var img = function (s, x, y, h, ax, ay, rot, wx) { var vb = /viewBox="([^"]+)"/.exec(s)[1].split(' ').map(Number), w = h * vb[2] / vb[3] * (wx || 1); return '<image href="' + uri(s) + '" x="' + (-w * ax).toFixed(1) + '" y="' + (-h * ay).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h + '" transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')"/>'; };
