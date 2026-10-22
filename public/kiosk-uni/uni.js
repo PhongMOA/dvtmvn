@@ -265,7 +265,7 @@ function mount(root, host) {
     opt = opt || {};
     var seq = S.seq = S.seq + 1; S.screen = name; S.lastTouch = now();
     function still() { return S.seq === seq; }
-    face.occl = null; occlTrack(seq);
+    face.occl = null; if (name !== 'sleep' && name !== 'hello') occlTrack(seq);   // màn ngủ: chữ trắng tự nổi, không khoét bóng tối dưới chữ
     if (name === 'ok') chime('ok'); else if (name === 'problem') chime('bad');
     var wasBig = !face.small;
     face.small = !(name === 'sleep' || name === 'hello');

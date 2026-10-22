@@ -982,7 +982,8 @@ Face.prototype.draw = function (o, T) {
     if (T.dim > 0.02) g.filter = 'brightness(' + (1 - T.dim).toFixed(3) + ')';
     this.drawTinted('ears', T); g.filter = 'none';
   }
-  if (hairBack) this.drawDecor('hair', T);   // sừng, mũ cắm sau vòm mặt
+  var dimF = T.dim > 0.02 ? 'brightness(' + (1 - T.dim).toFixed(3) + ')' : 'none';   // mọi phụ kiện tối dần cùng mặt khi ngủ
+  if (hairBack) { g.filter = dimF; this.drawDecor('hair', T); g.filter = 'none'; }   // sừng, mũ cắm sau vòm mặt
   g.fillStyle = fcOld; this.facePath(T); g.fill();
   g.save(); this.facePath(T); g.clip();
   if (spread < 1) {   // vòng màu mới lan từ góc dưới trái ra, mép hơi mềm
@@ -1000,10 +1001,10 @@ Face.prototype.draw = function (o, T) {
   if (px) px.pal = [fc, fcOld, eyeCol];
   this.drawEyes(o, T, paths, eyeCol);
   g.restore();
-  if (dec.eyes) this.drawDecor('eyes', T);   // kính vẽ sau khi bỏ khung cắt của mặt nên được lòi ra ngoài vòm mặt
+  if (dec.eyes) { g.filter = dimF; this.drawDecor('eyes', T); g.filter = 'none'; }   // kính vẽ sau khi bỏ khung cắt của mặt nên được lòi ra ngoài vòm mặt
   if (dec.hair && !hairBack) {   // món nhuộm theo màu mặt (sừng Unikorn) cũng tối dần theo mặt khi ngủ
     var ht = this.tintDecor('hair');
-    if (ht && T.dim > 0.02) g.filter = 'brightness(' + (1 - T.dim).toFixed(3) + ')';
+    g.filter = dimF;
     if (ht) this.drawTinted('hair', T); else this.drawDecor('hair', T); g.filter = 'none';
   }
   if (px) this.pixSnap(px, fc, fcOld, T.dim);
