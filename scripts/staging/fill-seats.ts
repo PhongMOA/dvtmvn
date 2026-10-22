@@ -27,7 +27,7 @@ async function main() {
     const groups: string[][] = [];
     for (const row of SEAT_LAYOUT) {
       for (const segment of row.segments) {
-        let run: string[] = [];
+        const run: string[] = [];
         const flush = () => {
           while (run.length > 0) groups.push(run.splice(0, 1 + Math.floor(Math.random() * 4)));
         };

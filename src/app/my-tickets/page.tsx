@@ -4,8 +4,6 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { expireOrderIfPastDue } from "@/lib/order-expiry";
 import { TicketQr } from "@/components/ticket-qr";
-import { StagingTestTickets } from "@/components/staging-test-tickets";
-import { isStaff } from "@/lib/auth-helpers";
 import { ShipmentStatus } from "@/components/shipment-status";
 import { SeatTurnCard } from "@/components/seat-turn-card";
 import {
@@ -79,10 +77,6 @@ export default async function MyTicketsPage() {
       orderBy: { seatCode: "asc" },
     }),
   ]);
-
-  // Staging (dữ liệu seed): admin/staff thấy thêm QR/SĐT khách khác để thử kiosk.
-  const showTestTickets =
-    process.env.NEXT_PUBLIC_APP_ENV === "staging" && (await isStaff(session.user));
 
   const displayOrders = orders.map((order) =>
     staleOrderIds.includes(order.id)
@@ -303,8 +297,6 @@ export default async function MyTicketsPage() {
           })}
         </div>
       )}
-
-      {showTestTickets && <StagingTestTickets excludeUserId={session.user.id} />}
     </div>
   );
 }
