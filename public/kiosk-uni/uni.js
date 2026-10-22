@@ -612,6 +612,8 @@ function mount(root, host) {
     stage.style.background = L.bg.base; screen.style.background = L.bg.base; root.style.setProperty('--bg', L.bg.base);
     // màu chủ đạo (theme): ô Check-in, nút chính, vòng đếm ngược; không có thì giữ trắng
     if (/^#[0-9a-f]{6}$/i.test(L.theme || '')) root.style.setProperty('--acc', L.theme); else root.style.removeProperty('--acc');
+    // có màu chủ đạo: các ô chưa chọn ở màn chính ngả sẫm theo màu đó (xanh rất đậm với Doombot), icon trắng
+    if (/^#[0-9a-f]{6}$/i.test(L.theme || '')) root.style.setProperty('--tile', mix(L.theme, '#1a1f1d', 0.93)); else root.style.removeProperty('--tile');
     if (MODE === 'control') { render(); if (fromUser && host.send) host.send({ t: 'look', v: clone(L) }); }
   }
   function set(patch, fromUser) { Object.keys(patch).forEach(function (k) { L[k] = patch[k]; }); apply(fromUser); }

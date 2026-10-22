@@ -1045,6 +1045,7 @@ Face.prototype.draw = function (o, T) {
   var g = this.g;
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
   if (this.bc && (this.bgAlpha || this.bgImg)) g.drawImage(this.bc, 0, 0); else { g.fillStyle = this.bgBase || '#000'; g.fillRect(0, 0, this.cv.width, this.cv.height); }
+  if (this.dim > 0.01 && this.bgImg) { g.fillStyle = 'rgba(0,0,0,' + (this.dim * 0.6).toFixed(3) + ')'; g.fillRect(0, 0, this.cv.width, this.cv.height); }   // ngủ: ảnh nền tối theo mặt, khỏi chói cạnh linh vật đang tắt đèn
   g.setTransform(this.ss, 0, 0, this.ss, 0, 0);
   // mặt thu nhỏ: vẽ confetti, mặt và phụ kiện lên một lớp riêng rồi khoét các ô chữ, để Uni luôn nằm dưới thông tin, không đè lên chữ;
   // nền họa tiết vẽ trên lớp chính nên luôn ở sâu nhất

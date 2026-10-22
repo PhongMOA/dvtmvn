@@ -102,8 +102,9 @@
 .uni-root #stage .btn, .uni-root #stage .tile, .uni-root #stage .res, .uni-root #stage .fq, .uni-root #stage .numpad button { transition: transform .12s ease-out, background-color .15s; }
 .uni-root #stage .btn:active, .uni-root #stage .tile:active, .uni-root #stage .res:active, .uni-root #stage .fq:active { transform: scale(.97); }
 .uni-root #stage .grid4 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; height: 100%; }
-.uni-root #stage .tile { background: var(--card); border-radius: 22px; padding: 16px 18px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; cursor: pointer; }
+.uni-root #stage .tile { background: var(--tile, var(--card)); border-radius: 22px; padding: 16px 18px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; cursor: pointer; }
 .uni-root #stage .tile .ic { display: block; color: var(--acc, var(--ink)); line-height: 0; }
+.uni-root[style*="--tile"] #stage .tile:not(.main) .ic { color: var(--ink); }
 .uni-root #stage .tile .ic svg { width: 34px; height: 34px; }
 .uni-root #stage .tile .t { font-family: var(--f-display); font-weight: 700; font-size: 26px; line-height: 1.15; }
 .uni-root #stage .tile .s { font-size: 17px; color: var(--muted); margin-top: 3px; }
