@@ -37,8 +37,6 @@ export const UNI_EVENT: UniEventConfig = {
     { q: "Mấy giờ vào rạp?", a: "Rạp mở cửa lúc 18:45. Bạn vào chỗ sớm để kịp giao lưu trúng thưởng lúc 18:50 nhé." },
     { q: "Mấy giờ chiếu phim?", a: "Phim bắt đầu chiếu lúc 19:10, ngay sau phần giao lưu trúng thưởng." },
     { q: "Giao lưu trúng thưởng lúc nào?", a: "Từ 18:50 đến 19:10 ngay trong phòng chiếu. Có mặt đúng giờ để không lỡ quà nhé." },
-    { q: "Tiếp theo là gì?", a: "__NEXT__" },
-    { q: "Nhận combo bắp nước ở đâu?", a: "Bạn nhận combo và áo tại quầy hỗ trợ sau khi check-in, trước 18:45." },
     { q: "Quên mã QR thì sao?", a: "Bấm Check-in rồi chọn Nhập số điện thoại đã đặt vé." },
     { q: "Ghế của tôi ở đâu?", a: "Số ghế hiện trên màn check-in và trong mục Vé của tôi." },
   ],

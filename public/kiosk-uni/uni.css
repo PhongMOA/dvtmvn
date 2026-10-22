@@ -322,9 +322,7 @@
 
 .uni-root #stage .panel.seatp { height: 100%; box-sizing: border-box; overflow: hidden; padding: 10px 16px 12px; gap: 8px; }
 .uni-root #stage .seatmap { display: block; flex: 1 1 0; min-height: 0; width: 100%; }
-.uni-root #stage .sfoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; font-size: 14px; color: var(--muted); }
-.uni-root #stage .slegend, .uni-root #stage .sdir { display: flex; flex-wrap: wrap; gap: 6px 14px; }
-.uni-root #stage .slegend span, .uni-root #stage .sdir span { display: inline-flex; align-items: center; gap: 6px; }
-.uni-root #stage .sdir { color: var(--fg, #fff); font-weight: 600; }
-.uni-root #stage .sdir .ar svg { width: 16px; height: 16px; }
+.uni-root #stage .sfoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 16px; font-size: 14px; color: var(--muted); }
+.uni-root #stage .slegend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.uni-root #stage .slegend span { display: inline-flex; align-items: center; gap: 6px; }
 .uni-root #stage .slegend i { width: 12px; height: 12px; border-radius: 3px; }

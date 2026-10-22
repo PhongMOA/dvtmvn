@@ -212,18 +212,22 @@ function mount(root, host) {
     rows.forEach(function (r) { if (r.segments.length > 1) r.segments.forEach(function (g, i) { widths[i] = Math.max(widths[i] || 0, g.length); }); });
     var inner = widths.reduce(function (a, n) { return a + n * C; }, 0) + (widths.length - 1) * AIS;
     var W = inner + LBL * 2, top = 34, y = top, out = '';
-    var seat = function (x, yy, t) { return '<rect x="' + (x + 1) + '" y="' + (yy + 1) + '" width="' + (C - 2) + '" height="' + (C - 2) + '" rx="2" fill="' + (SEAT_COL[t] || SEAT_COL.normal) + '"' + (t === 'blocked' ? '' : ' fill-opacity=".85"') + '/>'; };
+    var seat = function (x, yy, st) {
+      var t = st.type, num = String(st.code).replace(/^[A-Z]+/, '');
+      return '<rect x="' + (x + 1) + '" y="' + (yy + 1) + '" width="' + (C - 2) + '" height="' + (C - 2) + '" rx="2" fill="' + (SEAT_COL[t] || SEAT_COL.normal) + '"' + (t === 'blocked' ? '' : ' fill-opacity=".85"') + '/>' +
+        (t === 'blocked' ? '' : '<text x="' + (x + C / 2) + '" y="' + (yy + C / 2 + 2) + '" fill="#000" fill-opacity=".75" font-size="5.6" font-weight="700" text-anchor="middle">' + num + '</text>');
+    };
     rows.forEach(function (r) {
       if (r.segments.length === 1) {
         y += 6;
         var g = r.segments[0], pair = g.some(function (x) { return x.type === 'sweetbox'; }), gap = pair ? 3 : 0;
         var w = g.length * C + (pair ? Math.ceil(g.length / 2) - 1 : 0) * gap, x0 = LBL + (inner - w) / 2;
-        g.forEach(function (st, i) { out += seat(x0 + i * C + (pair ? Math.floor(i / 2) * gap : 0), y, st.type); });
+        g.forEach(function (st, i) { out += seat(x0 + i * C + (pair ? Math.floor(i / 2) * gap : 0), y, st); });
       } else {
         var x = LBL;
         r.segments.forEach(function (g, i) {
           var bw = widths[i] * C, off = i === 0 ? bw - g.length * C : 0;
-          g.forEach(function (st, k) { out += seat(x + off + k * C, y, st.type); });
+          g.forEach(function (st, k) { out += seat(x + off + k * C, y, st); });
           x += bw + AIS;
         });
       }
@@ -383,8 +387,7 @@ function mount(root, host) {
       expr('neutral');
       var dirRow = function (d) { return '<div class="row"><div class="v">' + dirIcon(d) + esc(d.label) + '</div><div class="n">' + esc(d.note || '') + '</div></div>'; };
       h = EV.seats && EV.seats.length
-        ? '<div class="content" data-anim><div class="panel seatp">' + seatSvg() + '<div class="sfoot">' + seatLegend() +
-          '<div class="sdir">' + [EV.directions.hall, EV.directions.help].map(function (d) { return '<span>' + dirIcon(d) + esc(d.label) + '</span>'; }).join('') + '</div></div></div></div>'
+        ? '<div class="content" data-anim><div class="panel seatp">' + seatSvg() + '<div class="sfoot">' + seatLegend() + '</div></div></div>'
         : '<div class="content" data-anim><div class="two map"><div class="panel">' + mapSvg() + '</div>' +
           '<div class="panel guide">' + dirRow(EV.directions.hall) + dirRow(EV.directions.help) + '<div class="row"><div class="n">' + esc(HELP) + '</div></div></div></div></div>';
       h += btns([['Quay lại', 'data-go="home"']]);
