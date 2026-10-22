@@ -59,7 +59,7 @@ var EXL = { neutral: 'Bình thường', listening: 'Lắng nghe', curious: 'Tò 
 var COLORS = [['#ef5350', 'Đỏ'], ['#ff8a3d', 'Cam'], ['#ffc53d', 'Vàng'], ['#4cc77f', 'Xanh lá'], ['#2ec4c4', 'Xanh ngọc'], ['#4c8dff', 'Xanh dương'], ['#9b6bff', 'Tím'], ['#ff6fa8', 'Hồng'], ['#fffdf7', 'Trắng']];
 var BASES = [['#000000', 'Đen'], ['#0b1222', 'Xanh đêm'], ['#160f24', 'Tím đêm'], ['#0d1a14', 'Rêu đêm'], ['#1c1010', 'Nâu đêm']];
 var PCOLS = [['#ffffff', 'Trắng'], ['#ffd666', 'Vàng'], ['#ff8fc8', 'Hồng'], ['#7cc7ff', 'Xanh'], ['#b79cff', 'Tím'], ['#86e0a8', 'Xanh lá']];
-var SHAPES = [['round', 'Tròn'], ['squircle', 'Bo vuông'], ['wide', 'Bầu dục'], ['cloud', 'Mây'], ['jelly', 'Thạch']];
+var SHAPES = [['round', 'Tròn'], ['squircle', 'Bo vuông'], ['wide', 'Bầu dục'], ['cloud', 'Mây'], ['jelly', 'Thạch'], ['bot', 'Doombot']];
 var EYES = [['soft', 'Tròn'], ['rect', 'Vuông bo'], ['anime', 'Anime'], ['devil', 'Quỷ']];
 var SLOTS = [['ears', 'Tai, sừng'], ['hair', 'Trên đầu'], ['eyes', 'Mắt']];
 var LOOKS = [
@@ -71,6 +71,7 @@ var LOOKS = [
   ['Black Panther', { color: '#6c4ee0', shape: 'squircle', eyeStyle: 'anime', pixel: false, decor: { ears: 'cat' }, bg: { base: '#160f24', p: 'hexagons', c: '#b79cff' } }],
   ['Doctor Strange', { color: '#ff8a3d', shape: 'round', eyeStyle: 'soft', pixel: false, decor: { hair: 'agamotto' }, bg: { base: '#1c1010', p: 'overlappingCircles', c: '#ffd666' } }],
   ['Deadpool', { color: '#a61c1c', shape: 'round', eyeStyle: 'soft', pixel: false, decor: { eyes: 'dpmask' }, bg: { base: '#1c1010', p: 'polkaDots', c: '#ff6b6b' } }],
+  ['Doombot', { color: '#12b552', theme: '#12b552', shape: 'bot', eyeStyle: 'soft', pixel: false, decor: {}, bg: { base: '#160f24', p: 'topography', c: '#7cc7ff', img: '/kiosk-uni/bg/doom-green.jpg', dim: 0.4, blur: 3 } }],
   ['Doctor Doom', { color: '#9aa4ae', shape: 'squircle', eyeStyle: 'devil', pixel: false, decor: { eyes: 'doomplate', hair: 'doomhood' }, bg: { base: '#0d1a14', p: 'hexagons', c: '#86e0a8' } }]
 ];
 var SCREENS = [['sleep', 'Ngủ (chờ khách)'], ['hello', 'Thấy khách'], ['home', 'Màn chính'], ['scan', 'Quét vé'], ['lookup', 'Nhập số điện thoại'], ['agenda', 'Lịch trình'], ['info', 'Sơ đồ'], ['chat', 'Hỏi đáp']];
@@ -93,7 +94,7 @@ var ERR = { NOT_FOUND: 'notfound', NOT_PAID: 'unpaid', WRONG_EVENT: 'event', NO_
 var DEMO_GUEST = { userName: 'Khách thử', tickets: 2, seats: ['F7', 'F8'], seatsPending: false, combos: ['Combo bắp nước × 1'], shirts: '', alreadyCheckedIn: false, checkedInAt: null, justCheckedIn: true };
 var TICKET_COL = { fg: '#1a1200', bg: '#ffc53d' };
 var IDLE_MOODS = ['happy', 'confused', 'curious'];
-var DEFAULT_LOOK = LOOKS[8][1];
+var DEFAULT_LOOK = LOOKS.filter(function (x) { return x[0] === 'Doombot'; })[0][1];
 
 function uri(s) { return 'data:image/svg+xml,' + encodeURIComponent(s); }
 function mix(a, b, k) { var x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16); return '#' + [16, 8, 0].map(function (s) { return ('0' + Math.round((x >> s & 255) * (1 - k) + (y >> s & 255) * k).toString(16)).slice(-2); }).join(''); }
@@ -609,6 +610,10 @@ function mount(root, host) {
     face.setEyeStyle(L.eyeStyle, !!L.pixel || !!L.facePix);
     face.setDecor(L.decor); face.setBg(L.bg);
     stage.style.background = L.bg.base; screen.style.background = L.bg.base; root.style.setProperty('--bg', L.bg.base);
+    // màu chủ đạo (theme): ô Check-in, nút chính, vòng đếm ngược; không có thì giữ trắng
+    if (/^#[0-9a-f]{6}$/i.test(L.theme || '')) root.style.setProperty('--acc', L.theme); else root.style.removeProperty('--acc');
+    // có màu chủ đạo: các ô chưa chọn ở màn chính ngả sẫm theo màu đó (xanh rất đậm với Doombot), icon trắng
+    if (/^#[0-9a-f]{6}$/i.test(L.theme || '')) root.style.setProperty('--tile', mix(L.theme, '#1a1f1d', 0.93)); else root.style.removeProperty('--tile');
     if (MODE === 'control') { render(); if (fromUser && host.send) host.send({ t: 'look', v: clone(L) }); }
   }
   function set(patch, fromUser) { Object.keys(patch).forEach(function (k) { L[k] = patch[k]; }); apply(fromUser); }
@@ -648,9 +653,12 @@ function mount(root, host) {
   /* hình mặt nhỏ trong ô chọn: vòm mặt theo dáng, hai mắt theo kiểu mắt, phụ kiện, trên nền đã chọn */
   function mini(lk, bg) {
     var f = RIM[lk.shape || 'round'], d = '', c = lk.color, e = mix(c, '#000000', .5), es = lk.eyeStyle || 'soft', id = 'mp' + (pid++);
+    var bot = lk.shape === 'bot', fcol = c;
+    if (bot) { e = '#1b1d1f'; es = 'bot'; }   // người máy: mắt khe đen xếch xuống phía trong
     for (var i = 0; i <= 120; i++) { var a = (-120 + 2 * i) * Math.PI / 180, r = 74 * (f ? f(a) : 1); d += (i ? 'L' : 'M') + (60 + r * Math.sin(a)).toFixed(1) + ' ' + (118 - r * Math.cos(a)).toFixed(1); }
     var eye = function (x, y) {
       if (es === 'devil') { var s = x < 60 ? 1 : -1; return '<path d="M' + (x - 10) + ' ' + (y - 2.5 - 2.5 * s) + 'L' + (x + 10) + ' ' + (y - 2.5 + 2.5 * s) + 'A10 9.5 0 0 1 ' + (x - 10) + ' ' + (y - 2.5 - 2.5 * s) + 'Z" fill="' + e + '"/>'; }
+      if (es === 'bot') { var sb = x < 60 ? 1 : -1, xi = x + 9 * sb, xo = x - 9 * sb; return '<path d="M' + xo + ' ' + (y - 4.6) + 'L' + xi + ' ' + (y - 1.8) + 'L' + xi + ' ' + (y + 4.4) + 'L' + xo + ' ' + (y + 4.4) + 'Z" fill="' + e + '"/>'; }
       if (es === 'rect') return '<rect x="' + (x - 8.5) + '" y="' + (y - 10) + '" width="17" height="20" rx="6.5" fill="' + e + '"/>';
       if (es === 'anime') return '<rect x="' + (x - 8.5) + '" y="' + (y - 10) + '" width="17" height="20" rx="6.5" fill="' + e + '"/><circle cx="' + (x - 2.6) + '" cy="' + (y - 3.3) + '" r="2.5" fill="' + c + '"/>';
       return '<circle cx="' + x + '" cy="' + y + '" r="9.5" fill="' + e + '"/>';
@@ -658,6 +666,13 @@ function mount(root, host) {
     var b = bg || { base: '#000000' }, p = b.p && PAT[b.p];
     var pat = p ? '<defs><pattern id="' + id + '" width="40" height="40" patternUnits="userSpaceOnUse"><image href="' + uri(p.svg.split('#C0FFEE').join(b.c === 'face' ? c : (b.c || '#ffffff'))) + '" width="40" height="40"/></pattern></defs><rect width="120" height="80" fill="url(#' + id + ')" opacity=".21"/>' : '';
     var dec = lk.decor || {}, back = '', front = '';
+    if (bot) {   // vẽ như trên kiosk (face.js BOT_HOOD, BOT_HOLE theo cỡ mắt R, gốc giữa hai mắt): vòm mặt là mũ trùm màu chọn, trong lỗ mũ là mặt thép, vạt mũ đổ bóng xuống
+      var UF = window.UniFace || {}, kR = 36 / 384 * 92, bp = function (def, dy) { return def ? def.map(function (s, j) { var n = j ? s.slice(1) : s; return (j ? s[0] : 'M') + n.map(function (v, k) { return (k % 2 ? 66 + v * kR + dy : 60 + v * kR).toFixed(1); }).join(' '); }).join('') + 'Z' : ''; };
+      var hd = bp(UF.BOT_HOOD, 0), hl = bp(UF.BOT_HOLE, 0), mx = 0.3 * 7 * kR, mt = 2.4 * kR / 2, my = 66 + 1.57 * kR, mb = 7 * kR;
+      var mouth = '<path d="M' + (60 - mt - mx) + ' ' + (my + mb) + 'L' + (60 - mt) + ' ' + my + 'L' + (60 + mt) + ' ' + my + 'L' + (60 + mt + mx) + ' ' + (my + mb) + 'Z" fill="' + e + '"/>';
+      if (hd) var mask = '<defs><clipPath id="' + id + 'h"><path d="' + hl + '"/></clipPath></defs><path d="' + hd + '" fill="' + c + '"/><path d="' + hl + '" fill="#7b8389" stroke="' + mix(c, '#000000', .38) + '" stroke-width="' + (kR * .5).toFixed(1) + '" stroke-linejoin="round"/><g clip-path="url(#' + id + 'h)">' + mouth + '<path d="' + hl + bp(UF.BOT_HOLE, kR * .75) + '" fill="' + mix('#7b8389', '#000000', .42) + '" fill-rule="evenodd"/></g>';
+      if (hd) d = '';
+    }
     var rim = function (deg, inset) { var a = deg * Math.PI / 180, r = 74 * (f ? f(a) : 1) - inset; return [60 + r * Math.sin(a), 118 - r * Math.cos(a)]; };
     var img = function (s, x, y, h, ax, ay, rot, wx) { var vb = /viewBox="([^"]+)"/.exec(s)[1].split(' ').map(Number), w = h * vb[2] / vb[3] * (wx || 1); return '<image href="' + uri(s) + '" x="' + (-w * ax).toFixed(1) + '" y="' + (-h * ay).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h + '" transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')"/>'; };
     var it = dec.ears && D[dec.ears];
@@ -666,7 +681,7 @@ function mount(root, host) {
     if (it) { var fh = it.m.pos === 'forehead', ct = it.m.pos === 'center' || fh, ha = ct ? 0 : 36, hp = rim(ha, fh ? 9 : ct ? 4 : 1); var hs = img(tint(it, it.parts[0], c), hp[0], hp[1], it.m.mh || (fh ? 30 : ct ? 24 : 22), .5, it.m.ay || (ct ? .85 : .5), ha, it.m.wx); if (it.m.back) back += hs; else front += hs; }
     it = dec.eyes && D[dec.eyes];
     if (it) front += img(it.parts[0], 60, 66, it.m.mh || 22, .5, .5, 0);
-    return '<svg class="mini" viewBox="0 0 120 80" aria-hidden="true"><rect width="120" height="80" fill="' + (b.base || '#000000') + '"/>' + pat + back + '<path d="' + d + 'Z" fill="' + c + '"/>' + eye(42, 66) + eye(78, 66) + front + '</svg>';
+    return '<svg class="mini" viewBox="0 0 120 80" aria-hidden="true"><rect width="120" height="80" fill="' + (b.base || '#000000') + '"/>' + pat + back + (mask || '<path d="' + d + 'Z" fill="' + fcol + '"/>') + eye(42, 66) + eye(78, 66) + front + '</svg>';
   }
   function tileBtn(isOn, inner, name, fn) { var b = document.createElement('button'); b.type = 'button'; b.className = 'tile2' + (isOn ? ' on' : ''); b.innerHTML = inner + '<span class="tn">' + esc(name) + '</span>'; b.title = name; b.onclick = fn; return b; }
   function swBtn(col, name, isOn, fn, cls) { var b = document.createElement('button'); b.type = 'button'; b.className = 'sw' + (cls ? ' ' + cls : ''); b.style.background = col; b.title = name; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', isOn ? 'true' : 'false'); b.onclick = fn; return b; }
@@ -674,7 +689,7 @@ function mount(root, host) {
   function render() {
     fillEl('#looks', LOOKS.map(function (x) {
       var lk = x[1], isOn = lk.color === L.color && lk.shape === L.shape && lk.eyeStyle === L.eyeStyle && lk.pixel === !!L.pixel && !L.facePix && same(lk.decor, L.decor) && (lk.bg.p || null) === (L.bg.p || null) && lk.bg.base === L.bg.base;
-      return tileBtn(isOn, mini(lk, lk.bg), x[0], function () { pick({ color: lk.color, shape: lk.shape, eyeStyle: lk.eyeStyle, pixel: lk.pixel, facePix: false, decor: Object.assign({}, lk.decor), bg: Object.assign({ c: '#ffffff' }, lk.bg) }); });
+      return tileBtn(isOn, mini(lk, lk.bg), x[0], function () { pick({ color: lk.color, theme: lk.theme || null, shape: lk.shape, eyeStyle: lk.eyeStyle, pixel: lk.pixel, facePix: false, decor: Object.assign({}, lk.decor), bg: Object.assign({ c: '#ffffff' }, lk.bg) }); });
     }));
     var cs = COLORS.map(function (c) { return swBtn(c[0], 'Màu ' + c[1], L.color === c[0], function () { pick({ color: c[0] }); }); });
     var cu = document.createElement('label'); cu.className = 'sw custom'; cu.title = 'Chọn màu khác';

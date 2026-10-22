@@ -310,8 +310,58 @@ var SHAPE_FN = {
   squircle: function (a) { var n = 3.4; return Math.pow(Math.pow(Math.abs(Math.sin(a)), n) + Math.pow(Math.abs(Math.cos(a)), n), -1 / n); },
   wide: function (a) { var sx = Math.sin(a) / 1.1, cy = Math.cos(a) / 0.92; return 1 / Math.sqrt(sx * sx + cy * cy); },
   cloud: function (a) { return 0.985 + 0.03 * Math.pow(Math.abs(Math.cos(a * 7)), 0.7); },
-  jelly: function (a, t) { return 1 + 0.02 * Math.sin(3 * a + t * 0.9) + 0.012 * Math.sin(5 * a - t * 0.7 + 1.3); }
+  jelly: function (a, t) { return 1 + 0.02 * Math.sin(3 * a + t * 0.9) + 0.012 * Math.sin(5 * a - t * 0.7 + 1.3); },
+  // người máy trùm mũ (dáng ngoại lệ, theo bản phác của Hải): vòm mặt là chiếc mũ, đường bao vẽ theo mắt (BOT_HOOD) rồi quy ra bán kính theo góc mỗi khung (botBuild)
+  bot: function (a) { return botRim(a); }
 };
+var BOT = { steel: '#7b8389' };   // người máy trùm mũ: vòm mặt là mũ trùm màu mặt Uni, trong lỗ mũ là mặt thép xám của người máy
+/* Người máy theo bản phác của Hải. Tọa độ tính theo cỡ mắt R, gốc ở giữa hai mắt, y hướng xuống.
+   Mũ: bên trái dựng thẳng, góc trên trái bo nhỏ, đỉnh mũ cao dần từ trái sang rồi vòng xuống bên phải như vạt mũ ngả về sau sang trái.
+   Lỗ mũ: hai bên gần thẳng đứng, mở xuống tận dưới màn, đỉnh nhọn như hình thoi đứng hơi chếch sang phải (sườn trái thoải, sườn phải dốc hơn). */
+var BOT_HOOD = [[-5.75, 30], ['L', -5.75, -3.55], ['C', -5.75, -3.95, -5.6, -4.08, -5.2, -4.12], ['C', -3.6, -4.3, -1.6, -4.62, -0.4, -4.62], ['C', 1.6, -4.62, 3.4, -3.9, 4.5, -2.5], ['C', 5.4, -1.3, 5.75, 0.4, 5.75, 2.5], ['L', 5.75, 30]];
+var BOT_HOLE = [[-4.15, 30], ['L', -4.12, 1.4], ['C', -4.08, -0.3, -3.3, -1.55, -2.2, -2.0], ['L', 0.15, -2.96], ['Q', 0.5, -3.12, 0.82, -2.94], ['L', 2.3, -2.12], ['C', 3.3, -1.55, 4.06, -0.4, 4.1, 1.4], ['L', 4.15, 30]];
+function botEnd(s) { return s[0] === 'L' ? [s[1], s[2]] : s[0] === 'Q' ? [s[3], s[4]] : [s[5], s[6]]; }
+function botPts(def, n) {
+  var out = [def[0].slice()], p = def[0];
+  for (var i = 1; i < def.length; i++) {
+    var s = def[i];
+    for (var k = 1; k <= n; k++) {
+      var t = k / n, u = 1 - t;
+      if (s[0] === 'L') out.push([p[0] + (s[1] - p[0]) * t, p[1] + (s[2] - p[1]) * t]);
+      else if (s[0] === 'Q') out.push([u * u * p[0] + 2 * u * t * s[1] + t * t * s[3], u * u * p[1] + 2 * u * t * s[2] + t * t * s[4]]);
+      else out.push([u * u * u * p[0] + 3 * u * u * t * s[1] + 3 * u * t * t * s[3] + t * t * t * s[5], u * u * u * p[1] + 3 * u * u * t * s[2] + 3 * u * t * t * s[4] + t * t * t * s[6]]);
+    }
+    p = botEnd(s);
+  }
+  return out;
+}
+function botPath(def, X, Y) {
+  var q = new Path2D(); q.moveTo(X(def[0][0]), Y(def[0][1]));
+  for (var i = 1; i < def.length; i++) {
+    var s = def[i];
+    if (s[0] === 'L') q.lineTo(X(s[1]), Y(s[2]));
+    else if (s[0] === 'Q') q.quadraticCurveTo(X(s[1]), Y(s[2]), X(s[3]), Y(s[4]));
+    else q.bezierCurveTo(X(s[1]), Y(s[2]), X(s[3]), Y(s[4]), X(s[5]), Y(s[6]));
+  }
+  q.closePath(); return q;
+}
+// miệng người máy: khối lưới (theo cỡ mắt R): rộng w, cao h, mép trên cách tâm mắt y; n khe dọc rộng sw, lề ngang px, lề dọc py
+var BOT_MOUTH = { w: 2.4, y: 1.57, k: 0.3, n: 5, rw: 0.16 };   // miệng hình thang: rộng đỉnh w, cạnh xòe k mỗi R xuống, n ngăn đen chia bởi gân sáng rộng rw
+// mặt pixel: ô cỡ 0,2R nên khe, vành phải to hơn một ô mới không bị gộp mất: ít khe hơn, khe rộng hơn, vành dày một ô
+var BOT_MOUTH_PIX = { w: 2.6, y: 1.57, k: 0.3, n: 5, rw: 0.3 };
+// mặt to (chào, ngủ): mép trái dựng thẳng cạnh mép màn trông như bị cắt theo góc màn, nên góc trên trái bo rộng hẳn ra
+var BOT_HOOD_BIG = [[-5.75, 30], ['L', -5.75, -0.4], ['C', -5.75, -2.5, -4.95, -3.7, -3.5, -4.22], ['C', -2.5, -4.52, -1.5, -4.62, -0.4, -4.62]].concat(BOT_HOOD.slice(4));
+var BOT_HOOD_PTS = botPts(BOT_HOOD, 16), BOT_HOOD_BIG_PTS = botPts(BOT_HOOD_BIG, 16), BOT_TAB = null, BOT_HM = 0.15;   // BOT_HM: mũ chỉ theo 15% chuyển động của mặt
+// bán kính vòm mũ theo góc (đã quy theo tâm và bán kính vòm mặt của khung hiện tại), nội suy trong bảng botBuild dựng
+function botRim(a) {
+  var T = BOT_TAB; if (!T) return 1;
+  a = Math.atan2(Math.sin(a), Math.cos(a));
+  var A = T.a, Rr = T.r, n = A.length;
+  if (a <= A[0] || a >= A[n - 1]) { var span = A[0] + Math.PI * 2 - A[n - 1], u = clamp((((a - A[n - 1]) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / span, 0, 1); return Rr[n - 1] + (Rr[0] - Rr[n - 1]) * u; }
+  var lo = 0, hi = n - 1;
+  while (hi - lo > 1) { var m = (lo + hi) >> 1; if (A[m] <= a) lo = m; else hi = m; }
+  return Rr[lo] + (Rr[hi] - Rr[lo]) * (a - A[lo]) / ((A[hi] - A[lo]) || 1);
+}
 /* Kiểu mắt: sw, sh là hệ số rộng, cao so với mắt mặc định; sq là độ vuông của mắt (0 là bầu dục).
    Pixel là lựa chọn riêng (setEyeStyle(k, pix)), ghép được với mọi kiểu mắt: pixel tròn, pixel vuông bo, pixel anime, pixel quỷ */
 var EYE_STYLE = {
@@ -319,7 +369,9 @@ var EYE_STYLE = {
   rect: { sw: 1.14, sh: 1.24, sq: 3.2 },
   anime: { sw: 1.14, sh: 1.24, sq: 3.2, anime: true },   // khuôn mắt như vuông bo, thêm hai đốm sáng khoét lỗ
   // mắt quỷ: bán nguyệt (mí trên cắt phẳng gần nửa mắt), mép cắt xếch xuống phía trong như đang nheo tinh quái
-  devil: { sw: 1.12, sh: 1.08, sq: 0, top: 0.42, slant: -0.38 }
+  devil: { sw: 1.12, sh: 1.08, sq: 0, top: 0.42, slant: -0.38 },
+  // mắt người máy (cố định, như hình gốc): hốc mắt đen, chữ nhật dẹt góc gần vuông, mép trên xếch xuống phía trong
+  bot: { sw: 1.05, sh: 0.55, sq: 7, top: 0.18, slant: -0.3 }
 };
 function Face() {
   this.ss = 2; this.cv = document.createElement('canvas'); this.cv.width = 1078 * this.ss; this.cv.height = 480 * this.ss;
@@ -349,6 +401,22 @@ Face.prototype.setShape = function (k) {
   if (k === this.shape && this.shapeSet) return;
   if (this.shapeSet) { this.shPrevK = this.shPrev && this.shT < 1 ? this.rimMix() : null; this.shPrev = this.shape; this.shT = 0; }
   this.shape = k; this.shapeSet = true;
+  if (this.esKey) this.setEyeStyle(this.esKey);   // người máy khóa kiểu mắt
+};
+// độ "người máy" hiện tại, 0 đến 1, đi cùng nhịp biến dáng (đầu thép, áo khoác mũ trùm, đường nối hàm, ba lỗ loa hiện hoặc tan dần)
+/* Dựng bảng bán kính vòm mũ theo góc cho khung này: mũ vẽ theo mắt nên đổi sang tọa độ cực quanh tâm vòm mặt.
+   Mặt to (chào, ngủ) thì mũ và lỗ mũ thấp lại (vy) và hẹp lại một chút (hs) để thấy trọn đỉnh mũ, mắt và miệng trong màn. */
+Face.prototype.botBuild = function (T) {
+  var b = (T.hk || 0) * (1 - T.sm), hs = 1 - 0.14 * b, vy = 1 - 0.42 * b, R = this.R, P = [];
+  this.bG = { hs: hs, vy: vy };
+  BOT_HOOD_PTS.forEach(function (p0, i) { var q = BOT_HOOD_BIG_PTS[i], p = [p0[0] + (q[0] - p0[0]) * b, p0[1] + (q[1] - p0[1]) * b], x = 492 + p[0] * R * hs - T.ccx, y = T.ccy - (262 + p[1] * R * vy); P.push([Math.atan2(x, y), Math.hypot(x, y) / T.cr]); });
+  P.sort(function (u, v) { return u[0] - v[0]; });
+  BOT_TAB = { a: P.map(function (q) { return q[0]; }), r: P.map(function (q) { return q[1]; }) };
+};
+Face.prototype.botK = function () {
+  var on = this.shape === 'bot' ? 1 : 0;
+  if (!this.shPrev || this.shT >= 1) return on;
+  var was = this.shPrev === 'bot' ? 1 : 0, e = ease(this.shT); return was + (on - was) * e;
 };
 function shapeK(key, a, t) { var f = SHAPE_FN[key]; return f ? f(a, t) : 1; }
 // đang biến dáng giữa chừng mà đổi tiếp: chụp lại dáng đang hiện làm điểm xuất phát, không giật về dáng cũ
@@ -361,10 +429,10 @@ Face.prototype.setEyeStyle = function (k, pix) {
   if (k === 'pixel') { k = 'soft'; pix = true; }   // cài đặt cũ: "pixel" từng là một kiểu mắt riêng
   if (pix !== undefined) this.pix = !!pix;
   this.esKey = EYE_STYLE[k] ? k : 'soft';
-  var b = EYE_STYLE[this.esKey];
+  var kn = this.shape === 'bot', b = kn ? EYE_STYLE.bot : EYE_STYLE[this.esKey];   // người máy khóa kiểu mắt
   // khi thành pixel: mắt tròn to hơn một chút để đủ ô cho viền mềm; mắt vuông bo hẹp lại thành khối đứng kiểu màn hình máy game
   var PIX_ADJ = { soft: { sw: 1.18, sh: 1.2 }, rect: { sw: 0.9 } };
-  this.es = this.pix && !this.fpix ? Object.assign({}, b, { pix: true }, PIX_ADJ[this.esKey] || {}) : this.pix ? Object.assign({}, b, PIX_ADJ[this.esKey] || {}) : b;   // mặt pixel: mắt vẽ mượt rồi pixel hóa cùng mặt
+  this.es = this.pix && !this.fpix ? Object.assign({}, b, { pix: true }, (kn ? {} : PIX_ADJ[this.esKey]) || {}) : this.pix ? Object.assign({}, b, (kn ? {} : PIX_ADJ[this.esKey]) || {}) : b;   // mặt pixel: mắt vẽ mượt rồi pixel hóa cùng mặt   // mặt pixel: mắt vẽ mượt rồi pixel hóa cùng mặt
 };
 Face.prototype.setPixel = function (on) { this.setEyeStyle(this.esKey || 'soft', !!on); };
 /* Mặt pixel: tai, sừng, vòm mặt, mắt, phụ kiện được vẽ mượt vào một tấm ảnh rất nhỏ (mỗi điểm ảnh là một ô, lưới neo theo tâm vòm mặt),
@@ -552,8 +620,8 @@ Face.prototype.step = function (dt) {
   this.wasSmall = small;
   var ant = this.antT > 0; if (ant) this.antT -= dt;
   // có tai, sừng hay đồ trên đầu thì mặt thu nhỏ hơn và thấp xuống (đỉnh mặt không quá nửa chiều cao màn) để phụ kiện có chỗ phía trên
-  var headDec = this.decor && (this.decor.ears || this.decor.hair);
-  this.Lt = small && !ant ? (headDec ? 0.32 : 0.36) : 1;
+  var headDec = this.decor && (this.decor.ears || this.decor.hair) || this.shape === 'bot';   // người máy: chừa chỗ để thấy chóp mũ trùm cả khi mặt to
+  this.Lt = small && !ant ? (this.shape === 'bot' ? 0.42 : headDec ? 0.32 : 0.36) : 1;   // người máy: mặt thu nhỏ to hơn để thấy trọn mũ trùm
   this.L = sdamp(this.L, this.Lt, this.lv, 'L', 0.09, dt);
   this.ak = (this.ak || 1) + ((1 + 0.07 * (this.attn || 0)) - (this.ak || 1)) * damp(3, dt);
   // ngủ thì tắt đèn: nền đỏ tối dần thành đen, có người tới thì đỏ bừng lên lại
@@ -564,7 +632,7 @@ Face.prototype.step = function (dt) {
   // hk: có phụ kiện trên đầu. Mặt to thì chỉ hiện vòm mặt chiếm khoảng 2/3 dưới màn, chừa 1/3 trên cho phụ kiện (mắt hạ xuống, vòm rộng hơn)
   this.hk = sdamp(this.hk || 0, headDec ? 1 : 0, this.lv, 'hk', 0.15, dt);
   var hk = this.hk * (1 - sm);
-  var PX = 539 + (212 - 539) * sm, PY = 240 + (400 - 240) * sm + 60 * hk;
+  var bkP = this.shape === 'bot' ? this.botK() : 0, PX = 539 + (212 + 12 * bkP - 539) * sm, PY = 240 + (400 - 4 * bkP - 240) * sm + 60 * hk;
   var focus = this.stepScan(dt);
   this.tl = sdamp(this.tl, ex.tilt || 0, this.lv, 'tl', 0.22, dt);
   // xê dịch nhẹ (px trên màn), giới hạn trong vùng an toàn: không lấn sang phần chữ bên phải và lịch trình phía trên
@@ -611,6 +679,13 @@ Face.prototype.step = function (dt) {
   this.hopT = (this.hopT === undefined ? 9 : this.hopT) + dt;
   var hp = this.hopT, awake = eff !== 'sleep';
   T.eyy += (awake ? -16 * Math.exp(-hp * 4.5) * Math.abs(Math.sin(hp * 9)) + 3.5 * Math.sin(this.clk * 1.8) : 0);
+  // người máy: mũ (vòm mặt) chỉ nhích rất nhẹ; phần xê dịch, nảy của mặt dồn sang mắt và miệng bên trong lỗ mũ
+  var bkM = this.shape === 'bot' || this.shPrev === 'bot' ? this.botK() : 0;
+  if (bkM > 0) {
+    var hmK = 1 - (1 - BOT_HM) * bkM;
+    T.exx += T.fx * (1 - hmK); T.eyy += T.fy * (1 - hmK); T.fx *= hmK; T.fy *= hmK;
+    T.sqx = 1 + (T.sqx - 1) * hmK; T.sqy = 1 + (T.sqy - 1) * hmK;
+  }
   // phối cảnh: mắt phía đang liếc tới to hơn, mắt kia nhỏ lại, nhìn lên hoặc xuống thì dẹt nhẹ; cộng nhịp thở
   // đeo kính ngầu thì tắt phối cảnh để hai nửa kính luôn khớp nhau
   var vk = this.gly[0] === 'visor' ? 1 - this.gk[0] : 1;
@@ -627,6 +702,7 @@ Face.prototype.step = function (dt) {
     eye: function (x, y) { return [PX + L * (x - 492 + T.exx + T.fx), PY + L * (y - 262 + T.eyy + T.fy)]; } };
   // full: mặt đỏ phủ kín màn hình; thu nhỏ: cùng khuôn mặt đó lùi về góc dưới trái
   T.sm = sm; T.px = PX; T.py = PY; T.ccx = 492 - 161 * sm; T.ccy = 262 + 186 * sm + 760 * hk; T.cr = 700 - 30 * sm + 200 * hk; T.hk = this.hk; T.dim = this.dim;
+  if (this.shape === 'bot' || this.shPrev === 'bot') this.botBuild(T);
   var dKey = this.decoOverride !== undefined ? this.decoOverride : (ex.deco || null);
   var deco = dKey ? DECO[dKey] : null;
   var sp = function (c) { self.spawn(c); };
@@ -700,7 +776,38 @@ function wrapText(g, text, maxW) {
 Face.prototype.drawEyes = function (o, T, paths, col) {
   var g = this.g, pz = this.pz;
   g.save();
+  var M0 = g.getTransform();   // khung trước khi theo mắt: mũ người máy chỉ nhích rất nhẹ theo khung này
   g.translate(T.exx, T.eyy); g.translate(492, 262); g.rotate(T.tilt * D2R); g.translate(-492, -262);
+  var bk2 = this.bk || 0;
+  if (bk2 > 0.01) {   // người máy trùm mũ: cả vòm mặt là mũ trùm (màu mặt Uni); trong lỗ mũ hình vòm cung là mặt thép của người máy như hình gốc
+    // lỗ mũ theo bản phác (BOT_HOLE): hai bên gần thẳng, đỉnh nhọn chếch sang phải; mặt to thì thấp và hẹp lại cùng mũ (bG)
+    // mũ (cả lỗ mũ) chỉ nhích rất nhẹ (BOT_HM phần chuyển động của mặt), còn mắt và miệng bên trong đi đủ theo biểu cảm
+    var gb = g.globalAlpha, rb = this.R, G = this.bG || { hs: 1, vy: 1 }, Me = g.getTransform(), hm = BOT_HM;
+    var X = function (u) { return 492 + u * rb * G.hs; };
+    var hole = function (dy) { return botPath(BOT_HOLE, X, function (v) { return 262 + v * rb * G.vy + dy; }); };
+    g.setTransform(M0); g.translate(T.exx * hm, T.eyy * hm); g.translate(492, 262); g.rotate(T.tilt * hm * D2R); g.translate(-492, -262);
+    var Mh = g.getTransform(), H = hole(0);
+    g.globalAlpha = gb * bk2;
+    g.lineWidth = rb * 0.5; g.lineJoin = 'round'; g.strokeStyle = this.bCol.rim; g.stroke(H);   // vành trong của mũ quanh lỗ, đậm hơn màu mũ (nửa trong bị mặt che, còn nửa ngoài)
+    g.save(); g.clip(H);
+    g.fillStyle = this.bCol.steel; g.fillRect(-3000, -3000, 7000, 7000);
+    // miệng: khối lưới bo góc như hình minh họa (vành tối, mặt lưới sáng hơn một chút), trong là các khe dọc đen; đi theo mặt (chi tiết tĩnh, biểu cảm vẫn chỉ ở mắt)
+    g.setTransform(Me);
+    // miệng theo bản phác: khối hình thang đen, đỉnh hẹp bo nhẹ hai góc, hai cạnh xòe ra chạy xuống dưới màn, chia bởi các gân sáng xòe theo cạnh
+    var BM = this.fpix ? BOT_MOUTH_PIX : BOT_MOUTH, wt = rb * BM.w * G.hs, my = 262 + rb * BM.y * G.vy, MH = rb * 7, wb = wt + 2 * MH * BM.k * G.hs / G.vy, cr = rb * 0.18;
+    var L0 = 492 - wt / 2, R0 = 492 + wt / 2, L1 = 492 - wb / 2, R1 = 492 + wb / 2, dx = (L0 - L1) / MH;
+    g.fillStyle = this.bCol.mouth; g.beginPath();
+    g.moveTo(L1, my + MH); g.lineTo(L0 + dx * cr, my + cr); g.quadraticCurveTo(L0, my, L0 + cr, my); g.lineTo(R0 - cr, my); g.quadraticCurveTo(R0, my, R0 - dx * cr, my + cr); g.lineTo(R1, my + MH); g.closePath(); g.fill();
+    g.fillStyle = this.bCol.panel; var rw = rb * BM.rw * G.hs;
+    for (var di = 1; di < BM.n; di++) { var f = di / BM.n, xt = L0 + (R0 - L0) * f, xb = L1 + (R1 - L1) * f; g.beginPath(); g.moveTo(xt - rw / 2, my + rb * 0.12); g.lineTo(xt + rw / 2, my + rb * 0.12); g.lineTo(xb + rw / 2, my + MH); g.lineTo(xb - rw / 2, my + MH); g.closePath(); g.fill(); }
+    // bóng đổ của vạt mũ in xuống mặt: đặc, sâu, lệch xuống nhiều, không mờ loang, để mặt như chìm sâu trong mũ
+    g.setTransform(Mh);
+    var sp = new Path2D(); sp.addPath(H); sp.addPath(hole(rb * 0.75));
+    g.fillStyle = this.bCol.shadow; g.fill(sp, 'evenodd');
+    g.restore(); g.globalAlpha = gb;
+    if (bk2 > 0.5) g.clip(H);   // mắt nằm trong lỗ mũ: phần mắt chạm vạt mũ bị che (khung drawEyes khôi phục ở cuối hàm)
+    g.setTransform(Me);
+  }
   for (var sd = 0; sd < 2; sd++) {
     var p = this.eyes[sd], cx = 492 + (sd ? 1 : -1) * this.gap / 2 * pz.gapK;
     g.save(); g.translate(cx + p.dx * this.R, 262 + p.dy * this.R); g.rotate(p.rot * D2R); g.scale(pz.sx[sd], pz.sy[sd]);
@@ -884,7 +991,7 @@ Face.prototype.drawDecor = function (slot, T) {
       var pf = Math.asin(clamp((492 - T.ccx) / (T.cr * this.rimK(0)), -0.9, 0.9)) * R2D, rt = onRim(pf, pick2(m.inset, 70, 95));
       put(imgs[0], rt[0], rt[1], rt[2] * 0.35 + (m.lean || 0), pick2(m.h, 240, 180), 0.5, m.ay || 1);   // ngả nhẹ theo mặt trán, lean: chóp nghiêng thêm về phía trên bên phải (độ)
     }
-    else if (m.pos === 'center') { var rc = onRim(0, lerp(20, 30)); put(imgs[0], rc[0], rc[1], rc[2], pick2(m.h, 120, 140), 0.5, m.ay || 0.85); }
+    else if (m.pos === 'center') { var rc = onRim(0, lerp(20, 30)); put(imgs[0], rc[0], rc[1], rc[2], m.fit ? m.fit * T.cr / 700 : pick2(m.h, 120, 140), 0.5, m.ay || 0.85); }   // fit: cao theo đơn vị vòm (bán kính 700), co giãn cùng vòm mặt
     else { var a2 = lerp(26, 38), rh = onRim(a2, 6); put(imgs[0], rh[0], rh[1], rh[2], pick2(m.h, 140, 150), 0.5, m.ay || 0.5); }
   } else if (slot === 'eyes') {
     // kính theo đầu (nghiêng, nảy) chứ không theo hướng nhìn, hai tròng ôm hai mắt
@@ -896,10 +1003,15 @@ Face.prototype.drawDecor = function (slot, T) {
 Face.prototype.setBg = function (b) {
   // họa tiết luôn đậm 13% (mức rõ nhất vẫn để chữ trắng dễ đọc); màu họa tiết chọn sẵn hoặc 'face' là theo màu mặt Uni (đổi màu mặt thì đổi theo)
   b = b || {}; this.bgSpec = b; this.bgBase = /^#[0-9a-f]{6}$/i.test(b.base || '') ? b.base : '#000';
-  var P = window.UniDecor && window.UniDecor.PATTERNS, it = P && P[b.p];
-  this.bgAlpha = it ? 0.13 : 0; this.bgPat = null; this.bakeBg();
+  var P = window.UniDecor && window.UniDecor.PATTERNS, it = P && P[b.p], self = this;
+  this.bgAlpha = it ? 0.13 : 0; this.bgPat = null;
+  // ảnh nền (img: đường dẫn cùng trang): phủ kín màn kiểu cover, tối bớt theo dim để chữ và mặt nổi lên, họa tiết vẽ đè trên ảnh
+  var src = typeof b.img === 'string' && /^\/[\w\/.-]+$/.test(b.img) ? b.img : null;
+  if (!src) this.bgImg = null;
+  else if (!this.bgImg || this.bgImgSrc !== src) { this.bgImg = null; this.bgImgSrc = src; var bi = new Image(); bi.onload = function () { if (self.bgImgSrc === src) { self.bgImg = bi; self.bakeBg(); } }; bi.src = src; }
+  this.bgDim = clamp(+b.dim || 0, 0, 0.95); this.bgBlur = clamp(b.blur === undefined ? 3 : +b.blur || 0, 0, 20); this.bakeBg();   // blur: độ nhòe ảnh nền (đơn vị vẽ)
   if (!it) return;
-  var self = this, img = new Image(), c = b.c === 'face' ? (this.color || FACE_RED) : /^#[0-9a-f]{6}$/i.test(b.c || '') ? b.c : '#ffffff';
+  var img = new Image(), c = b.c === 'face' ? (this.color || FACE_RED) : /^#[0-9a-f]{6}$/i.test(b.c || '') ? b.c : '#ffffff';
   img.onload = function () { self.bgPat = self.g.createPattern(img, 'repeat'); if (self.bgPat.setTransform) self.bgPat.setTransform(new DOMMatrix().scale(1.6)); self.bakeBg(); };
   img.src = 'data:image/svg+xml,' + encodeURIComponent(it.svg.split('#C0FFEE').join(c));
 };
@@ -908,6 +1020,14 @@ Face.prototype.bakeBg = function () {
   if (!this.bc) { this.bc = document.createElement('canvas'); this.bc.width = this.cv.width; this.bc.height = this.cv.height; this.bcg = this.bc.getContext('2d'); }
   var main = this.g; this.g = this.bcg;
   this.g.setTransform(this.ss, 0, 0, this.ss, 0, 0); this.g.fillStyle = this.bgBase || '#000'; this.g.fillRect(0, 0, 1078, 480);
+  var im = this.bgImg;
+  if (im && im.naturalWidth) {
+    var k = Math.max(1078 / im.naturalWidth, 480 / im.naturalHeight), iw = im.naturalWidth * k, ih = im.naturalHeight * k;
+    var bl = this.bgBlur || 0; iw += 4 * bl; ih += 4 * bl;   // nhòe thì phóng rộng ra một chút để mép màn không bị viền sáng
+    if (bl) this.g.filter = 'blur(' + (bl * this.ss) + 'px)';
+    this.g.drawImage(im, (1078 - iw) / 2, (480 - ih) / 2, iw, ih); this.g.filter = 'none';
+    if (this.bgDim) { this.g.fillStyle = 'rgba(0,0,0,' + this.bgDim + ')'; this.g.fillRect(0, 0, 1078, 480); }
+  }
   this.drawPattern(this.bgAlpha || 0); this.g = main;
 };
 Face.prototype.drawPattern = function (a) {
@@ -924,7 +1044,8 @@ Face.prototype.setColor = function (hex, instant) {
 Face.prototype.draw = function (o, T) {
   var g = this.g;
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
-  if (this.bc && this.bgAlpha) g.drawImage(this.bc, 0, 0); else { g.fillStyle = this.bgBase || '#000'; g.fillRect(0, 0, this.cv.width, this.cv.height); }
+  if (this.bc && (this.bgAlpha || this.bgImg)) g.drawImage(this.bc, 0, 0); else { g.fillStyle = this.bgBase || '#000'; g.fillRect(0, 0, this.cv.width, this.cv.height); }
+  if (this.dim > 0.01 && this.bgImg) { g.fillStyle = 'rgba(0,0,0,' + (this.dim * 0.82).toFixed(3) + ')'; g.fillRect(0, 0, this.cv.width, this.cv.height); }   // ngủ: ảnh nền tối theo mặt, khỏi chói cạnh linh vật đang tắt đèn
   g.setTransform(this.ss, 0, 0, this.ss, 0, 0);
   // mặt thu nhỏ: vẽ confetti, mặt và phụ kiện lên một lớp riêng rồi khoét các ô chữ, để Uni luôn nằm dưới thông tin, không đè lên chữ;
   // nền họa tiết vẽ trên lớp chính nên luôn ở sâu nhất
@@ -964,26 +1085,37 @@ Face.prototype.draw = function (o, T) {
     var ep = this.eyes[sd], open = (1 - clamp((ep.bA - 0.2) / 0.5, 0, 1)) * (1 - Math.min(1, ep.line));
     return new Path2D(this.eyePath(ep, this.gk[sd] > 0.5 ? 0 : o.blink * open, sd, 1 - this.gk[sd]));
   }, this);
-  var fc = mixHex(this.color || FACE_RED, '#000000', T.dim);
+  var fdim = T.dim * (1 - 0.28 * this.botK());   // người máy ngủ: mũ và mặt thép chỉ tối bớt, vẫn nhận ra hình
+  var fc = mixHex(this.color || FACE_RED, '#000000', fdim);
   var spread = this.cT !== undefined && this.cT < 1 ? ease(this.cT) : 1;
   // bước thời gian bị chặn trên (khung đầu sau lệnh đổi màu thường dài vì vừa dựng lại ảnh) để vệt loang không nhảy cóc
   if (this.cT !== undefined && this.cT < 1) this.cT = Math.min(1, this.cT + Math.min(this.lastDt || 0.016, 1 / 30) / CSPAN);
   if (this.shPrev && this.shT < 1) { this.shT = Math.min(1, this.shT + Math.min(this.lastDt || 0.016, 1 / 30) / CSPAN); if (this.shT >= 1) this.shPrev = this.shPrevK = null; }   // biến dáng cùng nhịp với loang màu
   this.spread = spread;
-  var fcOld = spread < 1 ? mixHex(this.oldColor || FACE_RED, '#000000', T.dim) : fc;
+  var fcOld = spread < 1 ? mixHex(this.oldColor || FACE_RED, '#000000', fdim) : fc;
+  var bk2 = this.bk = this.botK();
+  if (bk2 > 0) {
+    /* người máy trùm mũ: mặt xám kim loại, mắt và miệng đen; vành trong của mũ quanh lỗ đậm hơn màu mũ, vạt mũ đổ bóng sâu xuống mặt */
+    var face = mixHex(BOT.steel, '#000000', fdim), ink = mixHex(face, '#000000', 0.86);
+    this.bCol = { steel: face, eye: ink, mouth: ink, grille: mixHex(face, '#000000', 0.62), panel: mixHex(face, '#000000', 0.42), shadow: mixHex(face, '#000000', 0.42), rim: mixHex(fc, '#000000', 0.38) };
+  }
   // nhớ vị trí và độ sáng của mặt để vẽ hiệu ứng tương phản khi mặt màu sáng
   this.fcx = T.px + (T.ccx - 492 + T.fx) * T.L; this.fcy = T.py + (T.ccy - 262 + T.fy) * T.L; this.fcr = T.cr * T.L;
   // điểm neo cho bong bóng lời nhắn: mặt to thì phía trên bên phải mắt phải, mặt nhỏ thì mép vòm phía phải (58°); đi theo mặt khi nảy, xê dịch
   var ba = 58 * D2R, bk = this.rimK(ba), bx = 492 + 330 + (T.ccx + T.cr * bk * Math.sin(ba) - 492 - 330) * T.sm, by = 262 - 140 + (T.ccy - T.cr * bk * Math.cos(ba) - 262 + 140) * T.sm;   // lệch hẳn sang phải mặt
   this.bubA = [T.px + (bx - 492 + T.fx) * T.L, T.py + (by - 262 + T.fy) * T.L]; this.fLight = luma(fc) > 0.6;
-  var dec = this.decor || {}, DD = window.UniDecor && window.UniDecor.DECOR, hairBack = dec.hair && DD && DD[dec.hair] && DD[dec.hair].m && DD[dec.hair].m.back;
+  var dec = this.decor || {}, DD = window.UniDecor && window.UniDecor.DECOR, hm = (dec.hair && DD && DD[dec.hair] && DD[dec.hair].m) || {}, hairBack = hm.back, hairOver = hm.over;
+  // mũ trùm (m.over): mặt nhỏ thì trùm lên vòm mặt, nằm dưới mặt nạ; mặt to (có phụ kiện đầu nên mắt sát đỉnh vòm) thì lui ra sau vòm để khỏi che mắt, hòa dần khi đổi cỡ
+  var ow = hairOver ? clamp(1 - (this.hk || 0) * (1 - T.sm), 0, 1) : 0, ga0 = g.globalAlpha;
+  var hTint = (hairBack || hairOver) && this.tintDecor('hair'), self = this, hair = function () { if (hTint) self.drawTinted('hair', T); else self.drawDecor('hair', T); };   // mũ trùm nhuộm theo màu chọn
   if (dec.ears) {   // tai mọc sau vòm mặt, cùng tông màu mặt nên tối dần theo mặt khi ngủ
     this.tintDecor('ears');
     if (T.dim > 0.02) g.filter = 'brightness(' + (1 - T.dim).toFixed(3) + ')';
     this.drawTinted('ears', T); g.filter = 'none';
   }
   var dimF = T.dim > 0.02 ? 'brightness(' + (1 - T.dim).toFixed(3) + ')' : 'none';   // mọi phụ kiện tối dần cùng mặt khi ngủ
-  if (hairBack) { g.filter = dimF; this.drawDecor('hair', T); g.filter = 'none'; }   // sừng, mũ cắm sau vòm mặt
+  if (hairBack) { g.filter = dimF; hair(); g.filter = 'none'; }   // sừng, mũ cắm sau vòm mặt
+  if (hairOver && ow < 0.99) { g.filter = dimF; g.globalAlpha = ga0 * (1 - ow); hair(); g.globalAlpha = ga0; g.filter = 'none'; }
   g.fillStyle = fcOld; this.facePath(T); g.fill();
   g.save(); this.facePath(T); g.clip();
   if (spread < 1) {   // vòng màu mới lan từ góc dưới trái ra, mép hơi mềm
@@ -998,11 +1130,13 @@ Face.prototype.draw = function (o, T) {
   } else { g.fillStyle = fc; }
   var eyeOf = function (c) { return mixHex('#000000', c ? mixHex(c, '#000000', 0.5) : EYE_SLEEP, T.dim); };
   var eyeCol = spread < 1 ? mixHex(eyeOf(this.oldColor), eyeOf(this.color), spread) : eyeOf(this.color);
-  if (px) px.pal = [fc, fcOld, eyeCol];
+  if (bk2 > 0) eyeCol = mixHex(eyeCol, this.bCol.eye, bk2);   // người máy: mắt đen
+  if (px) px.pal = [fc, fcOld, eyeCol].concat(bk2 > 0 ? [this.bCol.steel, this.bCol.eye, this.bCol.grille, this.bCol.panel, this.bCol.shadow, this.bCol.rim] : []);
   this.drawEyes(o, T, paths, eyeCol);
   g.restore();
+  if (hairOver && ow > 0.01) { g.filter = dimF; g.globalAlpha = ga0 * ow; hair(); g.globalAlpha = ga0; g.filter = 'none'; }
   if (dec.eyes) { g.filter = dimF; this.drawDecor('eyes', T); g.filter = 'none'; }   // kính vẽ sau khi bỏ khung cắt của mặt nên được lòi ra ngoài vòm mặt
-  if (dec.hair && !hairBack) {   // món nhuộm theo màu mặt (sừng Unikorn) cũng tối dần theo mặt khi ngủ
+  if (dec.hair && !hairBack && !hairOver) {   // món nhuộm theo màu mặt (sừng Unikorn) cũng tối dần theo mặt khi ngủ
     var ht = this.tintDecor('hair');
     g.filter = dimF;
     if (ht) this.drawTinted('hair', T); else this.drawDecor('hair', T); g.filter = 'none';
@@ -1080,5 +1214,5 @@ Face.prototype.draw = function (o, T) {
 };
 
 
-window.UniFace = { Face: Face, EXD: EXD };
+window.UniFace = { Face: Face, EXD: EXD, BOT_HOOD: BOT_HOOD, BOT_HOLE: BOT_HOLE };   // đường mũ, lỗ mũ người máy: trang điều khiển vẽ ô xem trước theo cùng hình
 })();
