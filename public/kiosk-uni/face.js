@@ -349,7 +349,9 @@ function botPath(def, X, Y) {
 var BOT_MOUTH = { w: 2.4, y: 1.57, k: 0.3, n: 5, rw: 0.16 };   // miệng hình thang: rộng đỉnh w, cạnh xòe k mỗi R xuống, n ngăn đen chia bởi gân sáng rộng rw
 // mặt pixel: ô cỡ 0,2R nên khe, vành phải to hơn một ô mới không bị gộp mất: ít khe hơn, khe rộng hơn, vành dày một ô
 var BOT_MOUTH_PIX = { w: 2.6, y: 1.57, k: 0.3, n: 5, rw: 0.3 };
-var BOT_HOOD_PTS = botPts(BOT_HOOD, 16), BOT_TAB = null, BOT_HM = 0.15;   // BOT_HM: mũ chỉ theo 15% chuyển động của mặt
+// mặt to (chào, ngủ): mép trái dựng thẳng cạnh mép màn trông như bị cắt theo góc màn, nên góc trên trái bo rộng hẳn ra
+var BOT_HOOD_BIG = [[-5.75, 30], ['L', -5.75, -0.4], ['C', -5.75, -2.5, -4.95, -3.7, -3.5, -4.22], ['C', -2.5, -4.52, -1.5, -4.62, -0.4, -4.62]].concat(BOT_HOOD.slice(4));
+var BOT_HOOD_PTS = botPts(BOT_HOOD, 16), BOT_HOOD_BIG_PTS = botPts(BOT_HOOD_BIG, 16), BOT_TAB = null, BOT_HM = 0.15;   // BOT_HM: mũ chỉ theo 15% chuyển động của mặt
 // bán kính vòm mũ theo góc (đã quy theo tâm và bán kính vòm mặt của khung hiện tại), nội suy trong bảng botBuild dựng
 function botRim(a) {
   var T = BOT_TAB; if (!T) return 1;
@@ -407,7 +409,7 @@ Face.prototype.setShape = function (k) {
 Face.prototype.botBuild = function (T) {
   var b = (T.hk || 0) * (1 - T.sm), hs = 1 - 0.14 * b, vy = 1 - 0.42 * b, R = this.R, P = [];
   this.bG = { hs: hs, vy: vy };
-  BOT_HOOD_PTS.forEach(function (p) { var x = 492 + p[0] * R * hs - T.ccx, y = T.ccy - (262 + p[1] * R * vy); P.push([Math.atan2(x, y), Math.hypot(x, y) / T.cr]); });
+  BOT_HOOD_PTS.forEach(function (p0, i) { var q = BOT_HOOD_BIG_PTS[i], p = [p0[0] + (q[0] - p0[0]) * b, p0[1] + (q[1] - p0[1]) * b], x = 492 + p[0] * R * hs - T.ccx, y = T.ccy - (262 + p[1] * R * vy); P.push([Math.atan2(x, y), Math.hypot(x, y) / T.cr]); });
   P.sort(function (u, v) { return u[0] - v[0]; });
   BOT_TAB = { a: P.map(function (q) { return q[0]; }), r: P.map(function (q) { return q[1]; }) };
 };
@@ -1007,7 +1009,7 @@ Face.prototype.setBg = function (b) {
   var src = typeof b.img === 'string' && /^\/[\w\/.-]+$/.test(b.img) ? b.img : null;
   if (!src) this.bgImg = null;
   else if (!this.bgImg || this.bgImgSrc !== src) { this.bgImg = null; this.bgImgSrc = src; var bi = new Image(); bi.onload = function () { if (self.bgImgSrc === src) { self.bgImg = bi; self.bakeBg(); } }; bi.src = src; }
-  this.bgDim = clamp(+b.dim || 0, 0, 0.95); this.bakeBg();
+  this.bgDim = clamp(+b.dim || 0, 0, 0.95); this.bgBlur = clamp(b.blur === undefined ? 3 : +b.blur || 0, 0, 20); this.bakeBg();   // blur: độ nhòe ảnh nền (đơn vị vẽ)
   if (!it) return;
   var img = new Image(), c = b.c === 'face' ? (this.color || FACE_RED) : /^#[0-9a-f]{6}$/i.test(b.c || '') ? b.c : '#ffffff';
   img.onload = function () { self.bgPat = self.g.createPattern(img, 'repeat'); if (self.bgPat.setTransform) self.bgPat.setTransform(new DOMMatrix().scale(1.6)); self.bakeBg(); };
@@ -1021,7 +1023,9 @@ Face.prototype.bakeBg = function () {
   var im = this.bgImg;
   if (im && im.naturalWidth) {
     var k = Math.max(1078 / im.naturalWidth, 480 / im.naturalHeight), iw = im.naturalWidth * k, ih = im.naturalHeight * k;
-    this.g.drawImage(im, (1078 - iw) / 2, (480 - ih) / 2, iw, ih);
+    var bl = this.bgBlur || 0; iw += 4 * bl; ih += 4 * bl;   // nhòe thì phóng rộng ra một chút để mép màn không bị viền sáng
+    if (bl) this.g.filter = 'blur(' + (bl * this.ss) + 'px)';
+    this.g.drawImage(im, (1078 - iw) / 2, (480 - ih) / 2, iw, ih); this.g.filter = 'none';
     if (this.bgDim) { this.g.fillStyle = 'rgba(0,0,0,' + this.bgDim + ')'; this.g.fillRect(0, 0, 1078, 480); }
   }
   this.drawPattern(this.bgAlpha || 0); this.g = main;
@@ -1080,17 +1084,18 @@ Face.prototype.draw = function (o, T) {
     var ep = this.eyes[sd], open = (1 - clamp((ep.bA - 0.2) / 0.5, 0, 1)) * (1 - Math.min(1, ep.line));
     return new Path2D(this.eyePath(ep, this.gk[sd] > 0.5 ? 0 : o.blink * open, sd, 1 - this.gk[sd]));
   }, this);
-  var fc = mixHex(this.color || FACE_RED, '#000000', T.dim);
+  var fdim = T.dim * (1 - 0.45 * this.botK());   // người máy ngủ: mũ và mặt thép chỉ tối bớt, vẫn nhận ra hình
+  var fc = mixHex(this.color || FACE_RED, '#000000', fdim);
   var spread = this.cT !== undefined && this.cT < 1 ? ease(this.cT) : 1;
   // bước thời gian bị chặn trên (khung đầu sau lệnh đổi màu thường dài vì vừa dựng lại ảnh) để vệt loang không nhảy cóc
   if (this.cT !== undefined && this.cT < 1) this.cT = Math.min(1, this.cT + Math.min(this.lastDt || 0.016, 1 / 30) / CSPAN);
   if (this.shPrev && this.shT < 1) { this.shT = Math.min(1, this.shT + Math.min(this.lastDt || 0.016, 1 / 30) / CSPAN); if (this.shT >= 1) this.shPrev = this.shPrevK = null; }   // biến dáng cùng nhịp với loang màu
   this.spread = spread;
-  var fcOld = spread < 1 ? mixHex(this.oldColor || FACE_RED, '#000000', T.dim) : fc;
+  var fcOld = spread < 1 ? mixHex(this.oldColor || FACE_RED, '#000000', fdim) : fc;
   var bk2 = this.bk = this.botK();
   if (bk2 > 0) {
     /* người máy trùm mũ: mặt xám kim loại, mắt và miệng đen; vành trong của mũ quanh lỗ đậm hơn màu mũ, vạt mũ đổ bóng sâu xuống mặt */
-    var face = mixHex(BOT.steel, '#000000', T.dim), ink = mixHex(face, '#000000', 0.86);
+    var face = mixHex(BOT.steel, '#000000', fdim), ink = mixHex(face, '#000000', 0.86);
     this.bCol = { steel: face, eye: ink, mouth: ink, grille: mixHex(face, '#000000', 0.62), panel: mixHex(face, '#000000', 0.42), shadow: mixHex(face, '#000000', 0.42), rim: mixHex(fc, '#000000', 0.38) };
   }
   // nhớ vị trí và độ sáng của mặt để vẽ hiệu ứng tương phản khi mặt màu sáng

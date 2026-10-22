@@ -71,7 +71,7 @@ var LOOKS = [
   ['Black Panther', { color: '#6c4ee0', shape: 'squircle', eyeStyle: 'anime', pixel: false, decor: { ears: 'cat' }, bg: { base: '#160f24', p: 'hexagons', c: '#b79cff' } }],
   ['Doctor Strange', { color: '#ff8a3d', shape: 'round', eyeStyle: 'soft', pixel: false, decor: { hair: 'agamotto' }, bg: { base: '#1c1010', p: 'overlappingCircles', c: '#ffd666' } }],
   ['Deadpool', { color: '#a61c1c', shape: 'round', eyeStyle: 'soft', pixel: false, decor: { eyes: 'dpmask' }, bg: { base: '#1c1010', p: 'polkaDots', c: '#ff6b6b' } }],
-  ['Doombot', { color: '#12b552', theme: '#12b552', shape: 'bot', eyeStyle: 'soft', pixel: false, decor: {}, bg: { base: '#160f24', p: 'topography', c: '#7cc7ff', img: '/kiosk-uni/bg/doom-green.jpg', dim: 0.25 } }],
+  ['Doombot', { color: '#12b552', theme: '#12b552', shape: 'bot', eyeStyle: 'soft', pixel: false, decor: {}, bg: { base: '#160f24', p: 'topography', c: '#7cc7ff', img: '/kiosk-uni/bg/doom-green.jpg', dim: 0.4, blur: 3 } }],
   ['Doctor Doom', { color: '#9aa4ae', shape: 'squircle', eyeStyle: 'devil', pixel: false, decor: { eyes: 'doomplate', hair: 'doomhood' }, bg: { base: '#0d1a14', p: 'hexagons', c: '#86e0a8' } }]
 ];
 var SCREENS = [['sleep', 'Ngủ (chờ khách)'], ['hello', 'Thấy khách'], ['home', 'Màn chính'], ['scan', 'Quét vé'], ['lookup', 'Nhập số điện thoại'], ['agenda', 'Lịch trình'], ['info', 'Sơ đồ'], ['chat', 'Hỏi đáp']];
