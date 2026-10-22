@@ -1045,7 +1045,7 @@ Face.prototype.draw = function (o, T) {
   var g = this.g;
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
   if (this.bc && (this.bgAlpha || this.bgImg)) g.drawImage(this.bc, 0, 0); else { g.fillStyle = this.bgBase || '#000'; g.fillRect(0, 0, this.cv.width, this.cv.height); }
-  if (this.dim > 0.01 && this.bgImg) { g.fillStyle = 'rgba(0,0,0,' + (this.dim * 0.6).toFixed(3) + ')'; g.fillRect(0, 0, this.cv.width, this.cv.height); }   // ngủ: ảnh nền tối theo mặt, khỏi chói cạnh linh vật đang tắt đèn
+  if (this.dim > 0.01 && this.bgImg) { g.fillStyle = 'rgba(0,0,0,' + (this.dim * 0.82).toFixed(3) + ')'; g.fillRect(0, 0, this.cv.width, this.cv.height); }   // ngủ: ảnh nền tối theo mặt, khỏi chói cạnh linh vật đang tắt đèn
   g.setTransform(this.ss, 0, 0, this.ss, 0, 0);
   // mặt thu nhỏ: vẽ confetti, mặt và phụ kiện lên một lớp riêng rồi khoét các ô chữ, để Uni luôn nằm dưới thông tin, không đè lên chữ;
   // nền họa tiết vẽ trên lớp chính nên luôn ở sâu nhất
@@ -1085,7 +1085,7 @@ Face.prototype.draw = function (o, T) {
     var ep = this.eyes[sd], open = (1 - clamp((ep.bA - 0.2) / 0.5, 0, 1)) * (1 - Math.min(1, ep.line));
     return new Path2D(this.eyePath(ep, this.gk[sd] > 0.5 ? 0 : o.blink * open, sd, 1 - this.gk[sd]));
   }, this);
-  var fdim = T.dim * (1 - 0.45 * this.botK());   // người máy ngủ: mũ và mặt thép chỉ tối bớt, vẫn nhận ra hình
+  var fdim = T.dim * (1 - 0.28 * this.botK());   // người máy ngủ: mũ và mặt thép chỉ tối bớt, vẫn nhận ra hình
   var fc = mixHex(this.color || FACE_RED, '#000000', fdim);
   var spread = this.cT !== undefined && this.cT < 1 ? ease(this.cT) : 1;
   // bước thời gian bị chặn trên (khung đầu sau lệnh đổi màu thường dài vì vừa dựng lại ảnh) để vệt loang không nhảy cóc
