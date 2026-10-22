@@ -317,3 +317,5 @@
 .uni-root[data-mode="control"] .screen { cursor: default; }
 .uni-root[data-mode="control"] .ctl .note.live { color: var(--ink2); }
 .uni-root #stage .stop, .uni-root #stage .stap { color: #fff; }
+.uni-root #stage .slogo { width: auto; height: 44px; }
+.uni-root #stage .slogo .mlogo { display: block; height: 100%; width: auto; }

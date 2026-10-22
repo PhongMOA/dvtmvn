@@ -36,7 +36,13 @@ var LI = {
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.74"/>',
   'wifi-off': '<path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/>'
 };
-var LOGO = '<svg class="ulogo" viewBox="0 0 40 40" aria-hidden="true"><rect class="sq" width="40" height="40" rx="10"/><path class="mk" d="M9 30V10h5l6 9 6-9h5v20h-5V18l-6 8.5L14 18v12z"/></svg>';
+/* Logo "ĐA VŨ TRỤ / MARVEL VN" giống src/components/logo.tsx: màu và font lấy từ theme của app */
+var LOGO = '<svg class="mlogo" viewBox="0 0 300 150" role="img" aria-label="Đa Vũ Trụ Marvel VN">' +
+  '<rect width="300" height="52" style="fill:var(--card,#141a16);stroke:#fff;stroke-width:2"/>' +
+  '<rect y="52" width="300" height="98" style="fill:var(--primary,#3fbf6a)"/>' +
+  '<path d="M0 52V150H300V52" fill="none" style="stroke:#fff;stroke-width:2"/>' +
+  '<text x="150" y="36" text-anchor="middle" textLength="272" lengthAdjust="spacingAndGlyphs" font-size="32" letter-spacing="1" style="fill:var(--card-foreground,#fff);font-family:var(--font-logo),sans-serif">ĐA VŨ TRỤ</text>' +
+  '<text x="150" y="135" text-anchor="middle" textLength="265" lengthAdjust="spacingAndGlyphs" font-size="102" style="fill:var(--primary-foreground,#000);font-family:var(--font-marvel),sans-serif">MARVEL VN</text></svg>';
 
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
