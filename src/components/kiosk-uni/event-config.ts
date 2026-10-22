@@ -1,5 +1,8 @@
 // Nội dung 3 mục Lịch trình / Sơ đồ / Hỏi đáp của kiosk linh vật Uni.
 // Hiện là nội dung mẫu cho buổi Offline Avengers: Doomsday — sửa trực tiếp ở đây.
+// Mục Sơ đồ vẽ sơ đồ ghế của rạp (src/lib/seats/layout.ts).
+
+import { SEAT_LAYOUT, type SeatLayout } from "@/lib/seats/layout";
 
 export type UniSide = "left" | "right";
 
@@ -14,6 +17,8 @@ export type UniEventConfig = {
     hall: { name: string; label: string; note?: string; side: UniSide };
     help: { name: string; label: string; note?: string; side: UniSide };
   };
+  /** Sơ đồ ghế phòng chiếu cho mục Sơ đồ; bỏ trống thì vẽ sơ đồ khu vực. */
+  seats?: SeatLayout;
   help: string;
   /** Check-in xong bao nhiêu giây thì tự về màn quét. */
   backSec: number;
@@ -41,6 +46,7 @@ export const UNI_EVENT: UniEventConfig = {
     hall: { name: "Phòng chiếu", label: "Phòng chiếu: rẽ phải", note: "Đi thẳng qua sảnh rồi rẽ phải.", side: "right" },
     help: { name: "Quầy hỗ trợ", label: "Quầy hỗ trợ: bên trái", note: "Ngay cạnh lối vào.", side: "left" },
   },
+  seats: SEAT_LAYOUT,
   help: "Cần hỗ trợ, bạn ghé quầy hỗ trợ cạnh lối vào nhé.",
   backSec: 8,
 };

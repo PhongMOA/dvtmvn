@@ -203,6 +203,44 @@ function mount(root, host) {
       '<rect x="' + (L ? 10 : 180) + '" y="40" width="70" height="56" rx="10" fill="#1f1f1f" stroke="#8f8f8f" stroke-dasharray="4 3"/><text x="' + (L ? 45 : 215) + '" y="72" fill="#fff" font-size="12" text-anchor="middle">' + esc(EV.directions.help.name || 'Quầy hỗ trợ') + '</text>' +
       '<rect x="96" y="150" width="68" height="30" rx="8" fill="#141414" stroke="#2e2e2e"/><text x="130" y="170" fill="#8f8f8f" font-size="11" text-anchor="middle">Lối vào</text><circle cx="130" cy="122" r="7" fill="#fff"/><text x="118" y="126" fill="#fff" font-size="11" text-anchor="end">Bạn ở đây</text></svg>';
   }
+  /* Sơ đồ ghế phòng chiếu (EV.seats = SEAT_LAYOUT của app): hàng nhiều khối thì
+     khối trái canh phải, các khối sau canh trái cho cột ghế thẳng hàng; hàng 1
+     khối (Sweetbox) căn giữa, ghép cặp sát nhau. */
+  var SEAT_COL = { normal: '#3fbf6a', vip: '#ef4444', sweetbox: '#f472b6', blocked: '#3a3a3a' };
+  function seatSvg() {
+    var rows = EV.seats, C = 11, AIS = 12, LBL = 16, widths = [];
+    rows.forEach(function (r) { if (r.segments.length > 1) r.segments.forEach(function (g, i) { widths[i] = Math.max(widths[i] || 0, g.length); }); });
+    var inner = widths.reduce(function (a, n) { return a + n * C; }, 0) + (widths.length - 1) * AIS;
+    var W = inner + LBL * 2, top = 34, y = top, out = '';
+    var seat = function (x, yy, t) { return '<rect x="' + (x + 1) + '" y="' + (yy + 1) + '" width="' + (C - 2) + '" height="' + (C - 2) + '" rx="2" fill="' + (SEAT_COL[t] || SEAT_COL.normal) + '"' + (t === 'blocked' ? '' : ' fill-opacity=".85"') + '/>'; };
+    rows.forEach(function (r) {
+      if (r.segments.length === 1) {
+        y += 6;
+        var g = r.segments[0], pair = g.some(function (x) { return x.type === 'sweetbox'; }), gap = pair ? 3 : 0;
+        var w = g.length * C + (pair ? Math.ceil(g.length / 2) - 1 : 0) * gap, x0 = LBL + (inner - w) / 2;
+        g.forEach(function (st, i) { out += seat(x0 + i * C + (pair ? Math.floor(i / 2) * gap : 0), y, st.type); });
+      } else {
+        var x = LBL;
+        r.segments.forEach(function (g, i) {
+          var bw = widths[i] * C, off = i === 0 ? bw - g.length * C : 0;
+          g.forEach(function (st, k) { out += seat(x + off + k * C, y, st.type); });
+          x += bw + AIS;
+        });
+      }
+      var ly = y + C / 2 + 3.5;
+      out += '<text x="' + LBL / 2 + '" y="' + ly + '" fill="#8f8f8f" font-size="9" text-anchor="middle">' + esc(r.label) + '</text><text x="' + (W - LBL / 2) + '" y="' + ly + '" fill="#8f8f8f" font-size="9" text-anchor="middle">' + esc(r.label) + '</text>';
+      y += C + 1;
+    });
+    return '<svg class="seatmap" viewBox="0 0 ' + W + ' ' + (y + 4) + '" role="img" aria-label="Sơ đồ ghế phòng chiếu" font-family="Be Vietnam Pro, sans-serif">' +
+      '<path d="M' + (LBL + 10) + ' 14Q' + W / 2 + ' 4 ' + (W - LBL - 10) + ' 14" fill="none" stroke="#8f8f8f" stroke-width="3" stroke-linecap="round"/>' +
+      '<text x="' + W / 2 + '" y="26" fill="#8f8f8f" font-size="8" letter-spacing="3" text-anchor="middle">MÀN HÌNH</text>' + out + '</svg>';
+  }
+  function seatLegend() {
+    var has = {}; EV.seats.forEach(function (r) { r.segments.forEach(function (g) { g.forEach(function (x) { has[x.type] = 1; }); }); });
+    return '<div class="slegend">' + [['normal', 'Ghế thường'], ['vip', 'Ghế VIP'], ['sweetbox', 'Sweetbox (ghế đôi)']].filter(function (x) { return has[x[0]]; }).map(function (x) {
+      return '<span><i style="background:' + SEAT_COL[x[0]] + '"></i>' + x[1] + '</span>';
+    }).join('') + '</div>';
+  }
   function dirIcon(d) { return '<span class="ar">' + (d.side === 'left' ? IC.left : IC.right) + '</span>'; }
 
   /* ---------- âm thanh báo kết quả: Web Audio, không cần file ---------- */
@@ -294,7 +332,7 @@ function mount(root, host) {
         later(function () { if (still() && S.expr === 'happy') expr('neutral'); }, 1420);
       }
       h = '<div class="content full"><div class="grid4">' + tile('scan', 'main', IC.qr, 'Check-in', 'Quét mã QR trên vé') + tile('agenda', '', IC.cal, 'Lịch trình', 'Các phiên hôm nay') +
-        tile('info', '', IC.map, 'Sơ đồ', 'Vị trí các khu') + tile('chat', '', IC.help, 'Hỏi đáp', 'Câu hỏi thường gặp') + '</div></div>';
+        tile('info', '', IC.map, 'Sơ đồ', EV.seats && EV.seats.length ? 'Ghế phòng chiếu' : 'Vị trí các khu') + tile('chat', '', IC.help, 'Hỏi đáp', 'Câu hỏi thường gặp') + '</div></div>';
     } else if (name === 'scan') {
       expr('focused');
       h = '<div class="side" data-anim><h2 class="h">Đưa mã QR vào camera</h2><p class="p">Mở vé trong mục Vé của tôi, tăng độ sáng màn hình và giữ yên mã trong khung.</p><div class="hint" id="hint"></div><button class="btn camflip" data-cam>' + camLabel() + '</button></div>' +
@@ -344,8 +382,12 @@ function mount(root, host) {
     } else if (name === 'info') {
       expr('neutral');
       var dirRow = function (d) { return '<div class="row"><div class="v">' + dirIcon(d) + esc(d.label) + '</div><div class="n">' + esc(d.note || '') + '</div></div>'; };
-      h = '<div class="content" data-anim><div class="two map"><div class="panel">' + mapSvg() + '</div>' +
-        '<div class="panel guide">' + dirRow(EV.directions.hall) + dirRow(EV.directions.help) + '<div class="row"><div class="n">' + esc(HELP) + '</div></div></div></div></div>' + btns([['Quay lại', 'data-go="home"']]);
+      h = EV.seats && EV.seats.length
+        ? '<div class="content" data-anim><div class="panel seatp">' + seatSvg() + '<div class="sfoot">' + seatLegend() +
+          '<div class="sdir">' + [EV.directions.hall, EV.directions.help].map(function (d) { return '<span>' + dirIcon(d) + esc(d.label) + '</span>'; }).join('') + '</div></div></div></div>'
+        : '<div class="content" data-anim><div class="two map"><div class="panel">' + mapSvg() + '</div>' +
+          '<div class="panel guide">' + dirRow(EV.directions.hall) + dirRow(EV.directions.help) + '<div class="row"><div class="n">' + esc(HELP) + '</div></div></div></div></div>';
+      h += btns([['Quay lại', 'data-go="home"']]);
     } else if (name === 'chat') {
       expr('curious'); S.faq = -1;
       h = '<div class="content" data-anim><div class="faq" id="faq"></div></div>' + btns([['Quay lại', 'data-go="home"']]);
