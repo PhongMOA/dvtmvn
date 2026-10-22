@@ -94,7 +94,7 @@ var ERR = { NOT_FOUND: 'notfound', NOT_PAID: 'unpaid', WRONG_EVENT: 'event', NO_
 var DEMO_GUEST = { userName: 'Khách thử', tickets: 2, seats: ['F7', 'F8'], seatsPending: false, combos: ['Combo bắp nước × 1'], shirts: '', alreadyCheckedIn: false, checkedInAt: null, justCheckedIn: true };
 var TICKET_COL = { fg: '#1a1200', bg: '#ffc53d' };
 var IDLE_MOODS = ['happy', 'confused', 'curious'];
-var DEFAULT_LOOK = LOOKS[9][1];
+var DEFAULT_LOOK = LOOKS.filter(function (x) { return x[0] === 'Doombot'; })[0][1];
 
 function uri(s) { return 'data:image/svg+xml,' + encodeURIComponent(s); }
 function mix(a, b, k) { var x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16); return '#' + [16, 8, 0].map(function (s) { return ('0' + Math.round((x >> s & 255) * (1 - k) + (y >> s & 255) * k).toString(16)).slice(-2); }).join(''); }
@@ -663,7 +663,11 @@ function mount(root, host) {
     var b = bg || { base: '#000000' }, p = b.p && PAT[b.p];
     var pat = p ? '<defs><pattern id="' + id + '" width="40" height="40" patternUnits="userSpaceOnUse"><image href="' + uri(p.svg.split('#C0FFEE').join(b.c === 'face' ? c : (b.c || '#ffffff'))) + '" width="40" height="40"/></pattern></defs><rect width="120" height="80" fill="url(#' + id + ')" opacity=".21"/>' : '';
     var dec = lk.decor || {}, back = '', front = '';
-    if (bot && !dec.ears && !dec.hair) dec = { hair: 'bothood', eyes: dec.eyes };
+    if (bot && !dec.ears && !dec.hair) {   // vẽ như trên kiosk: mũ trùm, lỗ mũ có bóng xám, mặt nạ bám theo hai mắt (tỉ lệ 36/384)
+      var se = function (e, fill, extra) { var q = ''; for (var j = 0; j <= 120; j++) { var aj = j / 120 * Math.PI * 2, cj = Math.cos(aj), sj = Math.sin(aj), kj = 2 / e[3]; q += (j ? 'L' : 'M') + (60 + e[1] * .09375 * Math.sign(sj) * Math.pow(Math.abs(sj), kj)).toFixed(1) + ' ' + (66 + (e[0] - 262 - e[2] * Math.sign(cj) * Math.pow(Math.abs(cj), kj)) * .09375).toFixed(1); } return '<path d="' + q + 'Z" fill="' + fill + '"' + (extra || '') + '/>'; };
+      back += se([604, 590, 778, 2.6], c) + se([604, 392, 646, 3], '#5d636b', ' stroke="' + mix(c, '#000000', .4) + '" stroke-width="1.7"');
+      d = ''; var mask = se([604, 373, 560, 3], fcol); f = null;
+    }
     var rim = function (deg, inset) { var a = deg * Math.PI / 180, r = 74 * (f ? f(a) : 1) - inset; return [60 + r * Math.sin(a), 118 - r * Math.cos(a)]; };
     var img = function (s, x, y, h, ax, ay, rot, wx) { var vb = /viewBox="([^"]+)"/.exec(s)[1].split(' ').map(Number), w = h * vb[2] / vb[3] * (wx || 1); return '<image href="' + uri(s) + '" x="' + (-w * ax).toFixed(1) + '" y="' + (-h * ay).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h + '" transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')"/>'; };
     var it = dec.ears && D[dec.ears];
@@ -672,7 +676,7 @@ function mount(root, host) {
     if (it) { var fh = it.m.pos === 'forehead', ct = it.m.pos === 'center' || fh, ha = ct ? 0 : 36, hp = rim(ha, fh ? 9 : ct ? 4 : 1); var hs = img(tint(it, it.parts[0], c), hp[0], hp[1], it.m.mh || (fh ? 30 : ct ? 24 : 22), .5, it.m.ay || (ct ? .85 : .5), ha, it.m.wx); if (it.m.back) back += hs; else front += hs; }
     it = dec.eyes && D[dec.eyes];
     if (it) front += img(it.parts[0], 60, 66, it.m.mh || 22, .5, .5, 0);
-    return '<svg class="mini" viewBox="0 0 120 80" aria-hidden="true"><rect width="120" height="80" fill="' + (b.base || '#000000') + '"/>' + pat + back + '<path d="' + d + 'Z" fill="' + fcol + '"/>' + eye(42, 66) + eye(78, 66) + front + '</svg>';
+    return '<svg class="mini" viewBox="0 0 120 80" aria-hidden="true"><rect width="120" height="80" fill="' + (b.base || '#000000') + '"/>' + pat + back + (mask || '<path d="' + d + 'Z" fill="' + fcol + '"/>') + eye(42, 66) + eye(78, 66) + front + '</svg>';
   }
   function tileBtn(isOn, inner, name, fn) { var b = document.createElement('button'); b.type = 'button'; b.className = 'tile2' + (isOn ? ' on' : ''); b.innerHTML = inner + '<span class="tn">' + esc(name) + '</span>'; b.title = name; b.onclick = fn; return b; }
   function swBtn(col, name, isOn, fn, cls) { var b = document.createElement('button'); b.type = 'button'; b.className = 'sw' + (cls ? ' ' + cls : ''); b.style.background = col; b.title = name; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', isOn ? 'true' : 'false'); b.onclick = fn; return b; }
