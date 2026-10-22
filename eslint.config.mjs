@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Engine linh vật Uni: JS thuần chạy thẳng trên trình duyệt.
+    "public/kiosk-uni/**",
   ]),
 ]);
 

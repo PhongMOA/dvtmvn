@@ -35,7 +35,7 @@ model User {
   ward          String? // phường/xã — text tự do, không validate; bắt buộc khi tạo đơn GHTK
   address       String? // số nhà + tên đường
   facebookUrl   String? // link Facebook cá nhân (tuỳ chọn) — để shop liên hệ khi cần, sửa ở /profile
-  role          String    @default("user") // "user" | "admin" | "tester" (tester: đặt thử combo trước giờ mở bán như admin, không vào /admin — xem canPreviewSales). Quyền admin = role == "admin" HOẶC email khớp ADMIN_EMAIL (admin bootstrap từ env, luôn admin, không set/gỡ được qua UI). Xem src/lib/auth-helpers.ts.
+  role          String    @default("user") // "user" | "admin" | "tester" | "staff" (staff: chỉ vào /kiosk + quét check-in, dùng cho máy kiosk/nhân viên cửa rạp — xem isStaff. tester: đặt thử combo trước giờ mở bán như admin, không vào /admin — xem canPreviewSales). Quyền admin = role == "admin" HOẶC email khớp ADMIN_EMAIL (admin bootstrap từ env, luôn admin, không set/gỡ được qua UI). Xem src/lib/auth-helpers.ts.
   // Hash scrypt của mật khẩu (tài khoản đăng ký thủ công, xem src/lib/password.ts).
   // null = tài khoản chỉ đăng nhập Google.
   passwordHash  String?
@@ -126,6 +126,41 @@ model Event {
   seatBatchSize   Int       @default(1)
   seatAllowances  SeatAllowance[]
   seatBookings    SeatBooking[]
+  luckyDraw       LuckyDraw?
+}
+
+// Quay số may mắn trên sơ đồ ghế (xem src/lib/lucky-draw.ts). 1 event = 1
+// phiên (eventId unique); xoá phiên = quay lại từ đầu. Pool = mọi SeatBooking
+// của event trừ ghế đã có trong LuckyDrawWinner (kể cả lượt bị huỷ vì vắng).
+model LuckyDraw {
+  id          String            @id @default(uuid())
+  eventId     String            @unique
+  totalRounds Int
+  createdBy   String
+  createdAt   DateTime          @default(now())
+  event       Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  winners     LuckyDrawWinner[]
+}
+
+// 1 lượt trúng. Lượt bị huỷ (voided, người trúng vắng mặt) giữ lại để ghế đó
+// không bị quay trúng lần nữa; round được quay lại nên 1 round có thể có
+// nhiều bản ghi nhưng tối đa 1 bản ghi voided = false (partial unique index
+// viết tay trong migration SQL).
+model LuckyDrawWinner {
+  id          String    @id @default(uuid())
+  drawId      String
+  round       Int // 1-based
+  seatCode    String
+  userId      String
+  displayName String // snapshot tên lúc trúng
+  maskedPhone String?
+  voided      Boolean   @default(false)
+  drawnBy     String
+  createdAt   DateTime  @default(now())
+  draw        LuckyDraw @relation(fields: [drawId], references: [id], onDelete: Cascade)
+
+  @@unique([drawId, seatCode])
+  @@index([drawId, round])
 }
 
 // Quyền chọn ghế của 1 user cho 1 event. Snapshot lúc admin "Chốt danh sách";
@@ -202,6 +237,11 @@ model Order {
   userId        String
   qrToken       String    @unique @default(uuid())
   status        String    @default("booked") // booked | checked_in
+  // Check-in (xem src/lib/checkin.ts). Đơn check-in trước khi có các cột này
+  // thì checkedInAt = null — UI hiện "đã check-in" không kèm giờ.
+  checkedInAt   DateTime?
+  checkedInVia  String? // "kiosk" | "staff"
+  checkedInBy   String? // userId tài khoản kiosk/nhân viên đã thao tác
   orderCode     String    @unique // mã ngắn nhúng vào nội dung chuyển khoản để webhook khớp đơn
   paymentStatus String    @default("pending") // pending | paid | expired
   expiresAt     DateTime // hạn chuyển khoản, hết hạn mà còn pending -> expired + hoàn kho
@@ -301,4 +341,16 @@ model ShopSetting {
   salesStartAt   DateTime @default("2026-11-03T17:00:00.000Z") // = 04/11/2026 00:00 giờ VN
   countdownTitle String   @default("Doomsday is coming")
   updatedAt    DateTime @updatedAt
+}
+
+// Trạng thái kiosk linh vật Uni — singleton id = "default". Trang /admin/kiosk
+// ghi bộ mặt (look) và nối lệnh (đổi màn, biểu cảm, lời nhắn...) vào cmds;
+// máy kiosk /kiosk/[eventId] hỏi định kỳ, chạy các lệnh có seq mới hơn.
+// Chỉ giữ 30 lệnh cuối (xem src/app/actions/kiosk-uni.ts).
+model KioskState {
+  id        String   @id @default("default")
+  look      Json?
+  seq       Int      @default(0)
+  cmds      Json     @default("[]")
+  updatedAt DateTime @updatedAt
 }

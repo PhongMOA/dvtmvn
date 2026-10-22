@@ -55,6 +55,15 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           >
             Cấu hình
           </Link>
+          <Link
+            href="/admin/kiosk"
+            className={cn(
+              buttonVariants({ size: "sm", variant: "outline" }),
+              "shrink-0 whitespace-nowrap",
+            )}
+          >
+            Kiosk
+          </Link>
           <AdminScanLink />
         </div>
       </div>

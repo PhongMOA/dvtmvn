@@ -5,11 +5,13 @@ import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
 import { auth } from "@/auth";
-import { isAdmin } from "@/lib/auth-helpers";
+import { isAdmin, isStaff } from "@/lib/auth-helpers";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { ProfileModal } from "@/components/profile-modal";
 import { PushRegistrar } from "@/components/push-registrar";
+import { UpdateWatcher } from "@/components/update-watcher";
+import { NativeUpdateCheck } from "@/components/native-update-check";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AgeNoticeModal } from "@/components/age-notice-modal";
 import { MessengerButton } from "@/components/messenger-button";
@@ -52,15 +54,21 @@ const marvelWordmark = localFont({
 
 const GA_ID = "G-0F1G6D17RJ";
 
+// Staging = project Vercel dvtmvn (dvtmarvelvn.8ternal.com, nhánh `staging`),
+// set NEXT_PUBLIC_APP_ENV=staging trên Vercel. Hiện banner, tắt GA, chặn index.
+const IS_STAGING = process.env.NEXT_PUBLIC_APP_ENV === "staging";
+
 export const metadata: Metadata = {
   title: "Đa vũ trụ Marvel VN - Đặt vé offline Avengers: Doomsday",
   description:
     "Đặt vé xem Avengers: Doomsday tại sự kiện chiếu phim offline. Thanh toán chuyển khoản VietQR, nhận vé QR check-in.",
+  ...(IS_STAGING && { robots: { index: false, follow: false } }),
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
   const admin = await isAdmin(session?.user);
+  const staff = !admin && (await isStaff(session?.user));
 
   return (
     <html
@@ -68,6 +76,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${calSans.variable} ${anton.variable} ${marvelWordmark.variable} dark h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {IS_STAGING && (
+          <div className="bg-amber-400 px-4 py-1 text-center text-xs font-semibold text-black">
+            STAGING — bản thử nghiệm, không phải trang đặt vé thật. Đừng chuyển khoản.
+          </div>
+        )}
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
         <footer className="border-t border-border/60 px-4 py-6 text-center text-xs text-muted-foreground">
@@ -75,26 +88,34 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <Link href="/dieu-khoan" className="underline-offset-2 hover:text-primary hover:underline">
             Điều khoản và điều kiện sử dụng
           </Link>
+          {/* Mã bản build — khi báo lỗi biết đang chạy bản nào */}
+          <span className="mt-1 block opacity-50">Bản {process.env.NEXT_PUBLIC_BUILD_ID}</span>
         </footer>
         <Toaster richColors theme="dark" />
         <ProfileModal />
         <AgeNoticeModal />
         <PushRegistrar />
-        <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} />
+        <UpdateWatcher />
+        <NativeUpdateCheck />
+        <AppBottomNav isLoggedIn={!!session?.user} isAdmin={admin} isStaff={staff} />
         <MessengerButton isLoggedIn={!!session?.user} />
         {/* Google Analytics 4 — cùng mã với trang tĩnh public/dong-thoi-gian-mcu.html.
             Chuyển trang phía client (App Router) được GA4 tự ghi nhận qua
             "Enhanced measurement > Page changes based on browser history". */}
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`window.dataLayer = window.dataLayer || [];
+        {!IS_STAGING && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', '${GA_ID}');`}
-        </Script>
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

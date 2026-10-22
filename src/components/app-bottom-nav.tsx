@@ -15,8 +15,14 @@ const USER_LINKS = [
 // đơn (/admin/orders — có bộ lọc + thống kê); đơn theo từng sự kiện vẫn xem ở
 // /admin/events/[id]/orders.
 const ADMIN_LINKS = [
-  { href: "/admin/scan", label: "Quét QR", icon: QrCode },
+  { href: "/scan", label: "Quét QR", icon: QrCode },
   { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList },
+] as const;
+
+// Staff (máy kiosk / nhân viên cửa rạp) không vào được /admin/orders.
+const STAFF_LINKS = [
+  { href: "/scan", label: "Quét QR", icon: QrCode },
+  { href: "/my-tickets", label: "Vé của tôi", icon: Ticket },
 ] as const;
 
 /**
@@ -39,15 +45,17 @@ const ADMIN_LINKS = [
 export function AppBottomNav({
   isLoggedIn,
   isAdmin = false,
+  isStaff = false,
 }: {
   isLoggedIn: boolean;
   isAdmin?: boolean;
+  isStaff?: boolean;
 }) {
   const pathname = usePathname();
 
   if (!isLoggedIn) return null;
 
-  const links = isAdmin ? ADMIN_LINKS : USER_LINKS;
+  const links = isAdmin ? ADMIN_LINKS : isStaff ? STAFF_LINKS : USER_LINKS;
 
   return (
     <>

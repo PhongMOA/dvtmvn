@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { orderItemsQuantity } from "@/lib/order-items";
 import { isAdminEmail } from "@/lib/auth-helpers";
 import { AdminDeleteUserButton } from "@/components/admin-delete-user-button";
-import { AdminSetTesterButton } from "@/components/admin-set-tester-button";
+import { AdminSetRoleButton } from "@/components/admin-set-role-button";
 import { AdminSetAdminButton } from "@/components/admin-set-admin-button";
 import { AdminSearchForm } from "@/components/admin-search-form";
 import { AdminPagination } from "@/components/admin-pagination";
@@ -135,7 +135,9 @@ export default async function AdminUsersPage({
               const facebookHref = safeFacebookHref(user.facebookUrl);
               const canToggleAdmin = !envAdmin && !isSelf;
               const tester = !admin && user.role === "tester";
-              const canToggleTester = !admin;
+              const staff = !admin && user.role === "staff";
+              const canToggleTester = !admin && !staff;
+              const canToggleStaff = !admin && !tester;
               const canDelete = !admin && user._count.orders === 0;
 
               return (
@@ -166,6 +168,11 @@ export default async function AdminUsersPage({
                             Tester
                           </Badge>
                         )}
+                        {staff && (
+                          <Badge variant="outline" className="border-green-600 text-green-600">
+                            Staff
+                          </Badge>
+                        )}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {user.email}
@@ -191,13 +198,22 @@ export default async function AdminUsersPage({
                     {formatDate(user.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {canToggleAdmin || canToggleTester || canDelete ? (
+                    {canToggleAdmin || canToggleTester || canToggleStaff || canDelete ? (
                       <div className="flex justify-end gap-2">
                         {canToggleTester && (
-                          <AdminSetTesterButton
+                          <AdminSetRoleButton
                             userId={user.id}
                             label={displayName}
-                            isTester={tester}
+                            role="tester"
+                            hasRole={tester}
+                          />
+                        )}
+                        {canToggleStaff && (
+                          <AdminSetRoleButton
+                            userId={user.id}
+                            label={displayName}
+                            role="staff"
+                            hasRole={staff}
                           />
                         )}
                         {canToggleAdmin && (

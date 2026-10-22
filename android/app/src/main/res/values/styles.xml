@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+    </style>
+
+
+    <!-- android:background trước đây trỏ vào @drawable/splash (ảnh logo chữ
+         nhật ngang) — nhưng Theme.SplashScreen (androidx core-splashscreen,
+         xem android/app/build.gradle) là theme của Splash Screen API chính
+         thức từ Android 12+, CHỈ nhận icon + màu nền phẳng qua 2 thuộc tính
+         riêng windowSplashScreenBackground/windowSplashScreenAnimatedIcon —
+         android:background bị bỏ qua nên trước đây màn hình splash thật ra
+         hiện icon launcher mặc định trên NỀN TRẮNG mặc định của hệ thống
+         (không phải ảnh @drawable/splash mình tạo). Ảnh logo chữ nhật đầy đủ
+         (ĐA VŨ TRỤ/MARVEL VN) không thể hiện full-bleed ở đây được nữa vì
+         chính sách Android 12+ chỉ cho icon+màu nền, muốn có splash tuỳ biến
+         hoàn toàn thì cần thêm plugin @capacitor/splash-screen (JS-controlled,
+         hiện chưa cài, ngoài phạm vi sửa lần này). -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splashBackground</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+</resources>
